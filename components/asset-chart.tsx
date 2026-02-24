@@ -218,7 +218,7 @@ export function AssetChart({
                         fontSize: "11px",
                         color: "oklch(0.95 0.01 250)",
                       }}
-                      formatter={(value: number) => [formatPrice(value), "Preco"]}
+                      formatter={(value: string | number) => [formatPrice(Number(value)), "Preco"]}
                       labelFormatter={(label: string) => `Data: ${label}`}
                     />
                     <Area
@@ -259,7 +259,7 @@ export function AssetChart({
                           fontSize: "11px",
                           color: "oklch(0.95 0.01 250)",
                         }}
-                        formatter={(value: number) => [`$${value.toFixed(2)}`, "Volume"]}
+                        formatter={(value: string | number) => [`$${Number(value).toFixed(2)}`, "Volume"]}
                       />
                       <Bar dataKey="volume" fill="oklch(0.65 0.17 250)" radius={[3, 3, 0, 0]} opacity={0.7} />
                     </BarChart>

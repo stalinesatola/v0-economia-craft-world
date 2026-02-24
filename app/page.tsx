@@ -11,6 +11,7 @@ import { useMemo } from "react"
 
 export default function Home() {
   const { prices, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners } = usePrices()
+  console.log("[v0] Home rendered, prices keys:", Object.keys(prices).length, "banners:", banners?.length, "isLoading:", isLoading)
 
   const bannersByPosition = useMemo(() => {
     const map: Record<string, typeof banners[number]> = {}

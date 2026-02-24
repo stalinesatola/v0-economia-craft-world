@@ -16,11 +16,14 @@ export function AdBanner({ position, imageUrl, linkUrl, altText, adScript, enabl
 
   useEffect(() => {
     if (adScript && scriptRef.current) {
-      // Inject ad script safely
-      const container = scriptRef.current
-      container.innerHTML = ""
-      const fragment = document.createRange().createContextualFragment(adScript)
-      container.appendChild(fragment)
+      try {
+        const container = scriptRef.current
+        container.innerHTML = ""
+        const fragment = document.createRange().createContextualFragment(adScript)
+        container.appendChild(fragment)
+      } catch {
+        // Invalid ad script - fail silently
+      }
     }
   }, [adScript])
 

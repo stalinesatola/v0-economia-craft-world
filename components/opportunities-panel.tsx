@@ -75,7 +75,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
     opps.sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation))
 
     return opps
-  }, [prices])
+  }, [prices, dynCosts, dynThresholds])
 
   const buyOpps = opportunities.filter((o) => o.type === "buy")
   const sellOpps = opportunities.filter((o) => o.type === "sell")
