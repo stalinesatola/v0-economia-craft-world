@@ -2,6 +2,7 @@
 
 import { RefreshCw, Activity, Zap, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { RonPrice } from "@/components/ron-price"
 import Link from "next/link"
 
 interface DashboardHeaderProps {
@@ -39,7 +40,9 @@ export function DashboardHeader({ timestamp, count, isValidating, onRefresh }: D
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <RonPrice />
+
         <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2">
           <Activity className={`h-3.5 w-3.5 ${isValidating ? "text-primary animate-pulse" : "text-primary"}`} />
           <span className="text-xs font-medium text-secondary-foreground font-mono">

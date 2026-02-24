@@ -12,11 +12,11 @@ export default function AdminPage() {
 
   const checkAuth = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/config")
+      // Lightweight auth check - does not load config
+      const res = await fetch("/api/admin/check")
       if (res.ok) {
-        const data = await res.json()
         setIsAuthenticated(true)
-        setInitialConfig(data)
+        // Config will be loaded by AdminDashboard
       }
     } catch {
       // Not authenticated

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   getAllResources,
+  POOLS,
   PRODUCTION_COSTS,
   BUY_THRESHOLD,
   SELL_THRESHOLD,
@@ -23,6 +24,7 @@ import {
   type ResourceCategory,
   type Priority,
 } from "@/lib/craft-data"
+import { AssetChart } from "@/components/asset-chart"
 
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
@@ -60,6 +62,14 @@ const priorityLabels: Record<Priority, string> = {
 }
 
 export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts }: PriceTableProps) {
+  const [selectedAsset, setSelectedAsset] = useState<{
+    symbol: string
+    poolAddress: string
+    currentPrice: number
+    cost: number
+    deviation: number
+    signal: "buy" | "sell" | "neutral"
+  } | null>(null)
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "all">("all")
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all")
@@ -251,7 +261,17 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
                 return (
                   <tr
                     key={res.symbol}
-                    className="border-b border-border/50 transition-colors hover:bg-secondary/30"
+                    className="border-b border-border/50 transition-colors hover:bg-secondary/30 cursor-pointer"
+                    onClick={() =>
+                      setSelectedAsset({
+                        symbol: res.symbol,
+                        poolAddress: POOLS[res.symbol] ?? "",
+                        currentPrice: res.marketPrice,
+                        cost: res.cost,
+                        deviation: res.deviation,
+                        signal: res.signal,
+                      })
+                    }
                   >
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
@@ -331,6 +351,19 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
           </table>
         </div>
       </CardContent>
+
+      {/* Asset Chart Modal */}
+      {selectedAsset && (
+        <AssetChart
+          symbol={selectedAsset.symbol}
+          poolAddress={selectedAsset.poolAddress}
+          currentPrice={selectedAsset.currentPrice}
+          cost={selectedAsset.cost}
+          deviation={selectedAsset.deviation}
+          signal={selectedAsset.signal}
+          onClose={() => setSelectedAsset(null)}
+        />
+      )}
     </Card>
   )
 }
