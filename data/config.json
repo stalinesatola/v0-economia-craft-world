@@ -174,5 +174,53 @@
     "enabled": false,
     "intervalMinutes": 5
   },
-  "network": "ronin"
+  "network": "ronin",
+  "users": [],
+  "banners": [
+    {
+      "id": "top",
+      "position": "top",
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "altText": "Banner topo",
+      "adScript": ""
+    },
+    {
+      "id": "sidebar",
+      "position": "sidebar",
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "altText": "Banner lateral",
+      "adScript": ""
+    },
+    {
+      "id": "between",
+      "position": "between",
+      "enabled": false,
+      "imageUrl": "",
+      "linkUrl": "",
+      "altText": "Banner entre seccoes",
+      "adScript": ""
+    }
+  ],
+  "sharing": {
+    "twitter": {
+      "enabled": false,
+      "apiKey": "",
+      "apiSecret": "",
+      "accessToken": "",
+      "accessSecret": "",
+      "minDeviation": 30,
+      "hashtags": "CraftWorld,Ronin,GameFi,Play2Earn",
+      "template": "SIGNAL_TYPE SIGNAL_SYMBOL | Desvio: DEVIATION% | Preco: PRICE | #CraftWorld"
+    },
+    "telegramChannels": {
+      "enabled": false,
+      "chatIds": [],
+      "minDeviation": 25,
+      "template": "SIGNAL_ICON SIGNAL_TYPE SIGNAL_SYMBOL\nPreco: PRICE | Custo: COST\nDesvio: DEVIATION%"
+    }
+  }
 }

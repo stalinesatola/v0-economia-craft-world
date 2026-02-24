@@ -16,8 +16,14 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ section: string }> }
 ) {
-  if (!validateAdminRequest(request)) {
+  const auth = validateAdminRequest(request)
+  if (!auth.valid) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
+  }
+
+  // Only admins can modify config
+  if (auth.role !== "admin") {
+    return NextResponse.json({ error: "Sem permissoes de admin" }, { status: 403 })
   }
 
   const { section } = await params

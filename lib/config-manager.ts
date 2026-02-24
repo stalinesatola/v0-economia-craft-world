@@ -29,6 +29,45 @@ export interface AppConfig {
     intervalMinutes: number
   }
   network: string
+  users: UserEntry[]
+  banners: BannerConfig[]
+  sharing: SharingConfig
+}
+
+export interface UserEntry {
+  username: string
+  passwordHash: string
+  role: "admin" | "viewer"
+  createdAt: string
+}
+
+export interface BannerConfig {
+  id: string
+  position: "top" | "sidebar" | "between"
+  enabled: boolean
+  imageUrl: string
+  linkUrl: string
+  altText: string
+  adScript: string
+}
+
+export interface SharingConfig {
+  twitter: {
+    enabled: boolean
+    apiKey: string
+    apiSecret: string
+    accessToken: string
+    accessSecret: string
+    minDeviation: number
+    hashtags: string
+    template: string
+  }
+  telegramChannels: {
+    enabled: boolean
+    chatIds: string[]
+    minDeviation: number
+    template: string
+  }
 }
 
 export interface ChainNode {

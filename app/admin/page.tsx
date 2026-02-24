@@ -29,12 +29,15 @@ export default function AdminPage() {
     checkAuth()
   }, [checkAuth])
 
-  const handleLogin = async (password: string): Promise<boolean> => {
+  const handleLogin = async (password: string, username?: string): Promise<boolean> => {
     try {
+      const body: Record<string, string> = { password }
+      if (username) body.username = username
+
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(body),
       })
       if (res.ok) {
         const data = await res.json()

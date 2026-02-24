@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic"
 
 const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
 const API_HEADERS = { Accept: "application/json;version=20230203" }
-const FETCH_TIMEOUT = 8000
+const FETCH_TIMEOUT = 15000
 
 type PriceResult = {
   price_usd: number
@@ -29,18 +29,23 @@ async function fetchWithTimeout(url: string, timeout: number): Promise<Response>
   }
 }
 
-async function fetchBatch(addresses: string[]): Promise<Record<string, PriceResult>> {
+async function fetchBatch(addresses: string[], network: string): Promise<Record<string, PriceResult>> {
   const results: Record<string, PriceResult> = {}
   const joined = addresses.join(",")
-  const url = `${GECKO_BASE_URL}/networks/${NETWORK}/pools/multi/${joined}`
+  const url = `${GECKO_BASE_URL}/networks/${network}/pools/multi/${joined}`
+  console.log("[v0] fetchBatch URL:", url.substring(0, 120) + "...")
+  console.log("[v0] fetchBatch addresses count:", addresses.length)
 
   try {
     const res = await fetchWithTimeout(url, FETCH_TIMEOUT)
+    console.log("[v0] fetchBatch response status:", res.status)
     if (!res.ok) {
-      console.error(`[v0] GeckoTerminal batch error: ${res.status}`)
+      const errorText = await res.text().catch(() => "")
+      console.error(`[v0] GeckoTerminal batch error: ${res.status}`, errorText.substring(0, 200))
       return results
     }
     const data = await res.json()
+    console.log("[v0] fetchBatch data.data length:", data.data?.length ?? 0)
     for (const item of data.data ?? []) {
       const poolAddr = item.attributes?.address?.toLowerCase()
       if (!poolAddr) continue
@@ -69,36 +74,47 @@ export async function GET() {
   let productionCosts: Record<string, { cost_usd: number }> = {}
   let thresholds = { buy: 15, sell: 20 }
   let alertsConfig: Record<string, { enabled: boolean; priority: string; category: string }> = {}
+  let banners: Array<{ id: string; position: string; enabled: boolean; imageUrl: string; linkUrl: string; altText: string; adScript: string }> = []
 
   try {
     const config = getConfig()
-    pools = config.pools
-    network = config.network
-    productionCosts = config.productionCosts
-    thresholds = config.thresholds
-    alertsConfig = config.alertsConfig
-  } catch {
-    // Use defaults
+    pools = config.pools ?? pools
+    network = config.network ?? network
+    productionCosts = config.productionCosts ?? productionCosts
+    thresholds = config.thresholds ?? thresholds
+    alertsConfig = config.alertsConfig ?? alertsConfig
+    banners = (config.banners ?? []).filter((b) => b.enabled)
+    console.log("[v0] Config loaded, pools:", Object.keys(pools).length, "network:", network)
+  } catch (err) {
+    console.log("[v0] Config error, using defaults:", err instanceof Error ? err.message : "unknown")
   }
 
   const poolEntries = Object.entries(pools)
   const addresses = poolEntries.map(([, addr]) => addr).filter((a) => a.startsWith("0x"))
+  console.log("[v0] Pool entries:", poolEntries.length, "addresses:", addresses.length)
+  console.log("[v0] First 3 addresses:", addresses.slice(0, 3))
+  console.log("[v0] Network for API:", network)
 
-  // Split into batches of 30 (max allowed by GeckoTerminal) and fetch in parallel
-  const batchSize = 30
+  // Split into batches of 15 for reliability (GeckoTerminal max is 30)
+  const batchSize = 15
   const batches: string[][] = []
   for (let i = 0; i < addresses.length; i += batchSize) {
     batches.push(addresses.slice(i, i + batchSize))
   }
 
+  console.log("[v0] Fetching", batches.length, "batch(es) with sizes:", batches.map(b => b.length))
+
   // Fetch all batches in parallel
-  const batchResults = await Promise.all(batches.map(fetchBatch))
+  const batchResults = await Promise.all(batches.map((batch) => fetchBatch(batch, network)))
 
   // Merge all results
   const allPrices: Record<string, PriceResult> = {}
   for (const result of batchResults) {
     Object.assign(allPrices, result)
   }
+
+  console.log("[v0] allPrices count:", Object.keys(allPrices).length)
+  console.log("[v0] allPrices sample keys:", Object.keys(allPrices).slice(0, 3))
 
   // Map pool addresses back to symbols
   const symbolPrices: Record<string, PriceResult> = {}
@@ -109,6 +125,9 @@ export async function GET() {
     }
   }
 
+  console.log("[v0] Final symbolPrices count:", Object.keys(symbolPrices).length)
+  console.log("[v0] Final symbols:", Object.keys(symbolPrices).slice(0, 5))
+
   return NextResponse.json({
     prices: symbolPrices,
     timestamp: new Date().toISOString(),
@@ -116,5 +135,6 @@ export async function GET() {
     productionCosts,
     thresholds,
     alertsConfig,
+    banners,
   })
 }

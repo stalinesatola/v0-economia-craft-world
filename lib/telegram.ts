@@ -21,13 +21,13 @@ interface Opportunity {
 }
 
 // Send a message via Telegram Bot API
-export async function sendTelegramMessage(text: string): Promise<{ success: boolean; message: string }> {
+export async function sendTelegramMessage(text: string, overrideChatId?: string): Promise<{ success: boolean; message: string }> {
   const config = getConfig()
   const token = config.telegram.botToken || process.env.TELEGRAM_BOT_TOKEN
-  const chatId = config.telegram.chatId || process.env.TELEGRAM_CHAT_ID
+  const chatId = overrideChatId || config.telegram.chatId || process.env.TELEGRAM_CHAT_ID
 
   if (!token || !chatId) {
-    return { success: false, message: "Bot Token ou Chat ID nao configurados" }
+    return { success: false, message: "Bot Token ou Chat ID nao configurados. Configure no painel Admin > Bot Telegram ou defina as variaveis TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID." }
   }
 
   try {
@@ -204,7 +204,7 @@ export async function runMonitorCycle(): Promise<{
   // Sort by absolute deviation (strongest signals first)
   opportunities.sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation))
 
-  // Send Telegram message if enabled and there are opportunities
+  // Send main Telegram message if enabled and there are opportunities
   if (config.telegram.enabled && opportunities.length > 0) {
     const msg = buildAlertMessage(opportunities)
     const result = await sendTelegramMessage(msg)
@@ -215,6 +215,61 @@ export async function runMonitorCycle(): Promise<{
         alerts: alertMessages,
         opportunities,
       }
+    }
+  }
+
+  // Send to additional Telegram channels if enabled
+  const sharing = config.sharing
+  if (sharing?.telegramChannels?.enabled && opportunities.length > 0) {
+    const channelChatIds = sharing.telegramChannels.chatIds ?? []
+    const channelMinDev = sharing.telegramChannels.minDeviation ?? 25
+    const channelTemplate = sharing.telegramChannels.template ?? ""
+    const strongOpps = opportunities.filter((o) => Math.abs(o.deviation) >= channelMinDev)
+
+    if (strongOpps.length > 0 && channelChatIds.length > 0) {
+      const msg = channelTemplate
+        ? strongOpps.map((o) =>
+            channelTemplate
+              .replace(/SIGNAL_ICON/g, o.signal === "buy" ? "v" : "^")
+              .replace(/SIGNAL_TYPE/g, o.signal === "buy" ? "COMPRA" : "VENDA")
+              .replace(/SIGNAL_SYMBOL/g, o.symbol)
+              .replace(/DEVIATION/g, o.deviation.toFixed(1))
+              .replace(/PRICE/g, `$${o.marketPrice.toFixed(8)}`)
+              .replace(/COST/g, `$${o.costPrice.toFixed(8)}`)
+          ).join("\n\n")
+        : buildAlertMessage(strongOpps)
+
+      for (const chatId of channelChatIds) {
+        await sendTelegramMessage(msg, chatId)
+      }
+    }
+  }
+
+  // Post to Twitter/X.com if enabled
+  if (sharing?.twitter?.enabled && opportunities.length > 0) {
+    try {
+      const { postTweet } = await import("./twitter")
+      const twitterMinDev = sharing.twitter.minDeviation ?? 30
+      const twitterTemplate = sharing.twitter.template ?? ""
+      const strongOpps = opportunities.filter((o) => Math.abs(o.deviation) >= twitterMinDev)
+
+      if (strongOpps.length > 0) {
+        const hashtags = (sharing.twitter.hashtags ?? "CraftWorld").split(",").map((h) => `#${h.trim()}`).join(" ")
+        const tweetText = twitterTemplate
+          ? strongOpps.slice(0, 3).map((o) =>
+              twitterTemplate
+                .replace(/SIGNAL_TYPE/g, o.signal === "buy" ? "COMPRA" : "VENDA")
+                .replace(/SIGNAL_SYMBOL/g, o.symbol)
+                .replace(/DEVIATION/g, o.deviation.toFixed(1))
+                .replace(/PRICE/g, `$${o.marketPrice.toFixed(8)}`)
+                .replace(/COST/g, `$${o.costPrice.toFixed(8)}`)
+            ).join("\n") + `\n${hashtags}`
+          : `Craft World - ${strongOpps.length} alertas: ${strongOpps.slice(0, 3).map((o) => `${o.signal === "buy" ? "COMPRA" : "VENDA"} ${o.symbol} (${o.deviation.toFixed(1)}%)`).join(", ")} ${hashtags}`
+
+        await postTweet(tweetText.substring(0, 280), sharing.twitter)
+      }
+    } catch {
+      // Twitter posting failed silently - don't break the cycle
     }
   }
 

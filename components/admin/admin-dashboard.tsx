@@ -7,6 +7,8 @@ import { PoolsTab } from "@/components/admin/tabs/pools-tab"
 import { ChainsTab } from "@/components/admin/tabs/chains-tab"
 import { TelegramTab } from "@/components/admin/tabs/telegram-tab"
 import { SettingsTab } from "@/components/admin/tabs/settings-tab"
+import { BannersTab } from "@/components/admin/tabs/banners-tab"
+import { SharingTab } from "@/components/admin/tabs/sharing-tab"
 import { LogOut, ArrowLeft, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import type { AppConfig } from "@/lib/config-manager"
@@ -116,11 +118,13 @@ export function AdminDashboard({ onLogout, initialConfig }: AdminDashboardProps)
 
           {/* Tabs */}
           <Tabs defaultValue="pools" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-secondary">
-              <TabsTrigger value="pools">Pools & Recursos</TabsTrigger>
-              <TabsTrigger value="chains">Cadeia de Producao</TabsTrigger>
-              <TabsTrigger value="telegram">Bot Telegram</TabsTrigger>
-              <TabsTrigger value="settings">Configuracoes</TabsTrigger>
+            <TabsList className="flex w-full overflow-x-auto bg-secondary">
+              <TabsTrigger value="pools" className="text-xs">Pools</TabsTrigger>
+              <TabsTrigger value="chains" className="text-xs">Producao</TabsTrigger>
+              <TabsTrigger value="telegram" className="text-xs">Telegram</TabsTrigger>
+              <TabsTrigger value="sharing" className="text-xs">Partilha</TabsTrigger>
+              <TabsTrigger value="banners" className="text-xs">Banners</TabsTrigger>
+              <TabsTrigger value="settings" className="text-xs">Config</TabsTrigger>
             </TabsList>
 
             <TabsContent value="pools" className="mt-4">
@@ -133,6 +137,14 @@ export function AdminDashboard({ onLogout, initialConfig }: AdminDashboardProps)
 
             <TabsContent value="telegram" className="mt-4">
               <TelegramTab config={config} onUpdate={updateSection} saving={saving} />
+            </TabsContent>
+
+            <TabsContent value="sharing" className="mt-4">
+              <SharingTab config={config} onUpdate={updateSection} saving={saving} />
+            </TabsContent>
+
+            <TabsContent value="banners" className="mt-4">
+              <BannersTab config={config} onUpdate={updateSection} saving={saving} />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-4">
