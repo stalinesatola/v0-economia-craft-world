@@ -14,6 +14,7 @@ import {
 
 interface OpportunitiesPanelProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
+  isLoading?: boolean
 }
 
 interface Opportunity {
@@ -26,7 +27,7 @@ interface Opportunity {
   volume: number
 }
 
-export function OpportunitiesPanel({ prices }: OpportunitiesPanelProps) {
+export function OpportunitiesPanel({ prices, isLoading }: OpportunitiesPanelProps) {
   const opportunities = useMemo(() => {
     const resources = getAllResources()
     const opps: Opportunity[] = []
@@ -90,7 +91,14 @@ export function OpportunitiesPanel({ prices }: OpportunitiesPanelProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {opportunities.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col gap-2 py-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-secondary" />
+            ))}
+            <p className="text-xs text-center text-muted-foreground pt-2">A carregar precos...</p>
+          </div>
+        ) : opportunities.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
               <Zap className="h-5 w-5 text-muted-foreground" />

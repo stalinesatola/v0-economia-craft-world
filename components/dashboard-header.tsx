@@ -40,9 +40,9 @@ export function DashboardHeader({ timestamp, count, isValidating, onRefresh }: D
 
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2">
-          <Activity className="h-3.5 w-3.5 text-primary" />
+          <Activity className={`h-3.5 w-3.5 ${isValidating ? "text-primary animate-pulse" : "text-primary"}`} />
           <span className="text-xs font-medium text-secondary-foreground font-mono">
-            {count} pools
+            {isValidating && count === 0 ? "A carregar..." : `${count} pools`}
           </span>
         </div>
 

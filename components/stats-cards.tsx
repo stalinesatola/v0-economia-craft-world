@@ -1,6 +1,6 @@
 "use client"
 
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, AlertTriangle, ShieldCheck } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   getAllResources,
@@ -12,9 +12,10 @@ import {
 
 interface StatsCardsProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
+  isLoading?: boolean
 }
 
-export function StatsCards({ prices }: StatsCardsProps) {
+export function StatsCards({ prices, isLoading }: StatsCardsProps) {
   const resources = getAllResources()
   const priceKeys = Object.keys(prices)
 
@@ -85,7 +86,13 @@ export function StatsCards({ prices }: StatsCardsProps) {
             </div>
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className="text-lg font-bold text-card-foreground font-mono">{stat.value}</p>
+              <p className="text-lg font-bold text-card-foreground font-mono">
+                {isLoading ? (
+                  <span className="inline-block h-5 w-12 animate-pulse rounded bg-secondary" />
+                ) : (
+                  stat.value
+                )}
+              </p>
               <p className="text-xs text-muted-foreground truncate">{stat.description}</p>
             </div>
           </CardContent>

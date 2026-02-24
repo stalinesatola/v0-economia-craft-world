@@ -6,7 +6,6 @@ import {
   ArrowUp,
   ArrowDown,
   Search,
-  Filter,
   Pickaxe,
   Factory,
   Coins,
@@ -27,6 +26,7 @@ import {
 
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
+  isLoading?: boolean
 }
 
 type SortField = "symbol" | "market_price" | "cost" | "deviation" | "volume" | "priority"
@@ -56,7 +56,7 @@ const priorityLabels: Record<Priority, string> = {
   low: "Baixa",
 }
 
-export function PriceTable({ prices }: PriceTableProps) {
+export function PriceTable({ prices, isLoading }: PriceTableProps) {
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "all">("all")
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all")
@@ -260,7 +260,9 @@ export function PriceTable({ prices }: PriceTableProps) {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono text-card-foreground">
-                      {res.hasPrice ? formatPrice(res.marketPrice) : (
+                      {res.hasPrice ? formatPrice(res.marketPrice) : isLoading ? (
+                        <span className="inline-block h-4 w-16 animate-pulse rounded bg-secondary ml-auto" />
+                      ) : (
                         <span className="text-muted-foreground">--</span>
                       )}
                     </td>
@@ -281,12 +283,16 @@ export function PriceTable({ prices }: PriceTableProps) {
                           {res.deviation > 0 ? "+" : ""}
                           {res.deviation.toFixed(1)}%
                         </span>
+                      ) : isLoading ? (
+                        <span className="inline-block h-4 w-14 animate-pulse rounded bg-secondary ml-auto" />
                       ) : (
                         <span className="text-muted-foreground">--</span>
                       )}
                     </td>
                     <td className="hidden px-3 py-2.5 text-right font-mono text-muted-foreground md:table-cell">
-                      {res.hasPrice ? formatPrice(res.volume) : "--"}
+                      {res.hasPrice ? formatPrice(res.volume) : isLoading ? (
+                        <span className="inline-block h-4 w-14 animate-pulse rounded bg-secondary ml-auto" />
+                      ) : "--"}
                     </td>
                     <td className="hidden px-3 py-2.5 text-center lg:table-cell">
                       <Badge variant="secondary" className={`text-xs ${priorityColors[res.priority]}`}>

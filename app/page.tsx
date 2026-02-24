@@ -6,24 +6,9 @@ import { StatsCards } from "@/components/stats-cards"
 import { PriceTable } from "@/components/price-table"
 import { ProductionChain } from "@/components/production-chain"
 import { OpportunitiesPanel } from "@/components/opportunities-panel"
-import { Loader2 } from "lucide-react"
 
 export default function Home() {
   const { prices, timestamp, count, isLoading, isValidating, refresh } = usePrices()
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <div className="text-center">
-            <p className="text-sm font-medium text-foreground">A carregar precos...</p>
-            <p className="text-xs text-muted-foreground">A consultar GeckoTerminal API</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -32,18 +17,18 @@ export default function Home() {
           <DashboardHeader
             timestamp={timestamp}
             count={count}
-            isValidating={isValidating}
+            isValidating={isValidating || isLoading}
             onRefresh={() => refresh()}
           />
 
-          <StatsCards prices={prices} />
+          <StatsCards prices={prices} isLoading={isLoading} />
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <PriceTable prices={prices} />
+              <PriceTable prices={prices} isLoading={isLoading} />
             </div>
             <div className="flex flex-col gap-6">
-              <OpportunitiesPanel prices={prices} />
+              <OpportunitiesPanel prices={prices} isLoading={isLoading} />
               <ProductionChain prices={prices} />
             </div>
           </div>
