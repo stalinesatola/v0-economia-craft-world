@@ -9,6 +9,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password obrigatoria" }, { status: 400 })
     }
 
+    const adminPwd = process.env.ADMIN_PASSWORD
+    console.log("[v0] ADMIN_PASSWORD configured:", !!adminPwd)
+    console.log("[v0] ADMIN_PASSWORD length:", adminPwd?.length ?? 0)
+    console.log("[v0] Input password length:", password.length)
+    console.log("[v0] Passwords match:", password === adminPwd)
+
     if (!validatePassword(password)) {
       return NextResponse.json({ error: "Password incorreta" }, { status: 401 })
     }
