@@ -12,6 +12,9 @@ interface PricesResponse {
   prices: Record<string, PriceData>
   timestamp: string
   count: number
+  productionCosts?: Record<string, { cost_usd: number; input?: string; ratio?: number; levels: number; source?: string }>
+  thresholds?: { buy: number; sell: number }
+  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -31,6 +34,9 @@ export function usePrices() {
     prices: data?.prices ?? {},
     timestamp: data?.timestamp,
     count: data?.count ?? 0,
+    productionCosts: data?.productionCosts,
+    thresholds: data?.thresholds,
+    alertsConfig: data?.alertsConfig,
     isLoading,
     isValidating,
     error,

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
-import { POOLS, NETWORK, GECKO_BASE_URL } from "@/lib/craft-data"
+import { getConfig } from "@/lib/config-manager"
+import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "@/lib/craft-data"
 
 export const dynamic = "force-dynamic"
 
+const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
 const API_HEADERS = { Accept: "application/json;version=20230203" }
 const FETCH_TIMEOUT = 8000
 
@@ -61,7 +63,25 @@ async function fetchBatch(addresses: string[]): Promise<Record<string, PriceResu
 }
 
 export async function GET() {
-  const poolEntries = Object.entries(POOLS)
+  // Try to read from config.json, fallback to hardcoded defaults
+  let pools: Record<string, string> = DEFAULT_POOLS
+  let network: string = DEFAULT_NETWORK
+  let productionCosts: Record<string, { cost_usd: number }> = {}
+  let thresholds = { buy: 15, sell: 20 }
+  let alertsConfig: Record<string, { enabled: boolean; priority: string; category: string }> = {}
+
+  try {
+    const config = getConfig()
+    pools = config.pools
+    network = config.network
+    productionCosts = config.productionCosts
+    thresholds = config.thresholds
+    alertsConfig = config.alertsConfig
+  } catch {
+    // Use defaults
+  }
+
+  const poolEntries = Object.entries(pools)
   const addresses = poolEntries.map(([, addr]) => addr).filter((a) => a.startsWith("0x"))
 
   // Split into batches of 30 (max allowed by GeckoTerminal) and fetch in parallel
@@ -93,5 +113,8 @@ export async function GET() {
     prices: symbolPrices,
     timestamp: new Date().toISOString(),
     count: Object.keys(symbolPrices).length,
+    productionCosts,
+    thresholds,
+    alertsConfig,
   })
 }

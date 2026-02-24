@@ -27,6 +27,9 @@ import {
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
   isLoading?: boolean
+  productionCosts?: Record<string, { cost_usd: number }>
+  thresholds?: { buy: number; sell: number }
+  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
 }
 
 type SortField = "symbol" | "market_price" | "cost" | "deviation" | "volume" | "priority"
@@ -56,7 +59,7 @@ const priorityLabels: Record<Priority, string> = {
   low: "Baixa",
 }
 
-export function PriceTable({ prices, isLoading }: PriceTableProps) {
+export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts }: PriceTableProps) {
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "all">("all")
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all")
@@ -69,14 +72,16 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
     return resources.map((res) => {
       const priceData = prices[res.symbol]
       const marketPrice = priceData?.price_usd ?? 0
-      const cost = PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
+      const cost = dynCosts?.[res.symbol]?.cost_usd ?? PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
       const deviation = cost > 0 && marketPrice > 0 ? ((marketPrice - cost) / cost) * 100 : 0
       const volume = priceData?.volume_usd_24h ?? 0
       const change24h = priceData?.price_change_24h ?? 0
+      const buyTh = dynThresholds?.buy ?? BUY_THRESHOLD
+      const sellTh = dynThresholds?.sell ?? SELL_THRESHOLD
 
       let signal: "buy" | "sell" | "neutral" = "neutral"
-      if (deviation < -BUY_THRESHOLD) signal = "buy"
-      else if (deviation > SELL_THRESHOLD) signal = "sell"
+      if (deviation < -buyTh) signal = "buy"
+      else if (deviation > sellTh) signal = "sell"
 
       return {
         ...res,

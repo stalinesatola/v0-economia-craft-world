@@ -15,6 +15,9 @@ import {
 interface OpportunitiesPanelProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
   isLoading?: boolean
+  productionCosts?: Record<string, { cost_usd: number }>
+  thresholds?: { buy: number; sell: number }
+  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
 }
 
 interface Opportunity {
@@ -27,23 +30,25 @@ interface Opportunity {
   volume: number
 }
 
-export function OpportunitiesPanel({ prices, isLoading }: OpportunitiesPanelProps) {
+export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds }: OpportunitiesPanelProps) {
   const opportunities = useMemo(() => {
     const resources = getAllResources()
     const opps: Opportunity[] = []
+    const buyTh = dynThresholds?.buy ?? BUY_THRESHOLD
+    const sellTh = dynThresholds?.sell ?? SELL_THRESHOLD
 
     for (const res of resources) {
       const priceData = prices[res.symbol]
       if (!priceData) continue
 
-      const cost = PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
+      const cost = dynCosts?.[res.symbol]?.cost_usd ?? PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
       const marketPrice = priceData.price_usd
 
       if (cost <= 0 || marketPrice <= 0) continue
 
       const deviation = ((marketPrice - cost) / cost) * 100
 
-      if (deviation < -BUY_THRESHOLD) {
+      if (deviation < -buyTh) {
         opps.push({
           symbol: res.symbol,
           marketPrice,
@@ -53,7 +58,7 @@ export function OpportunitiesPanel({ prices, isLoading }: OpportunitiesPanelProp
           priority: res.priority,
           volume: priceData.volume_usd_24h,
         })
-      } else if (deviation > SELL_THRESHOLD) {
+      } else if (deviation > sellTh) {
         opps.push({
           symbol: res.symbol,
           marketPrice,

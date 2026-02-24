@@ -1,7 +1,8 @@
 "use client"
 
-import { RefreshCw, Activity, Zap } from "lucide-react"
+import { RefreshCw, Activity, Zap, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 interface DashboardHeaderProps {
   timestamp?: string
@@ -61,6 +62,13 @@ export function DashboardHeader({ timestamp, count, isValidating, onRefresh }: D
           <RefreshCw className={`h-3.5 w-3.5 ${isValidating ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline">Atualizar</span>
         </Button>
+
+        <Link href="/admin">
+          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+            <Settings className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Admin</span>
+          </Button>
+        </Link>
       </div>
     </header>
   )

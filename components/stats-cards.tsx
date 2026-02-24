@@ -13,9 +13,12 @@ import {
 interface StatsCardsProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
   isLoading?: boolean
+  productionCosts?: Record<string, { cost_usd: number }>
+  thresholds?: { buy: number; sell: number }
+  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
 }
 
-export function StatsCards({ prices, isLoading }: StatsCardsProps) {
+export function StatsCards({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds }: StatsCardsProps) {
   const resources = getAllResources()
   const priceKeys = Object.keys(prices)
 
@@ -28,13 +31,15 @@ export function StatsCards({ prices, isLoading }: StatsCardsProps) {
     const priceData = prices[res.symbol]
     if (!priceData) continue
 
-    const cost = PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
+    const cost = dynCosts?.[res.symbol]?.cost_usd ?? PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
     const marketPrice = priceData.price_usd
+    const buyTh = dynThresholds?.buy ?? BUY_THRESHOLD
+    const sellTh = dynThresholds?.sell ?? SELL_THRESHOLD
 
     if (cost > 0 && marketPrice > 0) {
       const deviation = ((marketPrice - cost) / cost) * 100
-      if (deviation < -BUY_THRESHOLD) buyOpportunities++
-      if (deviation > SELL_THRESHOLD) sellOpportunities++
+      if (deviation < -buyTh) buyOpportunities++
+      if (deviation > sellTh) sellOpportunities++
     }
 
     totalVolume += priceData.volume_usd_24h
@@ -54,7 +59,7 @@ export function StatsCards({ prices, isLoading }: StatsCardsProps) {
       label: "Oportunidades Compra",
       value: buyOpportunities.toString(),
       icon: TrendingDown,
-      description: `abaixo de -${BUY_THRESHOLD}%`,
+      description: `abaixo de -${dynThresholds?.buy ?? BUY_THRESHOLD}%`,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
@@ -62,7 +67,7 @@ export function StatsCards({ prices, isLoading }: StatsCardsProps) {
       label: "Oportunidades Venda",
       value: sellOpportunities.toString(),
       icon: TrendingUp,
-      description: `acima de +${SELL_THRESHOLD}%`,
+      description: `acima de +${dynThresholds?.sell ?? SELL_THRESHOLD}%`,
       color: "text-destructive",
       bgColor: "bg-destructive/10",
     },

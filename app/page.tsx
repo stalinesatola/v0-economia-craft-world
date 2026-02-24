@@ -8,7 +8,7 @@ import { ProductionChain } from "@/components/production-chain"
 import { OpportunitiesPanel } from "@/components/opportunities-panel"
 
 export default function Home() {
-  const { prices, timestamp, count, isLoading, isValidating, refresh } = usePrices()
+  const { prices, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig } = usePrices()
 
   return (
     <main className="min-h-screen bg-background">
@@ -21,15 +21,15 @@ export default function Home() {
             onRefresh={() => refresh()}
           />
 
-          <StatsCards prices={prices} isLoading={isLoading} />
+          <StatsCards prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <PriceTable prices={prices} isLoading={isLoading} />
+              <PriceTable prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
             </div>
             <div className="flex flex-col gap-6">
-              <OpportunitiesPanel prices={prices} isLoading={isLoading} />
-              <ProductionChain prices={prices} />
+              <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+              <ProductionChain prices={prices} productionCosts={productionCosts} />
             </div>
           </div>
 

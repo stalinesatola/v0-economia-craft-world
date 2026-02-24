@@ -14,6 +14,7 @@ import {
 
 interface ProductionChainProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
+  productionCosts?: Record<string, { cost_usd: number; input?: string; ratio?: number }>
 }
 
 function ChainNodeItem({
@@ -121,7 +122,9 @@ function ChainNodeItem({
   )
 }
 
-export function ProductionChain({ prices }: ProductionChainProps) {
+export function ProductionChain({ prices, productionCosts: dynCosts }: ProductionChainProps) {
+  // Use dynamic costs if available for the legend
+  void dynCosts
   return (
     <Card className="bg-card">
       <CardHeader className="pb-3">
