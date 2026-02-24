@@ -13,11 +13,12 @@ import type { AppConfig } from "@/lib/config-manager"
 
 interface AdminDashboardProps {
   onLogout: () => void
+  initialConfig?: AppConfig | null
 }
 
-export function AdminDashboard({ onLogout }: AdminDashboardProps) {
-  const [config, setConfig] = useState<AppConfig | null>(null)
-  const [loading, setLoading] = useState(true)
+export function AdminDashboard({ onLogout, initialConfig }: AdminDashboardProps) {
+  const [config, setConfig] = useState<AppConfig | null>(initialConfig ?? null)
+  const [loading, setLoading] = useState(!initialConfig)
   const [saving, setSaving] = useState(false)
 
   const fetchConfig = useCallback(async () => {
@@ -35,8 +36,11 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   }, [])
 
   useEffect(() => {
-    fetchConfig()
-  }, [fetchConfig])
+    // Skip initial fetch if we already have config from login
+    if (!initialConfig) {
+      fetchConfig()
+    }
+  }, [fetchConfig, initialConfig])
 
   const updateSection = async (section: string, data: unknown): Promise<boolean> => {
     setSaving(true)
