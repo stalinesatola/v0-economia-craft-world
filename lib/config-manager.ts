@@ -30,8 +30,8 @@ export interface AppConfig {
   }
   network: string
   users: UserEntry[]
-  banners: BannerConfig[]
-  sharing: SharingConfig
+  banners?: BannerConfig[]
+  sharing?: SharingConfig
 }
 
 export interface UserEntry {

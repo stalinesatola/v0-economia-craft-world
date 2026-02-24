@@ -10,6 +10,9 @@ const VALID_SECTIONS = [
   "thresholds",
   "telegram",
   "network",
+  "users",
+  "banners",
+  "sharing",
 ]
 
 export async function PUT(

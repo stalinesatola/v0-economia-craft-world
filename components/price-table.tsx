@@ -104,7 +104,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
         hasPrice: !!priceData,
       }
     })
-  }, [resources, prices])
+  }, [resources, prices, dynCosts, dynThresholds])
 
   const filtered = useMemo(() => {
     let list = enrichedResources

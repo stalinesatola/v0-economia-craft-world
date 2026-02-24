@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { NextRequest } from "next/server"
 import { createHash } from "crypto"
-import { getConfig } from "@/lib/config-manager"
+import { getConfig, updateConfig } from "@/lib/config-manager"
 
 const SESSION_COOKIE = "cw_admin_session"
 const SESSION_MAX_AGE = 60 * 60 * 24 // 24 hours
@@ -137,7 +137,6 @@ export function validateAdminRequest(request: NextRequest): { valid: boolean; us
 // Change password for a config user
 export function changePassword(username: string, newPassword: string): boolean {
   try {
-    const { updateConfig } = require("@/lib/config-manager")
     const config = getConfig()
     const users = config.users || []
     const idx = users.findIndex((u: { username: string }) => u.username === username)
