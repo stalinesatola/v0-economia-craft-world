@@ -13,6 +13,7 @@ const VALID_SECTIONS = [
   "users",
   "banners",
   "sharing",
+  "customization",
 ]
 
 export async function PUT(

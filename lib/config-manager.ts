@@ -32,6 +32,7 @@ export interface AppConfig {
   users: UserEntry[]
   banners?: BannerConfig[]
   sharing?: SharingConfig
+  customization?: CustomizationConfig
 }
 
 export interface UserEntry {
@@ -68,6 +69,16 @@ export interface SharingConfig {
     minDeviation: number
     template: string
   }
+}
+
+export interface CustomizationConfig {
+  headerLogo: string
+  headerText: string
+  footerCredits: string
+  footerLinks: string
+  footerDisclaimer: string
+  loginTitle: string
+  loginCredits: string
 }
 
 export interface ChainNode {

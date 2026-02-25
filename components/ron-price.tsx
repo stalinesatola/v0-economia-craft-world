@@ -18,7 +18,10 @@ export function RonPrice() {
     dedupingInterval: 30 * 1000,
   })
 
-  if (isLoading || !data) {
+  const price = data?.price_usd
+  const change = data?.price_change_24h
+
+  if (isLoading || typeof price !== "number") {
     return (
       <div className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2">
         <span className="text-xs font-semibold text-secondary-foreground">RON</span>
@@ -27,24 +30,26 @@ export function RonPrice() {
     )
   }
 
-  const isPositive = data.price_change_24h >= 0
+  const isPositive = (change ?? 0) >= 0
 
   return (
     <div className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2">
       <span className="text-xs font-semibold text-secondary-foreground">RON</span>
       <span className="text-xs font-mono font-bold text-card-foreground">
-        ${data.price_usd.toFixed(2)}
+        {'$'}{price.toFixed(2)}
       </span>
-      <div className={`flex items-center gap-0.5 ${isPositive ? "text-primary" : "text-destructive"}`}>
-        {isPositive ? (
-          <TrendingUp className="h-3 w-3" />
-        ) : (
-          <TrendingDown className="h-3 w-3" />
-        )}
-        <span className="text-xs font-mono font-semibold">
-          {isPositive ? "+" : ""}{data.price_change_24h.toFixed(1)}%
-        </span>
-      </div>
+      {typeof change === "number" && (
+        <div className={`flex items-center gap-0.5 ${isPositive ? "text-primary" : "text-destructive"}`}>
+          {isPositive ? (
+            <TrendingUp className="h-3 w-3" />
+          ) : (
+            <TrendingDown className="h-3 w-3" />
+          )}
+          <span className="text-xs font-mono font-semibold">
+            {isPositive ? "+" : ""}{change.toFixed(1)}%
+          </span>
+        </div>
+      )}
     </div>
   )
 }
