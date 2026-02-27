@@ -1,11 +1,10 @@
 "use client"
 
-import { RefreshCw, Activity, Zap, Settings } from "lucide-react"
+import { RefreshCw, Activity, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RonPrice } from "@/components/ron-price"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useI18n } from "@/lib/i18n"
-import Link from "next/link"
 
 interface DashboardHeaderProps {
   timestamp?: string
@@ -79,13 +78,6 @@ export function DashboardHeader({ timestamp, count, isValidating, onRefresh, cus
         </Button>
 
         <LanguageSwitcher />
-
-        <Link href="/admin">
-          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-            <Settings className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{t("dashboard.admin")}</span>
-          </Button>
-        </Link>
       </div>
     </header>
   )
