@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const users = (config.users ?? []).map((u) => ({
     username: u.username,
     role: u.role,
+    permissions: u.permissions,
     createdAt: u.createdAt,
   }))
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { username, password, role = "viewer" } = await request.json()
+    const { username, password, role = "viewer", permissions } = await request.json()
 
     if (!username || !password) {
       return NextResponse.json({ error: "Username e password obrigatorios" }, { status: 400 })
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
       username,
       passwordHash: hashPassword(password),
       role: role === "admin" ? "admin" : "viewer",
+      permissions: role === "viewer" && permissions ? permissions : undefined,
       createdAt: new Date().toISOString(),
     })
 
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      users: users.map((u) => ({ username: u.username, role: u.role, createdAt: u.createdAt })),
+      users: users.map((u) => ({ username: u.username, role: u.role, permissions: u.permissions, createdAt: u.createdAt })),
     })
   } catch {
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
@@ -82,7 +84,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      users: users.map((u) => ({ username: u.username, role: u.role, createdAt: u.createdAt })),
+      users: users.map((u) => ({ username: u.username, role: u.role, permissions: u.permissions, createdAt: u.createdAt })),
     })
   } catch {
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })

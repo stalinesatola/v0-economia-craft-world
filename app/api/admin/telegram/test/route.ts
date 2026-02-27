@@ -3,7 +3,8 @@ import { validateAdminRequest } from "@/lib/auth"
 import { sendTestMessage } from "@/lib/telegram"
 
 export async function POST(request: NextRequest) {
-  if (!validateAdminRequest(request)) {
+  const auth = validateAdminRequest(request)
+  if (!auth.valid) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
 

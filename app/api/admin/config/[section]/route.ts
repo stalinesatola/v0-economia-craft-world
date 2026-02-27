@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { validateAdminRequest } from "@/lib/auth"
-import { updateConfig } from "@/lib/config-manager"
+import { updateConfig, getConfig } from "@/lib/config-manager"
 
 const VALID_SECTIONS = [
   "pools",
@@ -25,12 +25,28 @@ export async function PUT(
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
 
-  // Only admins can modify config
-  if (auth.role !== "admin") {
-    return NextResponse.json({ error: "Sem permissoes de admin" }, { status: 403 })
-  }
-
   const { section } = await params
+
+  // Check permissions - admins always have access, viewers need granular permissions
+  if (auth.role !== "admin") {
+    // Map section names to permission keys
+    const sectionPermMap: Record<string, string> = {
+      pools: "pools", productionCosts: "pools", alertsConfig: "pools",
+      productionChains: "chains", thresholds: "settings", telegram: "telegram",
+      network: "settings", users: "users", banners: "banners",
+      sharing: "sharing", customization: "settings",
+    }
+    const permKey = sectionPermMap[section] ?? section
+    try {
+      const config = getConfig()
+      const user = config.users?.find((u) => u.username === auth.username)
+      if (!user?.permissions || !user.permissions[permKey as keyof typeof user.permissions]) {
+        return NextResponse.json({ error: "Sem permissoes para esta seccao" }, { status: 403 })
+      }
+    } catch {
+      return NextResponse.json({ error: "Sem permissoes" }, { status: 403 })
+    }
+  }
 
   if (!VALID_SECTIONS.includes(section)) {
     return NextResponse.json(

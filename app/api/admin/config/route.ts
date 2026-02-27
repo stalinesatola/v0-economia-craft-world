@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       users: config.users?.map((u) => ({
         username: u.username,
         role: u.role,
+        permissions: u.permissions,
         createdAt: u.createdAt,
       })) ?? [],
     }
