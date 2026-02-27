@@ -9,6 +9,7 @@ import {
   SELL_THRESHOLD,
   formatPrice,
 } from "@/lib/craft-data"
+import { useI18n } from "@/lib/i18n"
 
 interface StatsCardsProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
@@ -19,6 +20,7 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds }: StatsCardsProps) {
+  const { t } = useI18n()
   const resources = getAllResources()
   const priceKeys = Object.keys(prices)
 
@@ -48,34 +50,34 @@ export function StatsCards({ prices, isLoading, productionCosts: dynCosts, thres
 
   const stats = [
     {
-      label: "Pools Ativas",
+      label: t("stats.activePools"),
       value: priceKeys.length.toString(),
       icon: BarChart3,
-      description: `de ${resources.length} total`,
+      description: `${t("stats.ofTotal").replace("{0}", resources.length.toString())}`,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
-      label: "Oportunidades Compra",
+      label: t("stats.buyOpportunities"),
       value: buyOpportunities.toString(),
       icon: TrendingDown,
-      description: `abaixo de -${dynThresholds?.buy ?? BUY_THRESHOLD}%`,
+      description: `${t("stats.belowThreshold")} -${dynThresholds?.buy ?? BUY_THRESHOLD}%`,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
-      label: "Oportunidades Venda",
+      label: t("stats.sellOpportunities"),
       value: sellOpportunities.toString(),
       icon: TrendingUp,
-      description: `acima de +${dynThresholds?.sell ?? SELL_THRESHOLD}%`,
+      description: `${t("stats.aboveThreshold")} +${dynThresholds?.sell ?? SELL_THRESHOLD}%`,
       color: "text-destructive",
       bgColor: "bg-destructive/10",
     },
     {
-      label: "Volume 24h",
+      label: t("stats.volume24h"),
       value: formatPrice(totalVolume),
       icon: DollarSign,
-      description: "total combinado",
+      description: t("stats.totalCombined"),
       color: "text-chart-2",
       bgColor: "bg-chart-2/10",
     },

@@ -214,6 +214,10 @@
       "adScript": ""
     }
   ],
+  "maintenance": {
+    "enabled": false,
+    "message": ""
+  },
   "sharing": {
     "twitter": {
       "enabled": false,

@@ -7,6 +7,7 @@ import { PriceTable } from "@/components/price-table"
 import { ProductionChain } from "@/components/production-chain"
 import { OpportunitiesPanel } from "@/components/opportunities-panel"
 import { AdBanner } from "@/components/ad-banner"
+import { MaintenancePage } from "@/components/maintenance-page"
 import { useI18n } from "@/lib/i18n"
 import { useMemo } from "react"
 import useSWR from "swr"
@@ -16,6 +17,17 @@ const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
 export default function Home() {
   const { prices, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners } = usePrices()
   const { t } = useI18n()
+
+  // Check maintenance mode
+  const { data: maintenance } = useSWR("/api/maintenance", fetcher, {
+    refreshInterval: 30 * 1000,
+    revalidateOnFocus: true,
+  })
+
+  // Show maintenance page if enabled (except for admin which has its own route)
+  if (maintenance?.enabled) {
+    return <MaintenancePage message={maintenance.message} />
+  }
 
   // Fetch public customization
   const { data: customization } = useSWR("/api/customization", fetcher, {

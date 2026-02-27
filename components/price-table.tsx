@@ -25,6 +25,7 @@ import {
   type Priority,
 } from "@/lib/craft-data"
 import { AssetChart } from "@/components/asset-chart"
+import { useI18n } from "@/lib/i18n"
 
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
@@ -43,25 +44,26 @@ const categoryIcons: Record<ResourceCategory, typeof Pickaxe> = {
   token: Coins,
 }
 
-const categoryLabels: Record<ResourceCategory, string> = {
-  mine: "Mina",
-  factory: "Fabrica",
-  token: "Token",
-}
-
 const priorityColors: Record<Priority, string> = {
   high: "bg-destructive/20 text-destructive",
   medium: "bg-warning/20 text-warning",
   low: "bg-muted text-muted-foreground",
 }
 
-const priorityLabels: Record<Priority, string> = {
-  high: "Alta",
-  medium: "Media",
-  low: "Baixa",
-}
-
 export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts }: PriceTableProps) {
+  const { t } = useI18n()
+
+  const categoryLabels: Record<ResourceCategory, string> = {
+    mine: t("table.mine"),
+    factory: t("table.factory"),
+    token: t("table.token"),
+  }
+
+  const priorityLabels: Record<Priority, string> = {
+    high: t("table.high"),
+    medium: t("table.medium"),
+    low: t("table.low"),
+  }
   const [selectedAsset, setSelectedAsset] = useState<{
     symbol: string
     poolAddress: string
@@ -175,13 +177,13 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-semibold text-card-foreground">
-            Tabela de Precos
+            {t("table.title")}
           </CardTitle>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Pesquisar..."
+                placeholder={t("table.search")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-8 w-40 pl-8 text-xs bg-secondary"
@@ -198,7 +200,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
               className="h-7 text-xs px-2.5"
               onClick={() => setCategoryFilter(cat)}
             >
-              {cat === "all" ? "Todos" : categoryLabels[cat]}
+              {cat === "all" ? t("table.all") : categoryLabels[cat]}
             </Button>
           ))}
           <div className="mx-1 h-7 w-px bg-border" />
@@ -210,7 +212,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
               className="h-7 text-xs px-2.5"
               onClick={() => setPriorityFilter(pri)}
             >
-              {pri === "all" ? "Todas" : priorityLabels[pri]}
+              {pri === "all" ? t("table.allPriorities") : priorityLabels[pri]}
             </Button>
           ))}
         </div>
@@ -222,36 +224,36 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-3 py-2.5 text-left">
                   <button onClick={() => toggleSort("symbol")} className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    Recurso <SortIcon field="symbol" />
+                    {t("table.resource")} <SortIcon field="symbol" />
                   </button>
                 </th>
                 <th className="px-3 py-2.5 text-right">
                   <button onClick={() => toggleSort("market_price")} className="ml-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    Preco Mercado <SortIcon field="market_price" />
+                    {t("table.marketPrice")} <SortIcon field="market_price" />
                   </button>
                 </th>
                 <th className="hidden px-3 py-2.5 text-right sm:table-cell">
                   <button onClick={() => toggleSort("cost")} className="ml-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    Custo Prod. <SortIcon field="cost" />
+                    {t("table.productionCost")} <SortIcon field="cost" />
                   </button>
                 </th>
                 <th className="px-3 py-2.5 text-right">
                   <button onClick={() => toggleSort("deviation")} className="ml-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    Desvio <SortIcon field="deviation" />
+                    {t("table.deviation")} <SortIcon field="deviation" />
                   </button>
                 </th>
                 <th className="hidden px-3 py-2.5 text-right md:table-cell">
                   <button onClick={() => toggleSort("volume")} className="ml-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    Vol. 24h <SortIcon field="volume" />
+                    {t("table.volume24h")} <SortIcon field="volume" />
                   </button>
                 </th>
                 <th className="hidden px-3 py-2.5 text-center lg:table-cell">
                   <button onClick={() => toggleSort("priority")} className="mx-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    Prioridade <SortIcon field="priority" />
+                    {t("table.priority")} <SortIcon field="priority" />
                   </button>
                 </th>
                 <th className="px-3 py-2.5 text-center">
-                  <span className="font-medium text-muted-foreground">Sinal</span>
+                  <span className="font-medium text-muted-foreground">{t("table.signal")}</span>
                 </th>
               </tr>
             </thead>
@@ -277,11 +279,6 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
                       <div className="flex items-center gap-2">
                         <CategoryIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <span className="font-mono font-semibold text-card-foreground">{res.symbol}</span>
-                        {res.input && (
-                          <span className="hidden text-muted-foreground sm:inline">
-                            {res.ratio}x {res.input}
-                          </span>
-                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono text-card-foreground">
@@ -327,11 +324,11 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
                     <td className="px-3 py-2.5 text-center">
                       {res.signal === "buy" ? (
                         <Badge className="bg-primary/20 text-primary text-xs font-semibold">
-                          COMPRAR
+                          {t("table.buy")}
                         </Badge>
                       ) : res.signal === "sell" ? (
                         <Badge className="bg-destructive/20 text-destructive text-xs font-semibold">
-                          VENDER
+                          {t("table.sell")}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
@@ -343,7 +340,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
-                    Nenhum recurso encontrado.
+                    {t("table.noResults")}
                   </td>
                 </tr>
               )}

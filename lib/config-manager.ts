@@ -3,6 +3,11 @@ import { join } from "path"
 
 const CONFIG_PATH = join(process.cwd(), "data", "config.json")
 
+export interface MaintenanceConfig {
+  enabled: boolean
+  message: string
+}
+
 export interface AppConfig {
   pools: Record<string, string>
   productionCosts: Record<string, {
@@ -33,6 +38,7 @@ export interface AppConfig {
   banners?: BannerConfig[]
   sharing?: SharingConfig
   customization?: CustomizationConfig
+  maintenance?: MaintenanceConfig
 }
 
 export interface UserPermissions {

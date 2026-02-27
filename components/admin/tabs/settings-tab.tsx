@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Save, UserPlus, Trash2, Key, Shield, Eye, Palette } from "lucide-react"
+import { Save, UserPlus, Trash2, Key, Shield, Eye, Palette, Wrench } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import type { AppConfig } from "@/lib/config-manager"
 
@@ -82,6 +82,12 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const [userMessage, setUserMessage] = useState("")
   const [userLoading, setUserLoading] = useState(false)
 
+  // Maintenance mode
+  const maint = config.maintenance ?? { enabled: false, message: "" }
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(maint.enabled)
+  const [maintenanceMessage, setMaintenanceMessage] = useState(maint.message)
+  const [hasMaintenanceChanges, setHasMaintenanceChanges] = useState(false)
+
   // Password change
   const [currentPwd, setCurrentPwd] = useState("")
   const [newPwd, setNewPwd] = useState("")
@@ -99,6 +105,14 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
       headerLogo, headerText, footerCredits, footerLinks, footerDisclaimer, loginTitle, loginCredits,
     })
     if (success) setHasCustomChanges(false)
+  }
+
+  const handleSaveMaintenance = async () => {
+    const success = await onUpdate("maintenance", {
+      enabled: maintenanceEnabled,
+      message: maintenanceMessage,
+    })
+    if (success) setHasMaintenanceChanges(false)
   }
 
   const handleCreateUser = async () => {
@@ -478,13 +492,55 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
         </CardContent>
       </Card>
 
+      {/* Maintenance Mode */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Wrench className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-base text-card-foreground">{t("admin.maintenance")}</CardTitle>
+                <CardDescription>{t("admin.maintenanceDesc")}</CardDescription>
+              </div>
+            </div>
+            <Button onClick={handleSaveMaintenance} disabled={saving || !hasMaintenanceChanges} size="sm" className="gap-1.5">
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "..." : t("admin.save")}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 px-4 py-3">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium text-card-foreground">{t("admin.maintenanceEnabled")}</span>
+              <span className="text-xs text-muted-foreground">
+                {maintenanceEnabled ? "A plataforma esta em modo de manutencao" : "A plataforma esta online"}
+              </span>
+            </div>
+            <Switch
+              checked={maintenanceEnabled}
+              onCheckedChange={(v) => { setMaintenanceEnabled(v); setHasMaintenanceChanges(true) }}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs text-muted-foreground">{t("admin.maintenanceMessage")}</Label>
+            <Input
+              value={maintenanceMessage}
+              onChange={(e) => { setMaintenanceMessage(e.target.value); setHasMaintenanceChanges(true) }}
+              placeholder="A plataforma esta em manutencao..."
+              className="bg-secondary border-border text-card-foreground h-9 text-sm"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Password change */}
       <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center gap-3">
             <Key className="h-5 w-5 text-muted-foreground" />
             <div>
-              <CardTitle className="text-base text-card-foreground">Alterar Password</CardTitle>
+              <CardTitle className="text-base text-card-foreground">{t("admin.changePassword")}</CardTitle>
               <CardDescription>Alterar a password da sua conta</CardDescription>
             </div>
           </div>

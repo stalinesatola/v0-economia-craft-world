@@ -14,6 +14,7 @@ const VALID_SECTIONS = [
   "banners",
   "sharing",
   "customization",
+  "maintenance",
 ]
 
 export async function PUT(
@@ -34,7 +35,7 @@ export async function PUT(
       pools: "pools", productionCosts: "pools", alertsConfig: "pools",
       productionChains: "chains", thresholds: "settings", telegram: "telegram",
       network: "settings", users: "users", banners: "banners",
-      sharing: "sharing", customization: "settings",
+      sharing: "sharing", customization: "settings", maintenance: "settings",
     }
     const permKey = sectionPermMap[section] ?? section
     try {

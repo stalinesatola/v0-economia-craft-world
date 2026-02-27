@@ -11,6 +11,7 @@ import {
   formatPrice,
   type ChainNode,
 } from "@/lib/craft-data"
+import { useI18n } from "@/lib/i18n"
 
 interface ProductionChainProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
@@ -123,16 +124,17 @@ function ChainNodeItem({
 }
 
 export function ProductionChain({ prices, productionCosts: dynCosts }: ProductionChainProps) {
+  const { t } = useI18n()
   // Use dynamic costs if available for the legend
   void dynCosts
   return (
     <Card className="bg-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-card-foreground">
-          Cadeia de Producao
+          {t("chain.title")}
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Expanda para ver a hierarquia de producao. Cores indicam oportunidades.
+          {t("chain.description")}
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
@@ -142,15 +144,15 @@ export function ProductionChain({ prices, productionCosts: dynCosts }: Productio
         <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3">
           <div className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full bg-primary" />
-            <span className="text-xs text-muted-foreground">Comprar ({"<"}-{BUY_THRESHOLD}%)</span>
+            <span className="text-xs text-muted-foreground">{t("chain.buy")} ({"<"}-{BUY_THRESHOLD}%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full bg-destructive" />
-            <span className="text-xs text-muted-foreground">Vender ({">"}+{SELL_THRESHOLD}%)</span>
+            <span className="text-xs text-muted-foreground">{t("chain.sell")} ({">"}+{SELL_THRESHOLD}%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Neutro</span>
+            <span className="text-xs text-muted-foreground">{t("chain.neutral")}</span>
           </div>
         </div>
       </CardContent>
