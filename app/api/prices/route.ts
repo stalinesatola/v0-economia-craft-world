@@ -36,9 +36,7 @@ async function fetchBatch(addresses: string[], network: string): Promise<Record<
 
   try {
     const res = await fetchWithTimeout(url, FETCH_TIMEOUT)
-    if (!res.ok) {
-      return results
-    }
+    if (!res.ok) return results
     const data = await res.json()
     for (const item of data.data ?? []) {
       const poolAddr = item.attributes?.address?.toLowerCase()
@@ -46,23 +44,16 @@ async function fetchBatch(addresses: string[], network: string): Promise<Record<
       results[poolAddr] = {
         price_usd: parseFloat(item.attributes?.base_token_price_usd || "0"),
         volume_usd_24h: parseFloat(item.attributes?.volume_usd?.h24 || "0"),
-        price_change_24h: parseFloat(
-          item.attributes?.price_change_percentage?.h24 || "0"
-        ),
+        price_change_24h: parseFloat(item.attributes?.price_change_percentage?.h24 || "0"),
       }
     }
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      console.error("[v0] GeckoTerminal batch timeout")
-    } else {
-      console.error("[v0] GeckoTerminal batch error:", error)
-    }
+  } catch {
+    // Timeout or network error
   }
   return results
 }
 
 export async function GET() {
-  // Try to read from config.json, fallback to hardcoded defaults
   let pools: Record<string, string> = DEFAULT_POOLS
   let network: string = DEFAULT_NETWORK
   let productionCosts: Record<string, { cost_usd: number }> = {}
@@ -71,7 +62,7 @@ export async function GET() {
   let banners: Array<{ id: string; position: string; enabled: boolean; imageUrl: string; linkUrl: string; altText: string; adScript: string }> = []
 
   try {
-    const config = getConfig()
+    const config = await getConfig()
     pools = config.pools ?? pools
     network = config.network ?? network
     productionCosts = config.productionCosts ?? productionCosts
@@ -85,23 +76,19 @@ export async function GET() {
   const poolEntries = Object.entries(pools)
   const addresses = poolEntries.map(([, addr]) => addr).filter((a) => a.startsWith("0x"))
 
-  // Split into batches of 15 for reliability (GeckoTerminal max is 30)
   const batchSize = 15
   const batches: string[][] = []
   for (let i = 0; i < addresses.length; i += batchSize) {
     batches.push(addresses.slice(i, i + batchSize))
   }
 
-  // Fetch all batches in parallel
   const batchResults = await Promise.all(batches.map((batch) => fetchBatch(batch, network)))
 
-  // Merge all results
   const allPrices: Record<string, PriceResult> = {}
   for (const result of batchResults) {
     Object.assign(allPrices, result)
   }
 
-  // Map pool addresses back to symbols
   const symbolPrices: Record<string, PriceResult> = {}
   for (const [symbol, addr] of poolEntries) {
     const lowerAddr = addr.toLowerCase()

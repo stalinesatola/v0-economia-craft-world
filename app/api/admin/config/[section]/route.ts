@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { validateAdminRequest } from "@/lib/auth"
-import { updateConfig, getConfig } from "@/lib/config-manager"
+import { updateConfig, getConfigSection, getUserByUsername } from "@/lib/config-manager"
 
 const VALID_SECTIONS = [
-  "pools",
-  "productionCosts",
-  "alertsConfig",
-  "productionChains",
-  "thresholds",
-  "telegram",
-  "network",
-  "users",
-  "banners",
-  "sharing",
-  "customization",
-  "maintenance",
+  "pools", "productionCosts", "alertsConfig", "productionChains",
+  "thresholds", "telegram", "network", "users", "banners",
+  "sharing", "customization", "maintenance",
 ]
 
 export async function PUT(
@@ -30,7 +21,6 @@ export async function PUT(
 
   // Check permissions - admins always have access, viewers need granular permissions
   if (auth.role !== "admin") {
-    // Map section names to permission keys
     const sectionPermMap: Record<string, string> = {
       pools: "pools", productionCosts: "pools", alertsConfig: "pools",
       productionChains: "chains", thresholds: "settings", telegram: "telegram",
@@ -39,8 +29,7 @@ export async function PUT(
     }
     const permKey = sectionPermMap[section] ?? section
     try {
-      const config = getConfig()
-      const user = config.users?.find((u) => u.username === auth.username)
+      const user = await getUserByUsername(auth.username)
       if (!user?.permissions || !user.permissions[permKey as keyof typeof user.permissions]) {
         return NextResponse.json({ error: "Sem permissoes para esta seccao" }, { status: 403 })
       }
@@ -61,12 +50,13 @@ export async function PUT(
 
     // For telegram section, preserve existing bot token if masked value sent
     if (section === "telegram" && data.botToken && data.botToken.startsWith("****")) {
-      const { getConfig } = await import("@/lib/config-manager")
-      const currentConfig = getConfig()
-      data.botToken = currentConfig.telegram.botToken
+      const currentTelegram = await getConfigSection("telegram") as { botToken?: string } | null
+      if (currentTelegram?.botToken) {
+        data.botToken = currentTelegram.botToken
+      }
     }
 
-    const updatedConfig = updateConfig(section, data)
+    const updatedConfig = await updateConfig(section, data)
     return NextResponse.json({ success: true, config: updatedConfig })
   } catch (error) {
     return NextResponse.json(
