@@ -9,19 +9,42 @@ import { TelegramTab } from "@/components/admin/tabs/telegram-tab"
 import { SettingsTab } from "@/components/admin/tabs/settings-tab"
 import { BannersTab } from "@/components/admin/tabs/banners-tab"
 import { SharingTab } from "@/components/admin/tabs/sharing-tab"
-import { LogOut, ArrowLeft, RefreshCw } from "lucide-react"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { useI18n } from "@/lib/i18n"
+import { LogOut, ArrowLeft, RefreshCw, ShieldAlert } from "lucide-react"
 import Link from "next/link"
 import type { AppConfig } from "@/lib/config-manager"
+
+interface UserInfo {
+  username: string
+  role: string
+  permissions?: Record<string, boolean>
+}
 
 interface AdminDashboardProps {
   onLogout: () => void
   initialConfig?: AppConfig | null
+  userInfo?: UserInfo | null
 }
 
-export function AdminDashboard({ onLogout, initialConfig }: AdminDashboardProps) {
+export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashboardProps) {
+  const { t } = useI18n()
   const [config, setConfig] = useState<AppConfig | null>(initialConfig ?? null)
   const [loading, setLoading] = useState(!initialConfig)
   const [saving, setSaving] = useState(false)
+
+  // Permission check - superadmin (username "admin") always has full access
+  const isSuperAdmin = userInfo?.username === "admin" || userInfo?.role === "admin"
+  const perms = userInfo?.permissions ?? (isSuperAdmin ? {
+    pools: true, chains: true, telegram: true, sharing: true, banners: true, settings: true, users: true,
+  } : {
+    pools: false, chains: false, telegram: false, sharing: false, banners: false, settings: false, users: false,
+  })
+
+  const canEdit = (section: string) => {
+    if (isSuperAdmin) return true
+    return perms[section] === true
+  }
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -31,20 +54,18 @@ export function AdminDashboard({ onLogout, initialConfig }: AdminDashboardProps)
         setConfig(data)
       }
     } catch {
-      // Error fetching config
+      // Error
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    // Skip initial fetch if we already have config from login
-    if (!initialConfig) {
-      fetchConfig()
-    }
+    if (!initialConfig) fetchConfig()
   }, [fetchConfig, initialConfig])
 
   const updateSection = async (section: string, data: unknown): Promise<boolean> => {
+    if (!canEdit(section)) return false
     setSaving(true)
     try {
       const res = await fetch(`/api/admin/config/${section}`, {
@@ -72,6 +93,18 @@ export function AdminDashboard({ onLogout, initialConfig }: AdminDashboardProps)
     )
   }
 
+  // Determine which tabs to show
+  const visibleTabs = [
+    { id: "pools", label: t("admin.pools"), perm: "pools" },
+    { id: "chains", label: t("admin.production"), perm: "chains" },
+    { id: "telegram", label: t("admin.telegram"), perm: "telegram" },
+    { id: "sharing", label: t("admin.sharing"), perm: "sharing" },
+    { id: "banners", label: t("admin.banners"), perm: "banners" },
+    { id: "settings", label: t("admin.config"), perm: "settings" },
+  ].filter((tab) => isSuperAdmin || canEdit(tab.perm))
+
+  const defaultTab = visibleTabs[0]?.id || "pools"
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -84,73 +117,81 @@ export function AdminDashboard({ onLogout, initialConfig }: AdminDashboardProps)
                 className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ArrowLeft className="h-3 w-3" />
-                Dashboard
+                {t("admin.dashboard")}
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Painel de Administracao</h1>
+                <h1 className="text-xl font-bold text-foreground">{t("admin.title")}</h1>
                 <p className="text-xs text-muted-foreground">
-                  Craft World Economy - Gerir pools, custos, alertas e bot Telegram
+                  {userInfo?.username && (
+                    <span className="font-medium text-card-foreground">{userInfo.username}</span>
+                  )}
+                  {userInfo?.role && (
+                    <span className="ml-1 text-muted-foreground">({userInfo.role})</span>
+                  )}
+                  {" - "}{t("admin.subtitle")}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchConfig}
-                disabled={saving}
-                className="gap-1.5"
-              >
+              <LanguageSwitcher />
+              <Button variant="outline" size="sm" onClick={fetchConfig} disabled={saving} className="gap-1.5">
                 <RefreshCw className={`h-3.5 w-3.5 ${saving ? "animate-spin" : ""}`} />
-                Recarregar
+                {t("admin.reload")}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onLogout}
-                className="gap-1.5 text-muted-foreground hover:text-destructive"
-              >
+              <Button variant="ghost" size="sm" onClick={onLogout} className="gap-1.5 text-muted-foreground hover:text-destructive">
                 <LogOut className="h-3.5 w-3.5" />
-                Sair
+                {t("admin.logout")}
               </Button>
             </div>
           </div>
 
-          {/* Tabs */}
-          <Tabs defaultValue="pools" className="w-full">
-            <TabsList className="flex w-full overflow-x-auto bg-secondary">
-              <TabsTrigger value="pools" className="text-xs">Pools</TabsTrigger>
-              <TabsTrigger value="chains" className="text-xs">Producao</TabsTrigger>
-              <TabsTrigger value="telegram" className="text-xs">Telegram</TabsTrigger>
-              <TabsTrigger value="sharing" className="text-xs">Partilha</TabsTrigger>
-              <TabsTrigger value="banners" className="text-xs">Banners</TabsTrigger>
-              <TabsTrigger value="settings" className="text-xs">Config</TabsTrigger>
-            </TabsList>
+          {visibleTabs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-20">
+              <ShieldAlert className="h-10 w-10 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Sem permissoes de acesso a configuracoes.</p>
+            </div>
+          ) : (
+            <Tabs defaultValue={defaultTab} className="w-full">
+              <TabsList className="flex w-full overflow-x-auto bg-secondary">
+                {visibleTabs.map((tab) => (
+                  <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-            <TabsContent value="pools" className="mt-4">
-              <PoolsTab config={config} onUpdate={updateSection} saving={saving} />
-            </TabsContent>
-
-            <TabsContent value="chains" className="mt-4">
-              <ChainsTab config={config} onUpdate={updateSection} saving={saving} />
-            </TabsContent>
-
-            <TabsContent value="telegram" className="mt-4">
-              <TelegramTab config={config} onUpdate={updateSection} saving={saving} />
-            </TabsContent>
-
-            <TabsContent value="sharing" className="mt-4">
-              <SharingTab config={config} onUpdate={updateSection} saving={saving} />
-            </TabsContent>
-
-            <TabsContent value="banners" className="mt-4">
-              <BannersTab config={config} onUpdate={updateSection} saving={saving} />
-            </TabsContent>
-
-            <TabsContent value="settings" className="mt-4">
-              <SettingsTab config={config} onUpdate={updateSection} saving={saving} />
-            </TabsContent>
-          </Tabs>
+              {canEdit("pools") && (
+                <TabsContent value="pools" className="mt-4">
+                  <PoolsTab config={config} onUpdate={updateSection} saving={saving} />
+                </TabsContent>
+              )}
+              {canEdit("chains") && (
+                <TabsContent value="chains" className="mt-4">
+                  <ChainsTab config={config} onUpdate={updateSection} saving={saving} />
+                </TabsContent>
+              )}
+              {canEdit("telegram") && (
+                <TabsContent value="telegram" className="mt-4">
+                  <TelegramTab config={config} onUpdate={updateSection} saving={saving} />
+                </TabsContent>
+              )}
+              {canEdit("sharing") && (
+                <TabsContent value="sharing" className="mt-4">
+                  <SharingTab config={config} onUpdate={updateSection} saving={saving} />
+                </TabsContent>
+              )}
+              {canEdit("banners") && (
+                <TabsContent value="banners" className="mt-4">
+                  <BannersTab config={config} onUpdate={updateSection} saving={saving} />
+                </TabsContent>
+              )}
+              {canEdit("settings") && (
+                <TabsContent value="settings" className="mt-4">
+                  <SettingsTab config={config} onUpdate={updateSection} saving={saving} />
+                </TabsContent>
+              )}
+            </Tabs>
+          )}
         </div>
       </div>
     </div>

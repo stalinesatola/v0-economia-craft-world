@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Save, Search, ChevronDown, ChevronUp } from "lucide-react"
+import { Save, Search, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react"
+import { useI18n } from "@/lib/i18n"
 import type { AppConfig } from "@/lib/config-manager"
 
 interface PoolsTabProps {
@@ -24,12 +25,21 @@ interface PoolsTabProps {
 }
 
 export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
+  const { t } = useI18n()
   const [search, setSearch] = useState("")
   const [expandedResource, setExpandedResource] = useState<string | null>(null)
   const [localPools, setLocalPools] = useState(config.pools)
   const [localCosts, setLocalCosts] = useState(config.productionCosts)
   const [localAlerts, setLocalAlerts] = useState(config.alertsConfig)
   const [hasChanges, setHasChanges] = useState(false)
+
+  // Add pool form
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newSymbol, setNewSymbol] = useState("")
+  const [newAddress, setNewAddress] = useState("")
+  const [newCost, setNewCost] = useState("0")
+  const [newCategory, setNewCategory] = useState<"mine" | "factory" | "token">("factory")
+  const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
 
   const symbols = Object.keys(localPools).filter((s) =>
     s.toLowerCase().includes(search.toLowerCase())
@@ -56,6 +66,48 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     setHasChanges(true)
   }
 
+  const handleAddPool = () => {
+    const symbol = newSymbol.toUpperCase().trim()
+    if (!symbol || !newAddress.trim()) return
+    if (localPools[symbol]) return // Already exists
+
+    setLocalPools((prev) => ({ ...prev, [symbol]: newAddress.trim() }))
+    setLocalCosts((prev) => ({
+      ...prev,
+      [symbol]: { cost_usd: parseFloat(newCost) || 0, levels: 1 },
+    }))
+    setLocalAlerts((prev) => ({
+      ...prev,
+      [symbol]: { enabled: true, priority: newPriority, category: newCategory },
+    }))
+    setHasChanges(true)
+    setNewSymbol("")
+    setNewAddress("")
+    setNewCost("0")
+    setShowAddForm(false)
+  }
+
+  const handleDeletePool = (symbol: string) => {
+    if (!confirm(`Remover '${symbol}'?`)) return
+    setLocalPools((prev) => {
+      const next = { ...prev }
+      delete next[symbol]
+      return next
+    })
+    setLocalCosts((prev) => {
+      const next = { ...prev }
+      delete next[symbol]
+      return next
+    })
+    setLocalAlerts((prev) => {
+      const next = { ...prev }
+      delete next[symbol]
+      return next
+    })
+    setHasChanges(true)
+    if (expandedResource === symbol) setExpandedResource(null)
+  }
+
   const handleSave = async () => {
     const r1 = await onUpdate("pools", localPools)
     const r2 = await onUpdate("productionCosts", localCosts)
@@ -71,23 +123,113 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base text-card-foreground">Pools & Recursos</CardTitle>
+              <CardTitle className="text-base text-card-foreground">
+                {t("admin.pools")} & {t("table.resource")}
+              </CardTitle>
               <CardDescription>
-                Gerir enderecos de pools, custos de producao, prioridades e alertas para {symbols.length} recursos
+                {symbols.length} {t("dashboard.pools")}
               </CardDescription>
             </div>
-            <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
-              <Save className="h-3.5 w-3.5" />
-              {saving ? "A guardar..." : "Guardar Tudo"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {showAddForm ? t("chart.close") : t("table.resource")}
+              </Button>
+              <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "..." : t("admin.reload")}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
+          {/* Add Pool Form */}
+          {showAddForm && (
+            <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-card-foreground">Adicionar Novo Recurso</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Simbolo</Label>
+                  <Input
+                    value={newSymbol}
+                    onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
+                    placeholder="ex: GOLD"
+                    className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono uppercase"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Pool Address</Label>
+                  <Input
+                    value={newAddress}
+                    onChange={(e) => setNewAddress(e.target.value)}
+                    placeholder="0x..."
+                    className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Custo USD</Label>
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    value={newCost}
+                    onChange={(e) => setNewCost(e.target.value)}
+                    className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Categoria</Label>
+                  <Select value={newCategory} onValueChange={(v) => setNewCategory(v as "mine" | "factory" | "token")}>
+                    <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mine">{t("table.mine")}</SelectItem>
+                      <SelectItem value="factory">{t("table.factory")}</SelectItem>
+                      <SelectItem value="token">{t("table.token")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Prioridade</Label>
+                  <Select value={newPriority} onValueChange={(v) => setNewPriority(v as "high" | "medium" | "low")}>
+                    <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">Alta</SelectItem>
+                      <SelectItem value="medium">Media</SelectItem>
+                      <SelectItem value="low">Baixa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    onClick={handleAddPool}
+                    disabled={!newSymbol.trim() || !newAddress.trim() || !!localPools[newSymbol.toUpperCase().trim()]}
+                    size="sm"
+                    className="w-full gap-1.5"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Adicionar
+                  </Button>
+                </div>
+              </div>
+              {localPools[newSymbol.toUpperCase().trim()] && newSymbol.trim() && (
+                <p className="mt-2 text-xs text-destructive">Simbolo ja existe!</p>
+              )}
+            </div>
+          )}
+
           {/* Search */}
           <div className="relative mb-4">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Pesquisar recurso..."
+              placeholder={t("table.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 bg-secondary border-border text-card-foreground h-9 text-sm"
@@ -122,8 +264,8 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                           alert?.category === "mine"
                             ? "border-chart-3 text-chart-3"
                             : alert?.category === "token"
-                            ? "border-chart-2 text-chart-2"
-                            : "border-primary text-primary"
+                              ? "border-chart-2 text-chart-2"
+                              : "border-primary text-primary"
                         }
                       >
                         {alert?.category || "factory"}
@@ -134,8 +276,8 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                           alert?.priority === "high"
                             ? "border-destructive text-destructive"
                             : alert?.priority === "medium"
-                            ? "border-chart-3 text-chart-3"
-                            : "border-muted-foreground text-muted-foreground"
+                              ? "border-chart-3 text-chart-3"
+                              : "border-muted-foreground text-muted-foreground"
                         }
                       >
                         {alert?.priority || "low"}
@@ -160,90 +302,89 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
 
                   {/* Expanded details */}
                   {isExpanded && (
-                    <div className="border-t border-border px-3 py-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      <div className="flex flex-col gap-1.5">
-                        <Label className="text-xs text-muted-foreground">Endereco Pool</Label>
-                        <Input
-                          value={localPools[symbol] || ""}
-                          onChange={(e) => handlePoolChange(symbol, e.target.value)}
-                          className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
-                          placeholder="0x..."
-                        />
+                    <div className="border-t border-border px-4 py-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-xs text-muted-foreground">Pool Address</Label>
+                          <Input
+                            value={localPools[symbol]}
+                            onChange={(e) => handlePoolChange(symbol, e.target.value)}
+                            className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-xs text-muted-foreground">{t("table.productionCost")} (USD)</Label>
+                          <Input
+                            type="number"
+                            step="0.0001"
+                            value={cost?.cost_usd ?? 0}
+                            onChange={(e) => handleCostChange(symbol, "cost_usd", parseFloat(e.target.value) || 0)}
+                            className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-xs text-muted-foreground">Categoria</Label>
+                          <Select
+                            value={alert?.category || "factory"}
+                            onValueChange={(v) => handleAlertChange(symbol, "category", v)}
+                          >
+                            <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="mine">{t("table.mine")}</SelectItem>
+                              <SelectItem value="factory">{t("table.factory")}</SelectItem>
+                              <SelectItem value="token">{t("table.token")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-xs text-muted-foreground">Prioridade</Label>
+                          <Select
+                            value={alert?.priority || "low"}
+                            onValueChange={(v) => handleAlertChange(symbol, "priority", v)}
+                          >
+                            <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="high">Alta</SelectItem>
+                              <SelectItem value="medium">Media</SelectItem>
+                              <SelectItem value="low">Baixa</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {cost?.source && (
+                          <div className="flex flex-col gap-1.5">
+                            <Label className="text-xs text-muted-foreground">Fonte</Label>
+                            <Input
+                              value={cost.source}
+                              onChange={(e) => handleCostChange(symbol, "source", e.target.value)}
+                              className="bg-background border-border text-card-foreground h-8 text-xs"
+                            />
+                          </div>
+                        )}
+                        {cost?.input && (
+                          <div className="flex flex-col gap-1.5">
+                            <Label className="text-xs text-muted-foreground">Input</Label>
+                            <Input
+                              value={cost.input}
+                              onChange={(e) => handleCostChange(symbol, "input", e.target.value)}
+                              className="bg-background border-border text-card-foreground h-8 text-xs"
+                            />
+                          </div>
+                        )}
                       </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label className="text-xs text-muted-foreground">Custo Producao (USD)</Label>
-                        <Input
-                          type="number"
-                          step="any"
-                          value={cost?.cost_usd ?? 0}
-                          onChange={(e) =>
-                            handleCostChange(symbol, "cost_usd", parseFloat(e.target.value) || 0)
-                          }
-                          className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label className="text-xs text-muted-foreground">Input</Label>
-                        <Input
-                          value={cost?.input || ""}
-                          onChange={(e) => handleCostChange(symbol, "input", e.target.value)}
-                          className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
-                          placeholder="ex: EARTH"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label className="text-xs text-muted-foreground">Ratio</Label>
-                        <Input
-                          type="number"
-                          value={cost?.ratio || ""}
-                          onChange={(e) =>
-                            handleCostChange(symbol, "ratio", parseInt(e.target.value) || 0)
-                          }
-                          className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label className="text-xs text-muted-foreground">Levels</Label>
-                        <Input
-                          type="number"
-                          value={cost?.levels ?? 0}
-                          onChange={(e) =>
-                            handleCostChange(symbol, "levels", parseInt(e.target.value) || 0)
-                          }
-                          className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label className="text-xs text-muted-foreground">Prioridade</Label>
-                        <Select
-                          value={alert?.priority || "low"}
-                          onValueChange={(v) => handleAlertChange(symbol, "priority", v)}
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeletePool(symbol)}
+                          className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
-                          <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="high">Alta</SelectItem>
-                            <SelectItem value="medium">Media</SelectItem>
-                            <SelectItem value="low">Baixa</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label className="text-xs text-muted-foreground">Categoria</Label>
-                        <Select
-                          value={alert?.category || "factory"}
-                          onValueChange={(v) => handleAlertChange(symbol, "category", v)}
-                        >
-                          <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="mine">Mine</SelectItem>
-                            <SelectItem value="factory">Factory</SelectItem>
-                            <SelectItem value="token">Token</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remover
+                        </Button>
                       </div>
                     </div>
                   )}

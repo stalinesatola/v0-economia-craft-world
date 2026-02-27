@@ -7,11 +7,21 @@ import { PriceTable } from "@/components/price-table"
 import { ProductionChain } from "@/components/production-chain"
 import { OpportunitiesPanel } from "@/components/opportunities-panel"
 import { AdBanner } from "@/components/ad-banner"
+import { useI18n } from "@/lib/i18n"
 import { useMemo } from "react"
+import useSWR from "swr"
+
+const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
 
 export default function Home() {
   const { prices, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners } = usePrices()
+  const { t } = useI18n()
 
+  // Fetch public customization
+  const { data: customization } = useSWR("/api/customization", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60000,
+  })
 
   const bannersByPosition = useMemo(() => {
     const map: Record<string, typeof banners[number]> = {}
@@ -20,6 +30,10 @@ export default function Home() {
     }
     return map
   }, [banners])
+
+  const footerCredits = customization?.footerCredits || "Craft World Economy v1.0.0 | Desenvolvido por Plum com Qwen"
+  const footerLinks = customization?.footerLinks || "Telegram: @bondsbtc | Dados via GeckoTerminal API | Rede Ronin"
+  const footerDisclaimer = customization?.footerDisclaimer || t("footer.disclaimer")
 
   return (
     <main className="min-h-screen bg-background">
@@ -30,6 +44,7 @@ export default function Home() {
             count={count}
             isValidating={isValidating || isLoading}
             onRefresh={() => refresh()}
+            customization={customization ?? undefined}
           />
 
           {/* Top Banner */}
@@ -84,13 +99,13 @@ export default function Home() {
           <footer className="border-t border-border pt-4 pb-6">
             <div className="flex flex-col items-center gap-1 text-center">
               <p className="text-xs text-muted-foreground">
-                Craft World Economy v1.0.0 | Desenvolvido por Plum com Qwen
+                {footerCredits}
               </p>
               <p className="text-xs text-muted-foreground">
-                Telegram: @bondsbtc | Dados via GeckoTerminal API | Rede Ronin
+                {footerLinks}
               </p>
               <p className="mt-1 text-xs text-muted-foreground/60">
-                Verifique sempre no jogo antes de tomar decisoes!
+                {footerDisclaimer}
               </p>
             </div>
           </footer>

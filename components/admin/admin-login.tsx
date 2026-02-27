@@ -6,13 +6,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Lock, ArrowLeft, User } from "lucide-react"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { useI18n } from "@/lib/i18n"
 import Link from "next/link"
 
 interface AdminLoginProps {
   onLogin: (password: string, username?: string) => Promise<boolean>
+  customization?: {
+    loginTitle?: string
+    loginCredits?: string
+    headerText?: string
+  }
 }
 
-export function AdminLogin({ onLogin }: AdminLoginProps) {
+export function AdminLogin({ onLogin, customization }: AdminLoginProps) {
+  const { t } = useI18n()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -26,37 +34,42 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
 
     const success = await onLogin(password, showUsername ? username : undefined)
     if (!success) {
-      setError("Credenciais incorretas")
+      setError(t("login.wrongCredentials"))
       setPassword("")
     }
     setLoading(false)
   }
 
+  const title = customization?.loginTitle || t("login.welcome")
+  const subtitle = customization?.headerText || t("login.subtitle")
+  const credits = customization?.loginCredits || ""
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-3 w-3" />
-            Voltar ao Dashboard
+            {t("login.backToDashboard")}
           </Link>
+          <LanguageSwitcher />
         </div>
         <Card className="border-border bg-card">
           <CardHeader className="text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
               <Lock className="h-5 w-5 text-primary" />
             </div>
-            <CardTitle className="text-lg text-card-foreground">Admin</CardTitle>
-            <CardDescription>Craft World Economy</CardDescription>
+            <CardTitle className="text-lg text-card-foreground">{title}</CardTitle>
+            <CardDescription>{subtitle}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {showUsername && (
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="username" className="text-card-foreground">Username</Label>
+                  <Label htmlFor="username" className="text-card-foreground">{t("login.username")}</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
@@ -64,7 +77,7 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Username..."
+                      placeholder={t("login.enterUsername")}
                       autoFocus
                       className="bg-secondary border-border text-card-foreground pl-9"
                     />
@@ -72,7 +85,7 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
                 </div>
               )}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="password" className="text-card-foreground">Password</Label>
+                <Label htmlFor="password" className="text-card-foreground">{t("login.password")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
@@ -80,7 +93,7 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Introduzir password..."
+                    placeholder={t("login.enterPassword")}
                     autoFocus={!showUsername}
                     className="bg-secondary border-border text-card-foreground pl-9"
                   />
@@ -90,21 +103,21 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
                 )}
               </div>
               <Button type="submit" disabled={loading || !password} className="w-full">
-                {loading ? "A verificar..." : "Entrar"}
+                {loading ? t("login.verifying") : t("login.login")}
               </Button>
               <button
                 type="button"
                 onClick={() => setShowUsername(!showUsername)}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center"
               >
-                {showUsername ? "Entrar so com password (superadmin)" : "Entrar com username e password"}
+                {showUsername ? t("login.superadminHint") : t("login.userHint")}
               </button>
             </form>
           </CardContent>
         </Card>
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Superadmin: use a password ADMIN_PASSWORD | Utilizadores: username + password
-        </p>
+        {credits && (
+          <p className="mt-4 text-center text-xs text-muted-foreground">{credits}</p>
+        )}
       </div>
     </div>
   )

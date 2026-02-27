@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Save, Send, Play, MessageSquare, Clock, AlertTriangle } from "lucide-react"
+import { Save, Send, Play, MessageSquare, Clock, AlertTriangle, Info } from "lucide-react"
+import { useI18n } from "@/lib/i18n"
 import type { AppConfig } from "@/lib/config-manager"
 
 interface TelegramTabProps {
@@ -16,23 +18,48 @@ interface TelegramTabProps {
   saving: boolean
 }
 
+const DEFAULT_TEMPLATE = `📊 *Craft World Economy Alert*
+
+{SIGNAL_ICON} *{SIGNAL_TYPE}* — {SYMBOL}
+💰 Preço: \${PRICE}
+🏭 Custo: \${COST}
+📈 Desvio: {DEVIATION}%
+
+⏰ {TIMESTAMP}`
+
+const TEMPLATE_VARS = [
+  { var: "{SIGNAL_ICON}", desc: "Icone do sinal (compra/venda)" },
+  { var: "{SIGNAL_TYPE}", desc: "COMPRA ou VENDA" },
+  { var: "{SYMBOL}", desc: "Nome do recurso" },
+  { var: "{PRICE}", desc: "Preco de mercado" },
+  { var: "{COST}", desc: "Custo de producao" },
+  { var: "{DEVIATION}", desc: "Desvio percentual" },
+  { var: "{TIMESTAMP}", desc: "Data/hora do alerta" },
+]
+
 export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
+  const { t } = useI18n()
   const [botToken, setBotToken] = useState(config.telegram.botToken || "")
   const [chatId, setChatId] = useState(config.telegram.chatId || "")
   const [enabled, setEnabled] = useState(config.telegram.enabled)
   const [interval, setInterval] = useState(config.telegram.intervalMinutes || 5)
+  const [messageTemplate, setMessageTemplate] = useState(
+    (config.telegram as Record<string, unknown>).messageTemplate as string || DEFAULT_TEMPLATE
+  )
   const [hasChanges, setHasChanges] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [checkResult, setCheckResult] = useState<{ success: boolean; message: string; alerts?: string[] } | null>(null)
   const [testing, setTesting] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [showTemplateHelp, setShowTemplateHelp] = useState(false)
 
   const handleSave = async () => {
     const success = await onUpdate("telegram", {
-      botToken: botToken.startsWith("****") ? botToken : botToken,
+      botToken: botToken.startsWith("****") ? config.telegram.botToken : botToken,
       chatId,
       enabled,
       intervalMinutes: interval,
+      messageTemplate,
     })
     if (success) setHasChanges(false)
   }
@@ -74,6 +101,16 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
 
   const isConfigured = botToken.length > 10 && chatId.length > 0
 
+  // Generate preview with sample data
+  const previewTemplate = messageTemplate
+    .replace("{SIGNAL_ICON}", "🟢")
+    .replace("{SIGNAL_TYPE}", "COMPRA")
+    .replace("{SYMBOL}", "STEEL")
+    .replace("{PRICE}", "0.0234")
+    .replace("{COST}", "0.0312")
+    .replace("{DEVIATION}", "-25.0")
+    .replace("{TIMESTAMP}", new Date().toLocaleString("pt-BR"))
+
   return (
     <div className="flex flex-col gap-4">
       {/* Configuration */}
@@ -81,14 +118,16 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base text-card-foreground">Configuracao do Bot Telegram</CardTitle>
+              <CardTitle className="text-base text-card-foreground">
+                {t("admin.telegram")} Bot
+              </CardTitle>
               <CardDescription>
                 Token do bot, Chat ID e configuracoes de alertas automaticos
               </CardDescription>
             </div>
             <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
               <Save className="h-3.5 w-3.5" />
-              {saving ? "A guardar..." : "Guardar"}
+              {saving ? "..." : t("admin.reload")}
             </Button>
           </div>
         </CardHeader>
@@ -149,93 +188,131 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
               <span className="text-xs text-muted-foreground">min</span>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Status */}
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={isConfigured ? "border-primary text-primary" : "border-destructive text-destructive"}>
-              {isConfigured ? "Configurado" : "Nao configurado"}
-            </Badge>
-            <Badge variant="outline" className={enabled ? "border-primary text-primary" : "border-muted-foreground text-muted-foreground"}>
-              {enabled ? "Ativo" : "Inativo"}
-            </Badge>
+      {/* Message Template */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-sm text-card-foreground">Template de Mensagem</CardTitle>
+                <CardDescription className="text-xs">
+                  Personalize o formato das mensagens de alerta
+                </CardDescription>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTemplateHelp(!showTemplateHelp)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {showTemplateHelp && (
+            <div className="rounded-lg border border-border bg-secondary/50 p-3">
+              <p className="mb-2 text-xs font-semibold text-card-foreground">Variaveis disponiveis:</p>
+              <div className="grid gap-1">
+                {TEMPLATE_VARS.map((v) => (
+                  <div key={v.var} className="flex items-center gap-2 text-xs">
+                    <code className="rounded bg-background px-1.5 py-0.5 font-mono text-primary">{v.var}</code>
+                    <span className="text-muted-foreground">{v.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Template</Label>
+              <Textarea
+                value={messageTemplate}
+                onChange={(e) => { setMessageTemplate(e.target.value); setHasChanges(true) }}
+                rows={8}
+                className="bg-secondary border-border text-card-foreground text-sm font-mono resize-none"
+                placeholder="Escreva o template da mensagem..."
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setMessageTemplate(DEFAULT_TEMPLATE); setHasChanges(true) }}
+                className="self-start text-xs text-muted-foreground"
+              >
+                Repor predefinido
+              </Button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Pre-visualizacao</Label>
+              <div className="rounded-lg border border-border bg-background p-3 text-sm whitespace-pre-wrap font-mono min-h-[180px]">
+                <span className="text-card-foreground">{previewTemplate}</span>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Test & Check */}
+      {/* Test Actions */}
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-base text-card-foreground">Testar e Verificar</CardTitle>
-          <CardDescription>Enviar mensagem de teste ou executar verificacao manual</CardDescription>
+          <CardTitle className="text-sm text-card-foreground">Testar Conexao</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Test Message */}
-            <div className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/50 p-4">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-card-foreground">Mensagem de Teste</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Envia uma mensagem simples para verificar que o bot e o Chat ID estao corretos.
-              </p>
-              <Button
-                onClick={handleTest}
-                disabled={testing || !isConfigured}
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-              >
-                <Send className="h-3.5 w-3.5" />
-                {testing ? "A enviar..." : "Enviar Teste"}
-              </Button>
-              {testResult && (
-                <div className={`rounded-md p-2 text-xs ${
-                  testResult.success ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
-                }`}>
-                  {testResult.message}
-                </div>
-              )}
-            </div>
-
-            {/* Manual Check */}
-            <div className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/50 p-4">
-              <div className="flex items-center gap-2">
-                <Play className="h-4 w-4 text-chart-3" />
-                <span className="text-sm font-medium text-card-foreground">Verificacao Manual</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Executa o ciclo de verificacao completo: busca precos, compara com custos e mostra alertas.
-              </p>
-              <Button
-                onClick={handleCheck}
-                disabled={checking}
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-              >
-                <Play className="h-3.5 w-3.5" />
-                {checking ? "A verificar..." : "Executar Verificacao"}
-              </Button>
-              {checkResult && (
-                <div className={`rounded-md p-2 text-xs ${
-                  checkResult.success ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
-                }`}>
-                  <p>{checkResult.message}</p>
-                  {checkResult.alerts && checkResult.alerts.length > 0 && (
-                    <ul className="mt-2 flex flex-col gap-1">
-                      {checkResult.alerts.map((alert, i) => (
-                        <li key={i} className="flex items-start gap-1.5">
-                          <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                          <span>{alert}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTest}
+              disabled={testing || !isConfigured}
+              className="gap-1.5"
+            >
+              <Send className={`h-3.5 w-3.5 ${testing ? "animate-pulse" : ""}`} />
+              Enviar Mensagem Teste
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCheck}
+              disabled={checking || !isConfigured}
+              className="gap-1.5"
+            >
+              <Play className={`h-3.5 w-3.5 ${checking ? "animate-pulse" : ""}`} />
+              Simular Verificacao
+            </Button>
           </div>
+
+          {!isConfigured && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Configure o Token e Chat ID antes de testar
+            </div>
+          )}
+
+          {testResult && (
+            <div className={`rounded-lg border px-3 py-2 text-xs ${testResult.success ? "border-primary/30 bg-primary/5 text-primary" : "border-destructive/30 bg-destructive/5 text-destructive"}`}>
+              {testResult.message}
+            </div>
+          )}
+
+          {checkResult && (
+            <div className={`rounded-lg border px-3 py-2 text-xs ${checkResult.success ? "border-primary/30 bg-primary/5 text-primary" : "border-destructive/30 bg-destructive/5 text-destructive"}`}>
+              <p>{checkResult.message}</p>
+              {checkResult.alerts && checkResult.alerts.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {checkResult.alerts.map((a, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">
+                      {a}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

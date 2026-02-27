@@ -35,10 +35,29 @@ export interface AppConfig {
   customization?: CustomizationConfig
 }
 
+export interface UserPermissions {
+  pools: boolean
+  chains: boolean
+  telegram: boolean
+  sharing: boolean
+  banners: boolean
+  settings: boolean
+  users: boolean
+}
+
+export const DEFAULT_ADMIN_PERMISSIONS: UserPermissions = {
+  pools: true, chains: true, telegram: true, sharing: true, banners: true, settings: true, users: true,
+}
+
+export const DEFAULT_VIEWER_PERMISSIONS: UserPermissions = {
+  pools: false, chains: false, telegram: false, sharing: false, banners: false, settings: false, users: false,
+}
+
 export interface UserEntry {
   username: string
   passwordHash: string
   role: "admin" | "viewer"
+  permissions?: UserPermissions
   createdAt: string
 }
 

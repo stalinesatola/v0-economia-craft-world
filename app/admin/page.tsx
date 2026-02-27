@@ -5,24 +5,40 @@ import { AdminLogin } from "@/components/admin/admin-login"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
 import type { AppConfig } from "@/lib/config-manager"
 
+interface UserInfo {
+  username: string
+  role: string
+  permissions?: Record<string, boolean>
+}
+
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
   const [initialConfig, setInitialConfig] = useState<AppConfig | null>(null)
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [customization, setCustomization] = useState<AppConfig["customization"]>(undefined)
 
   const checkAuth = useCallback(async () => {
     try {
-      // Lightweight auth check - does not load config
       const res = await fetch("/api/admin/check")
       if (res.ok) {
+        const data = await res.json()
         setIsAuthenticated(true)
-        // Config will be loaded by AdminDashboard
+        setUserInfo(data.user || null)
       }
     } catch {
       // Not authenticated
     } finally {
       setIsChecking(false)
     }
+  }, [])
+
+  // Fetch customization for login screen
+  useEffect(() => {
+    fetch("/api/customization")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setCustomization(d) })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -42,10 +58,8 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json()
         setIsAuthenticated(true)
-        // Login now returns config directly - no second fetch needed
-        if (data.config) {
-          setInitialConfig(data.config)
-        }
+        if (data.config) setInitialConfig(data.config)
+        if (data.user) setUserInfo(data.user)
         return true
       }
       return false
@@ -58,6 +72,7 @@ export default function AdminPage() {
     await fetch("/api/admin/logout", { method: "POST" })
     setIsAuthenticated(false)
     setInitialConfig(null)
+    setUserInfo(null)
   }
 
   if (isChecking) {
@@ -65,15 +80,15 @@ export default function AdminPage() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-xs text-muted-foreground">A verificar sessao...</p>
+          <p className="text-xs text-muted-foreground">...</p>
         </div>
       </div>
     )
   }
 
   if (!isAuthenticated) {
-    return <AdminLogin onLogin={handleLogin} />
+    return <AdminLogin onLogin={handleLogin} customization={customization} />
   }
 
-  return <AdminDashboard onLogout={handleLogout} initialConfig={initialConfig} />
+  return <AdminDashboard onLogout={handleLogout} initialConfig={initialConfig} userInfo={userInfo} />
 }
