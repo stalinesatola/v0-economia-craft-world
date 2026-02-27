@@ -124,23 +124,23 @@ const VALID_SECTIONS = [
 
 // ── Config section read/write ──────────────────────
 
-export async function getConfigSection(section: string): Promise<unknown> {
+export async function getConfigSection(sectionName: string): Promise<unknown> {
   const sql = getSql()
-  const rows = await sql`SELECT value FROM app_config WHERE key = ${section}`
+  const rows = await sql`SELECT data FROM app_config WHERE section = ${sectionName}`
   if (rows.length === 0) return null
-  return rows[0].value
+  return rows[0].data
 }
 
-export async function setConfigSection(section: string, value: unknown): Promise<void> {
-  if (!VALID_SECTIONS.includes(section)) {
-    throw new Error(`Unknown config section: ${section}`)
+export async function setConfigSection(sectionName: string, value: unknown): Promise<void> {
+  if (!VALID_SECTIONS.includes(sectionName)) {
+    throw new Error(`Unknown config section: ${sectionName}`)
   }
   const sql = getSql()
   const jsonValue = JSON.stringify(value)
   await sql`
-    INSERT INTO app_config (key, value)
-    VALUES (${section}, ${jsonValue}::jsonb)
-    ON CONFLICT (key) DO UPDATE SET value = ${jsonValue}::jsonb
+    INSERT INTO app_config (section, data)
+    VALUES (${sectionName}, ${jsonValue}::jsonb)
+    ON CONFLICT (section) DO UPDATE SET data = ${jsonValue}::jsonb
   `
 }
 
@@ -148,11 +148,11 @@ export async function setConfigSection(section: string, value: unknown): Promise
 
 export async function getConfig(): Promise<AppConfig> {
   const sql = getSql()
-  const rows = await sql`SELECT key, value FROM app_config`
+  const rows = await sql`SELECT section, data FROM app_config`
 
   const config: Record<string, unknown> = {}
   for (const row of rows) {
-    config[row.key] = row.value
+    config[row.section] = row.data
   }
 
   return config as unknown as AppConfig

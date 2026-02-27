@@ -7,9 +7,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { password, username } = body
 
-    console.log("[v0] Login attempt - username:", username || "(superadmin)", "password length:", password?.length)
-    console.log("[v0] ADMIN_PASSWORD env set:", !!process.env.ADMIN_PASSWORD, "length:", process.env.ADMIN_PASSWORD?.length)
-
     if (!password || typeof password !== "string") {
       return NextResponse.json({ error: "Password obrigatoria" }, { status: 400 })
     }
@@ -19,7 +16,6 @@ export async function POST(request: NextRequest) {
 
     if (username) {
       const result = await validateUserLogin(username, password)
-      console.log("[v0] User login result:", result)
       if (!result.valid) {
         return NextResponse.json({ error: "Credenciais incorretas" }, { status: 401 })
       }
@@ -27,7 +23,6 @@ export async function POST(request: NextRequest) {
       authRole = result.role
     } else {
       const result = await validatePassword(password)
-      console.log("[v0] Superadmin login result:", result)
       if (!result.valid) {
         return NextResponse.json({ error: "Password incorreta" }, { status: 401 })
       }
