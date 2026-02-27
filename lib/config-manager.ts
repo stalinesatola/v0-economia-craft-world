@@ -140,14 +140,19 @@ export function getConfig(): AppConfig {
 
 export function updateConfig(section: string, data: unknown): AppConfig {
   const config = getConfig()
-  const key = section as keyof AppConfig
 
-  if (!(key in config)) {
+  // Allow known optional sections to be created if they don't exist yet
+  const validSections = [
+    "pools", "productionCosts", "alertsConfig", "productionChains",
+    "thresholds", "telegram", "network", "users", "banners",
+    "sharing", "customization", "maintenance",
+  ]
+  if (!validSections.includes(section)) {
     throw new Error(`Unknown config section: ${section}`)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(config as any)[key] = data
+  ;(config as any)[section] = data
 
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8")
 
