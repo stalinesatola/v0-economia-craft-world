@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { validateAdminRequest } from "@/lib/auth"
-import { getFullConfig } from "@/lib/config-manager"
+import { getFullConfig, getUsers } from "@/lib/config-manager"
 
 export const dynamic = "force-dynamic"
 
@@ -11,20 +11,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const config = getFullConfig()
-    // Mask the Telegram bot token and user password hashes
+    const config = await getFullConfig()
+    const users = await getUsers()
+
     const safeConfig = {
       ...config,
-      telegram: {
+      telegram: config.telegram ? {
         ...config.telegram,
         botToken: config.telegram.botToken ? "****" + config.telegram.botToken.slice(-8) : "",
-      },
-      users: config.users?.map((u) => ({
+      } : { botToken: "", chatId: "", enabled: false, intervalMinutes: 30 },
+      users: users.map((u) => ({
         username: u.username,
         role: u.role,
         permissions: u.permissions,
         createdAt: u.createdAt,
-      })) ?? [],
+      })),
     }
     return NextResponse.json(safeConfig)
   } catch (error) {

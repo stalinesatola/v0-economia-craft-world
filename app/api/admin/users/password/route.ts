@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { validateAdminRequest, hashPassword, changePassword } from "@/lib/auth"
-import { getConfig, updateConfig } from "@/lib/config-manager"
+import { validateAdminRequest, hashPassword } from "@/lib/auth"
+import { getUserByUsername, updateUserPassword } from "@/lib/config-manager"
 
 export async function PUT(request: NextRequest) {
   const auth = validateAdminRequest(request)
@@ -22,17 +22,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Sem permissoes para alterar password de outro utilizador" }, { status: 403 })
     }
 
-    // If target is a config user
-    const config = getConfig()
-    const users = config.users || []
-    const userIdx = users.findIndex((u) => u.username === userToChange)
-
-    if (userIdx !== -1) {
-      users[userIdx].passwordHash = hashPassword(newPassword)
-      updateConfig("users", users)
-      return NextResponse.json({ success: true, message: `Password de '${userToChange}' atualizada` })
-    }
-
     // If target is superadmin, we can't change env var from here
     if (userToChange === "admin") {
       return NextResponse.json({
@@ -40,7 +29,13 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 })
     }
 
-    return NextResponse.json({ error: "Utilizador nao encontrado" }, { status: 404 })
+    const user = await getUserByUsername(userToChange)
+    if (!user) {
+      return NextResponse.json({ error: "Utilizador nao encontrado" }, { status: 404 })
+    }
+
+    await updateUserPassword(userToChange, hashPassword(newPassword))
+    return NextResponse.json({ success: true, message: `Password de '${userToChange}' atualizada` })
   } catch {
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }

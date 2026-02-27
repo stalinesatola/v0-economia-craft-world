@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server"
-import { getConfig } from "@/lib/config-manager"
+import { getConfigSection } from "@/lib/config-manager"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
-    const config = getConfig()
-    const maintenance = config.maintenance ?? { enabled: false, message: "" }
-    return NextResponse.json(maintenance)
+    const maintenance = await getConfigSection("maintenance") as { enabled: boolean; message: string } | null
+    return NextResponse.json(maintenance ?? { enabled: false, message: "" })
   } catch {
     return NextResponse.json({ enabled: false, message: "" })
   }

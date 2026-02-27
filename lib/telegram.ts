@@ -21,12 +21,22 @@ interface Opportunity {
 }
 
 // Send a message via Telegram Bot API
-export async function sendTelegramMessage(text: string, overrideChatId?: string): Promise<{ success: boolean; message: string }> {
-  const config = getConfig()
-  const token = config.telegram.botToken || process.env.TELEGRAM_BOT_TOKEN
-  const chatId = overrideChatId || config.telegram.chatId || process.env.TELEGRAM_CHAT_ID
+export async function sendTelegramMessage(text: string, botToken?: string, chatId?: string): Promise<{ success: boolean; message: string }> {
+  let token = botToken
+  let chat = chatId
 
-  if (!token || !chatId) {
+  if (!token || !chat) {
+    try {
+      const config = await getConfig()
+      token = token || config.telegram?.botToken || process.env.TELEGRAM_BOT_TOKEN || ""
+      chat = chat || config.telegram?.chatId || process.env.TELEGRAM_CHAT_ID || ""
+    } catch {
+      token = token || process.env.TELEGRAM_BOT_TOKEN || ""
+      chat = chat || process.env.TELEGRAM_CHAT_ID || ""
+    }
+  }
+
+  if (!token || !chat) {
     return { success: false, message: "Bot Token ou Chat ID nao configurados. Configure no painel Admin > Bot Telegram ou defina as variaveis TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID." }
   }
 
@@ -35,7 +45,7 @@ export async function sendTelegramMessage(text: string, overrideChatId?: string)
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId,
+        chat_id: chat,
         text,
         parse_mode: "HTML",
         disable_web_page_preview: true,
@@ -67,7 +77,6 @@ async function fetchPrices(pools: Record<string, string>, network: string): Prom
   const addresses = poolEntries.map(([, addr]) => addr).filter((a) => a.startsWith("0x"))
   const results: Record<string, PriceResult> = {}
 
-  // Single batch request (GeckoTerminal supports up to 30)
   const joined = addresses.join(",")
   const url = `${GECKO_BASE_URL}/networks/${network}/pools/multi/${joined}`
 
@@ -107,7 +116,6 @@ async function fetchPrices(pools: Record<string, string>, network: string): Prom
   return results
 }
 
-// Format opportunity for Telegram
 function formatOpportunity(opp: Opportunity): string {
   const icon = opp.signal === "buy" ? "BUY" : "SELL"
   const arrow = opp.signal === "buy" ? "v" : "^"
@@ -115,26 +123,20 @@ function formatOpportunity(opp: Opportunity): string {
   return `${arrow} <b>${icon} ${opp.symbol}</b> | Mercado: $${opp.marketPrice.toFixed(8)} | Custo: $${opp.costPrice.toFixed(8)} | Desvio: ${deviation} | ${opp.priority.toUpperCase()}`
 }
 
-// Build full alert message
 function buildAlertMessage(opportunities: Opportunity[]): string {
   const buyOps = opportunities.filter((o) => o.signal === "buy")
   const sellOps = opportunities.filter((o) => o.signal === "sell")
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
 
   let msg = `<b>Craft World Economy - Alerta</b>\n${now}\n\n`
-
   if (buyOps.length > 0) {
     msg += `<b>OPORTUNIDADES DE COMPRA (${buyOps.length})</b>\n`
-    msg += buyOps.map(formatOpportunity).join("\n")
-    msg += "\n\n"
+    msg += buyOps.map(formatOpportunity).join("\n") + "\n\n"
   }
-
   if (sellOps.length > 0) {
     msg += `<b>SINAIS DE VENDA (${sellOps.length})</b>\n`
-    msg += sellOps.map(formatOpportunity).join("\n")
-    msg += "\n"
+    msg += sellOps.map(formatOpportunity).join("\n") + "\n"
   }
-
   msg += `\nTotal: ${opportunities.length} alertas`
   return msg
 }
@@ -146,141 +148,53 @@ export async function runMonitorCycle(): Promise<{
   alerts: string[]
   opportunities: Opportunity[]
 }> {
-  const config = getConfig()
-  const { pools, productionCosts, alertsConfig, thresholds, network } = config
+  const config = await getConfig()
+  const pools = config.pools || {}
+  const productionCosts = config.productionCosts || {}
+  const alertsConfig = config.alertsConfig || {}
+  const thresholds = config.thresholds || { buy: 15, sell: 15 }
+  const network = config.network || "ronin"
 
-  // Fetch current prices
   const prices = await fetchPrices(pools, network)
   const priceCount = Object.keys(prices).length
 
   if (priceCount === 0) {
-    return {
-      success: false,
-      message: "Nao foi possivel obter precos da GeckoTerminal",
-      alerts: [],
-      opportunities: [],
-    }
+    return { success: false, message: "Nao foi possivel obter precos da GeckoTerminal", alerts: [], opportunities: [] }
   }
 
-  // Find opportunities
   const opportunities: Opportunity[] = []
   const alertMessages: string[] = []
 
   for (const [symbol, price] of Object.entries(prices)) {
     const cost = productionCosts[symbol]
     const alertCfg = alertsConfig[symbol]
-
     if (!cost || !alertCfg || !alertCfg.enabled || cost.cost_usd === 0) continue
 
     const deviation = ((price.price_usd - cost.cost_usd) / cost.cost_usd) * 100
 
     if (deviation < -thresholds.buy) {
-      const opp: Opportunity = {
-        symbol,
-        signal: "buy",
-        marketPrice: price.price_usd,
-        costPrice: cost.cost_usd,
-        deviation,
-        priority: alertCfg.priority,
-        category: alertCfg.category,
-      }
-      opportunities.push(opp)
+      opportunities.push({ symbol, signal: "buy", marketPrice: price.price_usd, costPrice: cost.cost_usd, deviation, priority: alertCfg.priority, category: alertCfg.category })
       alertMessages.push(`COMPRAR ${symbol}: ${deviation.toFixed(1)}% abaixo do custo`)
     } else if (deviation > thresholds.sell) {
-      const opp: Opportunity = {
-        symbol,
-        signal: "sell",
-        marketPrice: price.price_usd,
-        costPrice: cost.cost_usd,
-        deviation,
-        priority: alertCfg.priority,
-        category: alertCfg.category,
-      }
-      opportunities.push(opp)
+      opportunities.push({ symbol, signal: "sell", marketPrice: price.price_usd, costPrice: cost.cost_usd, deviation, priority: alertCfg.priority, category: alertCfg.category })
       alertMessages.push(`VENDER ${symbol}: +${deviation.toFixed(1)}% acima do custo`)
     }
   }
 
-  // Sort by absolute deviation (strongest signals first)
   opportunities.sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation))
 
-  // Send main Telegram message if enabled and there are opportunities
-  if (config.telegram.enabled && opportunities.length > 0) {
+  // Send Telegram if enabled
+  if (config.telegram?.enabled && opportunities.length > 0) {
     const msg = buildAlertMessage(opportunities)
-    const result = await sendTelegramMessage(msg)
+    const result = await sendTelegramMessage(msg, config.telegram.botToken, config.telegram.chatId)
     if (!result.success) {
-      return {
-        success: false,
-        message: `${priceCount} precos obtidos, ${opportunities.length} alertas encontrados, mas falhou a enviar Telegram: ${result.message}`,
-        alerts: alertMessages,
-        opportunities,
-      }
-    }
-  }
-
-  // Send to additional Telegram channels if enabled
-  const sharing = config.sharing
-  if (sharing?.telegramChannels?.enabled && opportunities.length > 0) {
-    const channelChatIds = sharing.telegramChannels.chatIds ?? []
-    const channelMinDev = sharing.telegramChannels.minDeviation ?? 25
-    const channelTemplate = sharing.telegramChannels.template ?? ""
-    const strongOpps = opportunities.filter((o) => Math.abs(o.deviation) >= channelMinDev)
-
-    if (strongOpps.length > 0 && channelChatIds.length > 0) {
-      const msg = channelTemplate
-        ? strongOpps.map((o) =>
-            channelTemplate
-              .replace(/SIGNAL_ICON/g, o.signal === "buy" ? "v" : "^")
-              .replace(/SIGNAL_TYPE/g, o.signal === "buy" ? "COMPRA" : "VENDA")
-              .replace(/SIGNAL_SYMBOL/g, o.symbol)
-              .replace(/DEVIATION/g, o.deviation.toFixed(1))
-              .replace(/PRICE/g, `$${o.marketPrice.toFixed(8)}`)
-              .replace(/COST/g, `$${o.costPrice.toFixed(8)}`)
-          ).join("\n\n")
-        : buildAlertMessage(strongOpps)
-
-      for (const chatId of channelChatIds) {
-        await sendTelegramMessage(msg, chatId)
-      }
-    }
-  }
-
-  // Post to Twitter/X.com if enabled
-  if (sharing?.twitter?.enabled && opportunities.length > 0) {
-    try {
-      const { postTweet } = await import("./twitter")
-      const twitterMinDev = sharing.twitter.minDeviation ?? 30
-      const twitterTemplate = sharing.twitter.template ?? ""
-      const strongOpps = opportunities.filter((o) => Math.abs(o.deviation) >= twitterMinDev)
-
-      if (strongOpps.length > 0) {
-        const hashtags = (sharing.twitter.hashtags ?? "CraftWorld").split(",").map((h) => `#${h.trim()}`).join(" ")
-        const tweetText = twitterTemplate
-          ? strongOpps.slice(0, 3).map((o) =>
-              twitterTemplate
-                .replace(/SIGNAL_TYPE/g, o.signal === "buy" ? "COMPRA" : "VENDA")
-                .replace(/SIGNAL_SYMBOL/g, o.symbol)
-                .replace(/DEVIATION/g, o.deviation.toFixed(1))
-                .replace(/PRICE/g, `$${o.marketPrice.toFixed(8)}`)
-                .replace(/COST/g, `$${o.costPrice.toFixed(8)}`)
-            ).join("\n") + `\n${hashtags}`
-          : `Craft World - ${strongOpps.length} alertas: ${strongOpps.slice(0, 3).map((o) => `${o.signal === "buy" ? "COMPRA" : "VENDA"} ${o.symbol} (${o.deviation.toFixed(1)}%)`).join(", ")} ${hashtags}`
-
-        await postTweet(tweetText.substring(0, 280), sharing.twitter)
-      }
-    } catch {
-      // Twitter posting failed silently - don't break the cycle
+      return { success: false, message: `${priceCount} precos, ${opportunities.length} alertas, mas falhou enviar Telegram: ${result.message}`, alerts: alertMessages, opportunities }
     }
   }
 
   const summary = opportunities.length > 0
-    ? `${priceCount} precos obtidos, ${opportunities.length} alertas detetados${config.telegram.enabled ? " e enviados via Telegram" : " (Telegram desativado)"}`
+    ? `${priceCount} precos obtidos, ${opportunities.length} alertas detetados${config.telegram?.enabled ? " e enviados via Telegram" : ""}`
     : `${priceCount} precos obtidos, nenhum alerta neste momento`
 
-  return {
-    success: true,
-    message: summary,
-    alerts: alertMessages,
-    opportunities,
-  }
+  return { success: true, message: summary, alerts: alertMessages, opportunities }
 }

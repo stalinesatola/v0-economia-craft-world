@@ -1,7 +1,10 @@
-import { readFileSync, writeFileSync, existsSync } from "fs"
-import { join } from "path"
+import { neon } from "@neondatabase/serverless"
 
-const CONFIG_PATH = join(process.cwd(), "data", "config.json")
+function getSql() {
+  return neon(process.env.DATABASE_URL!)
+}
+
+// ── Types ──────────────────────────────────────────
 
 export interface MaintenanceConfig {
   enabled: boolean
@@ -111,64 +114,108 @@ export interface ChainNode {
   children: ChainNode[]
 }
 
-// In-memory cache to avoid repeated disk reads
-let cachedConfig: AppConfig | null = null
-let lastReadTime = 0
-const CACHE_TTL = 5000 // 5 seconds
+// ── Valid sections ──────────────────────────────────
 
-export function getConfig(): AppConfig {
-  const now = Date.now()
+const VALID_SECTIONS = [
+  "pools", "productionCosts", "alertsConfig", "productionChains",
+  "thresholds", "telegram", "network", "users", "banners",
+  "sharing", "customization", "maintenance",
+]
 
-  // Return cache if still valid
-  if (cachedConfig && now - lastReadTime < CACHE_TTL) {
-    return cachedConfig
-  }
+// ── Config section read/write ──────────────────────
 
-  try {
-    if (!existsSync(CONFIG_PATH)) {
-      throw new Error("Config file not found")
-    }
-    const raw = readFileSync(CONFIG_PATH, "utf-8")
-    cachedConfig = JSON.parse(raw) as AppConfig
-    lastReadTime = now
-    return cachedConfig
-  } catch {
-    // Fallback: try to import defaults from craft-data
-    throw new Error("Failed to read config. Ensure data/config.json exists.")
-  }
+export async function getConfigSection(sectionName: string): Promise<unknown> {
+  const sql = getSql()
+  const rows = await sql`SELECT data FROM app_config WHERE section = ${sectionName}`
+  if (rows.length === 0) return null
+  return rows[0].data
 }
 
-export function updateConfig(section: string, data: unknown): AppConfig {
-  const config = getConfig()
-
-  // Allow known optional sections to be created if they don't exist yet
-  const validSections = [
-    "pools", "productionCosts", "alertsConfig", "productionChains",
-    "thresholds", "telegram", "network", "users", "banners",
-    "sharing", "customization", "maintenance",
-  ]
-  if (!validSections.includes(section)) {
-    throw new Error(`Unknown config section: ${section}`)
+export async function setConfigSection(sectionName: string, value: unknown): Promise<void> {
+  if (!VALID_SECTIONS.includes(sectionName)) {
+    throw new Error(`Unknown config section: ${sectionName}`)
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(config as any)[section] = data
-
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8")
-
-  // Update cache
-  cachedConfig = config
-  lastReadTime = Date.now()
-
-  return config
+  const sql = getSql()
+  const jsonValue = JSON.stringify(value)
+  await sql`
+    INSERT INTO app_config (section, data)
+    VALUES (${sectionName}, ${jsonValue}::jsonb)
+    ON CONFLICT (section) DO UPDATE SET data = ${jsonValue}::jsonb
+  `
 }
 
-export function getFullConfig(): AppConfig {
+// ── Full config (assemble from all sections) ───────
+
+export async function getConfig(): Promise<AppConfig> {
+  const sql = getSql()
+  const rows = await sql`SELECT section, data FROM app_config`
+
+  const config: Record<string, unknown> = {}
+  for (const row of rows) {
+    config[row.section] = row.data
+  }
+
+  return config as unknown as AppConfig
+}
+
+export async function getFullConfig(): Promise<AppConfig> {
   return getConfig()
 }
 
-// Invalidate cache (useful after external edits)
+export async function updateConfig(section: string, data: unknown): Promise<AppConfig> {
+  await setConfigSection(section, data)
+  return getConfig()
+}
+
+// ── Users (separate table) ─────────────────────────
+
+export async function getUsers(): Promise<UserEntry[]> {
+  const sql = getSql()
+  const rows = await sql`SELECT username, password_hash, role, permissions, created_at FROM admin_users ORDER BY created_at ASC`
+  return rows.map((r) => ({
+    username: r.username,
+    passwordHash: r.password_hash,
+    role: r.role as "admin" | "viewer",
+    permissions: r.permissions as UserPermissions | undefined,
+    createdAt: r.created_at,
+  }))
+}
+
+export async function getUserByUsername(username: string): Promise<UserEntry | null> {
+  const sql = getSql()
+  const rows = await sql`SELECT username, password_hash, role, permissions, created_at FROM admin_users WHERE username = ${username}`
+  if (rows.length === 0) return null
+  const r = rows[0]
+  return {
+    username: r.username,
+    passwordHash: r.password_hash,
+    role: r.role as "admin" | "viewer",
+    permissions: r.permissions as UserPermissions | undefined,
+    createdAt: r.created_at,
+  }
+}
+
+export async function createUser(user: { username: string; passwordHash: string; role: "admin" | "viewer"; permissions?: UserPermissions }): Promise<void> {
+  const sql = getSql()
+  const permsJson = user.permissions ? JSON.stringify(user.permissions) : null
+  await sql`
+    INSERT INTO admin_users (username, password_hash, role, permissions)
+    VALUES (${user.username}, ${user.passwordHash}, ${user.role}, ${permsJson}::jsonb)
+  `
+}
+
+export async function deleteUser(username: string): Promise<void> {
+  const sql = getSql()
+  await sql`DELETE FROM admin_users WHERE username = ${username}`
+}
+
+export async function updateUserPassword(username: string, newPasswordHash: string): Promise<void> {
+  const sql = getSql()
+  await sql`UPDATE admin_users SET password_hash = ${newPasswordHash} WHERE username = ${username}`
+}
+
+// ── Cache invalidation (noop for DB, kept for API compat) ──
+
 export function invalidateCache(): void {
-  cachedConfig = null
-  lastReadTime = 0
+  // No-op: Neon queries are always fresh
 }

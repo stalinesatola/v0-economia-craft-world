@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { validateAdminRequest, hashPassword, changePassword } from "@/lib/auth"
-import { getConfig, updateConfig } from "@/lib/config-manager"
+import { getUserByUsername } from "@/lib/config-manager"
 
 // PUT: change password
 export async function PUT(request: NextRequest) {
@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest) {
       if (targetUsername === "admin") {
         return NextResponse.json({ error: "Password do superadmin e gerida via variavel de ambiente ADMIN_PASSWORD" }, { status: 400 })
       }
-      const success = changePassword(targetUsername, newPassword)
+      const success = await changePassword(targetUsername, newPassword)
       if (!success) {
         return NextResponse.json({ error: "Utilizador nao encontrado" }, { status: 404 })
       }
@@ -40,8 +40,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Password atual obrigatoria" }, { status: 400 })
     }
 
-    const config = getConfig()
-    const user = (config.users ?? []).find((u) => u.username === auth.username)
+    const user = await getUserByUsername(auth.username)
     if (!user) {
       return NextResponse.json({ error: "Utilizador nao encontrado" }, { status: 404 })
     }
@@ -51,10 +50,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Password atual incorreta" }, { status: 401 })
     }
 
-    const users = config.users ?? []
-    const idx = users.findIndex((u) => u.username === auth.username)
-    users[idx].passwordHash = hashPassword(newPassword)
-    updateConfig("users", users)
+    await changePassword(auth.username, newPassword)
 
     return NextResponse.json({ success: true, message: "Password alterada com sucesso" })
   } catch {

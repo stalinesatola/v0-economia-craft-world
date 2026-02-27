@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { validateAdminRequest } from "@/lib/auth"
-import { getConfig, DEFAULT_ADMIN_PERMISSIONS, DEFAULT_VIEWER_PERMISSIONS } from "@/lib/config-manager"
+import { getUserByUsername, DEFAULT_ADMIN_PERMISSIONS, DEFAULT_VIEWER_PERMISSIONS } from "@/lib/config-manager"
 
 export const dynamic = "force-dynamic"
 
@@ -10,12 +10,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ authenticated: false }, { status: 401 })
   }
 
-  // Get user permissions
   let permissions = auth.role === "admin" ? DEFAULT_ADMIN_PERMISSIONS : DEFAULT_VIEWER_PERMISSIONS
   if (auth.username !== "admin") {
     try {
-      const config = getConfig()
-      const user = config.users?.find((u) => u.username === auth.username)
+      const user = await getUserByUsername(auth.username)
       if (user?.permissions) {
         permissions = user.permissions
       }
