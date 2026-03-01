@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,6 +32,13 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [localCosts, setLocalCosts] = useState(config.productionCosts)
   const [localAlerts, setLocalAlerts] = useState(config.alertsConfig)
   const [hasChanges, setHasChanges] = useState(false)
+
+  useEffect(() => {
+    setLocalPools(config.pools)
+    setLocalCosts(config.productionCosts)
+    setLocalAlerts(config.alertsConfig)
+    setHasChanges(false)
+  }, [config.pools, config.productionCosts, config.alertsConfig])
 
   // Add pool form
   const [showAddForm, setShowAddForm] = useState(false)
@@ -249,10 +256,12 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                   className="rounded-lg border border-border bg-secondary/50"
                 >
                   {/* Collapsed row */}
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setExpandedResource(isExpanded ? null : symbol)}
-                    className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-secondary/80 transition-colors rounded-lg"
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedResource(isExpanded ? null : symbol) } }}
+                    className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-secondary/80 transition-colors rounded-lg cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-sm font-semibold text-card-foreground w-20">
@@ -287,18 +296,19 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Switch
-                        checked={alert?.enabled ?? false}
-                        onCheckedChange={(v) => handleAlertChange(symbol, "enabled", v)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Switch
+                          checked={alert?.enabled ?? false}
+                          onCheckedChange={(v) => handleAlertChange(symbol, "enabled", v)}
+                        />
+                      </div>
                       {isExpanded ? (
                         <ChevronUp className="h-4 w-4 text-muted-foreground" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
-                  </button>
+                  </div>
 
                   {/* Expanded details */}
                   {isExpanded && (

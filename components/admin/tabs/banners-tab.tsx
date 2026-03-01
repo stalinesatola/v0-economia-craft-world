@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -38,6 +38,11 @@ const positionDescriptions: Record<string, string> = {
 export function BannersTab({ config, onUpdate, saving }: BannersTabProps) {
   const [banners, setBanners] = useState<BannerConfig[]>(config.banners ?? [])
   const [hasChanges, setHasChanges] = useState(false)
+
+  useEffect(() => {
+    setBanners(config.banners ?? [])
+    setHasChanges(false)
+  }, [config.banners])
 
   const updateBanner = (id: string, field: keyof BannerConfig, value: string | boolean) => {
     setBanners((prev) =>

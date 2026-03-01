@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -48,6 +48,15 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
   )
   const [hasChanges, setHasChanges] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+
+  useEffect(() => {
+    setBotToken(config.telegram?.botToken || "")
+    setChatId(config.telegram?.chatId || "")
+    setEnabled(config.telegram?.enabled ?? false)
+    setInterval(config.telegram?.intervalMinutes || 5)
+    setMessageTemplate((config.telegram as Record<string, unknown>)?.messageTemplate as string || DEFAULT_TEMPLATE)
+    setHasChanges(false)
+  }, [config.telegram])
   const [checkResult, setCheckResult] = useState<{ success: boolean; message: string; alerts?: string[] } | null>(null)
   const [testing, setTesting] = useState(false)
   const [checking, setChecking] = useState(false)
