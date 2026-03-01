@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -64,6 +64,28 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const [loginCredits, setLoginCredits] = useState(cust.loginCredits)
   const [hasCustomChanges, setHasCustomChanges] = useState(false)
 
+  useEffect(() => {
+    setBuyThreshold(config.thresholds?.buy ?? 0)
+    setSellThreshold(config.thresholds?.sell ?? 0)
+    setNetwork(config.network ?? "ronin")
+    setHasChanges(false)
+  }, [config.thresholds, config.network])
+
+  useEffect(() => {
+    const c = config.customization ?? {
+      headerLogo: "", headerText: "", footerCredits: "", footerLinks: "",
+      footerDisclaimer: "", loginTitle: "", loginCredits: "",
+    }
+    setHeaderLogo(c.headerLogo)
+    setHeaderText(c.headerText)
+    setFooterCredits(c.footerCredits)
+    setFooterLinks(c.footerLinks)
+    setFooterDisclaimer(c.footerDisclaimer)
+    setLoginTitle(c.loginTitle)
+    setLoginCredits(c.loginCredits)
+    setHasCustomChanges(false)
+  }, [config.customization])
+
   // User management
   const [users, setUsers] = useState<UserDisplay[]>(
     (config.users ?? []).map((u) => ({
@@ -87,6 +109,24 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(maint.enabled)
   const [maintenanceMessage, setMaintenanceMessage] = useState(maint.message)
   const [hasMaintenanceChanges, setHasMaintenanceChanges] = useState(false)
+
+  useEffect(() => {
+    const m = config.maintenance ?? { enabled: false, message: "" }
+    setMaintenanceEnabled(m.enabled)
+    setMaintenanceMessage(m.message)
+    setHasMaintenanceChanges(false)
+  }, [config.maintenance])
+
+  useEffect(() => {
+    setUsers(
+      (config.users ?? []).map((u) => ({
+        username: typeof u === "object" && "username" in u ? (u as UserDisplay).username : "",
+        role: typeof u === "object" && "role" in u ? (u as UserDisplay).role : "viewer",
+        createdAt: typeof u === "object" && "createdAt" in u ? (u as UserDisplay).createdAt : "",
+        permissions: typeof u === "object" && "permissions" in u ? (u as UserDisplay).permissions : undefined,
+      }))
+    )
+  }, [config.users])
 
   // Password change
   const [currentPwd, setCurrentPwd] = useState("")

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -146,6 +146,12 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
   const [jsonText, setJsonText] = useState(JSON.stringify(config.productionChains, null, 2))
   const [error, setError] = useState("")
   const [hasChanges, setHasChanges] = useState(false)
+
+  useEffect(() => {
+    setJsonText(JSON.stringify(config.productionChains, null, 2))
+    setHasChanges(false)
+    setError("")
+  }, [config.productionChains])
 
   const handleSave = async () => {
     setError("")

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -50,6 +50,26 @@ export function SharingTab({ config, onUpdate, saving }: SharingTabProps) {
   const [hasChanges, setHasChanges] = useState(false)
   const [testResult, setTestResult] = useState("")
   const [testing, setTesting] = useState(false)
+
+  useEffect(() => {
+    const s = config.sharing ?? {
+      twitter: { enabled: false, apiKey: "", apiSecret: "", accessToken: "", accessSecret: "", minDeviation: 30, hashtags: "CraftWorld,Ronin,GameFi", template: "" },
+      telegramChannels: { enabled: false, chatIds: [], minDeviation: 25, template: "" },
+    }
+    setTwitterEnabled(s.twitter?.enabled ?? false)
+    setTwitterApiKey(s.twitter?.apiKey ?? "")
+    setTwitterApiSecret(s.twitter?.apiSecret ?? "")
+    setTwitterAccessToken(s.twitter?.accessToken ?? "")
+    setTwitterAccessSecret(s.twitter?.accessSecret ?? "")
+    setTwitterMinDev(s.twitter?.minDeviation ?? 30)
+    setTwitterHashtags(s.twitter?.hashtags ?? "CraftWorld,Ronin,GameFi")
+    setTwitterTemplate(s.twitter?.template ?? "")
+    setTgEnabled(s.telegramChannels?.enabled ?? false)
+    setTgChatIds(s.telegramChannels?.chatIds ?? [])
+    setTgMinDev(s.telegramChannels?.minDeviation ?? 25)
+    setTgTemplate(s.telegramChannels?.template ?? "")
+    setHasChanges(false)
+  }, [config.sharing])
 
   const addChatId = () => {
     if (newChatId.trim() && !tgChatIds.includes(newChatId.trim())) {

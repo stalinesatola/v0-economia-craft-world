@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,6 +32,13 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [localCosts, setLocalCosts] = useState(config.productionCosts)
   const [localAlerts, setLocalAlerts] = useState(config.alertsConfig)
   const [hasChanges, setHasChanges] = useState(false)
+
+  useEffect(() => {
+    setLocalPools(config.pools)
+    setLocalCosts(config.productionCosts)
+    setLocalAlerts(config.alertsConfig)
+    setHasChanges(false)
+  }, [config.pools, config.productionCosts, config.alertsConfig])
 
   // Add pool form
   const [showAddForm, setShowAddForm] = useState(false)
