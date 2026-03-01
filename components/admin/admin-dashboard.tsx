@@ -65,6 +65,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
   }, [fetchConfig, initialConfig])
 
   const updateSection = async (section: string, data: unknown): Promise<boolean> => {
+    console.log("[v0] updateSection called:", section, "canEdit:", canEdit(section))
     if (!canEdit(section)) return false
     setSaving(true)
     try {
@@ -73,12 +74,16 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
+      console.log("[v0] updateSection response:", res.status, res.ok)
       if (res.ok) {
         await fetchConfig()
         return true
       }
+      const err = await res.text()
+      console.error("[v0] updateSection error response:", err)
       return false
-    } catch {
+    } catch (e) {
+      console.error("[v0] updateSection fetch error:", e)
       return false
     } finally {
       setSaving(false)

@@ -47,6 +47,7 @@ export async function PUT(
 
   try {
     const data = await request.json()
+    console.log("[v0] PUT config section:", section, "data keys:", Object.keys(data ?? {}))
 
     // For telegram section, preserve existing bot token if masked value sent
     if (section === "telegram" && data.botToken && data.botToken.startsWith("****")) {
@@ -57,8 +58,10 @@ export async function PUT(
     }
 
     const updatedConfig = await updateConfig(section, data)
+    console.log("[v0] Config saved successfully for section:", section)
     return NextResponse.json({ success: true, config: updatedConfig })
   } catch (error) {
+    console.error("[v0] Error saving config:", section, error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Erro ao atualizar config" },
       { status: 500 }
