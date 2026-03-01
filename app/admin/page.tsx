@@ -17,17 +17,29 @@ export default function AdminPage() {
   const [isChecking, setIsChecking] = useState(true)
   const [initialConfig, setInitialConfig] = useState<AppConfig | null>(null)
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [authToken, setAuthToken] = useState<string | null>(null)
   const [customization, setCustomization] = useState<AppConfig["customization"]>(undefined)
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    setMounted(true)
+    // Restore token from sessionStorage
+    const saved = sessionStorage.getItem("cw_admin_token")
+    if (saved) setAuthToken(saved)
+  }, [])
 
   const checkAuth = useCallback(async () => {
+    const savedToken = sessionStorage.getItem("cw_admin_token")
     try {
-      const res = await fetch("/api/admin/check")
+      const headers: Record<string, string> = {}
+      if (savedToken) headers["Authorization"] = `Bearer ${savedToken}`
+      const res = await fetch("/api/admin/check", { headers })
       if (res.ok) {
         const data = await res.json()
         setIsAuthenticated(true)
         setUserInfo(data.user || null)
+        if (savedToken) setAuthToken(savedToken)
+      } else {
+        sessionStorage.removeItem("cw_admin_token")
       }
     } catch {
       // Not authenticated
@@ -36,7 +48,6 @@ export default function AdminPage() {
     }
   }, [])
 
-  // Fetch customization for login screen
   useEffect(() => {
     fetch("/api/customization")
       .then((r) => r.ok ? r.json() : null)
@@ -63,6 +74,11 @@ export default function AdminPage() {
         setIsAuthenticated(true)
         if (data.config) setInitialConfig(data.config)
         if (data.user) setUserInfo(data.user)
+        // Save token for API calls
+        if (data.token) {
+          setAuthToken(data.token)
+          sessionStorage.setItem("cw_admin_token", data.token)
+        }
         return true
       }
       return false
@@ -72,10 +88,14 @@ export default function AdminPage() {
   }
 
   const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" })
+    const headers: Record<string, string> = {}
+    if (authToken) headers["Authorization"] = `Bearer ${authToken}`
+    await fetch("/api/admin/logout", { method: "POST", headers })
     setIsAuthenticated(false)
     setInitialConfig(null)
     setUserInfo(null)
+    setAuthToken(null)
+    sessionStorage.removeItem("cw_admin_token")
   }
 
   if (!mounted || isChecking) {
@@ -93,5 +113,5 @@ export default function AdminPage() {
     return <AdminLogin onLogin={handleLogin} customization={customization} />
   }
 
-  return <AdminDashboard onLogout={handleLogout} initialConfig={initialConfig} userInfo={userInfo} />
+  return <AdminDashboard onLogout={handleLogout} initialConfig={initialConfig} userInfo={userInfo} authToken={authToken} />
 }

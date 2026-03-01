@@ -25,9 +25,10 @@ interface AdminDashboardProps {
   onLogout: () => void
   initialConfig?: AppConfig | null
   userInfo?: UserInfo | null
+  authToken?: string | null
 }
 
-export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashboardProps) {
+export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }: AdminDashboardProps) {
   const { t } = useI18n()
   const [config, setConfig] = useState<AppConfig | null>(initialConfig ?? null)
   const [loading, setLoading] = useState(!initialConfig)
@@ -52,9 +53,15 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
     return perms[section] === true
   }
 
+  const authHeaders = useCallback((): Record<string, string> => {
+    const h: Record<string, string> = { "Content-Type": "application/json" }
+    if (authToken) h["Authorization"] = `Bearer ${authToken}`
+    return h
+  }, [authToken])
+
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/config")
+      const res = await fetch("/api/admin/config", { headers: authHeaders() })
       if (res.ok) {
         const data = await res.json()
         setConfig(data)
@@ -64,7 +71,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [authHeaders])
 
   useEffect(() => {
     if (!initialConfig) fetchConfig()
@@ -79,7 +86,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
     try {
       const res = await fetch(`/api/admin/config/${section}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(data),
       })
       if (res.ok) {

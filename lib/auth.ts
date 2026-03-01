@@ -124,8 +124,17 @@ export async function isAuthenticated(): Promise<{ authenticated: boolean; usern
 }
 
 // Synchronous token validation for API routes (does not need DB)
+// Checks both cookie and Authorization header for token
 export function validateAdminRequest(request: NextRequest): { valid: boolean; username: string; role: string } {
-  const token = request.cookies.get(SESSION_COOKIE)?.value
+  // Try cookie first
+  let token = request.cookies.get(SESSION_COOKIE)?.value
+  // Fallback to Authorization header
+  if (!token) {
+    const authHeader = request.headers.get("Authorization")
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.slice(7)
+    }
+  }
   if (!token) return { valid: false, username: "", role: "" }
   return verifyToken(token)
 }
