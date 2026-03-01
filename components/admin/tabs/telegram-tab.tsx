@@ -63,13 +63,16 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
   const [showTemplateHelp, setShowTemplateHelp] = useState(false)
 
   const handleSave = async () => {
-    const success = await onUpdate("telegram", {
+    const payload = {
       botToken: botToken.startsWith("****") ? config.telegram.botToken : botToken,
       chatId,
       enabled,
       intervalMinutes: interval,
       messageTemplate,
-    })
+    }
+    console.log("[v0] Telegram save payload:", JSON.stringify(payload))
+    const success = await onUpdate("telegram", payload)
+    console.log("[v0] Telegram save success:", success)
     if (success) setHasChanges(false)
   }
 

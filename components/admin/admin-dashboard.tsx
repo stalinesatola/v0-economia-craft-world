@@ -65,7 +65,11 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
   }, [fetchConfig, initialConfig])
 
   const updateSection = async (section: string, data: unknown): Promise<boolean> => {
-    if (!canEdit(section)) return false
+    console.log("[v0] updateSection called:", section)
+    if (!canEdit(section)) {
+      console.log("[v0] updateSection: no permission for", section)
+      return false
+    }
     setSaving(true)
     try {
       const res = await fetch(`/api/admin/config/${section}`, {
@@ -73,12 +77,18 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
+      console.log("[v0] updateSection response:", res.status, res.statusText)
       if (res.ok) {
+        const resData = await res.json()
+        console.log("[v0] updateSection result:", resData.success)
         await fetchConfig()
         return true
       }
+      const errText = await res.text()
+      console.error("[v0] updateSection error:", errText)
       return false
-    } catch {
+    } catch (e) {
+      console.error("[v0] updateSection exception:", e)
       return false
     } finally {
       setSaving(false)
