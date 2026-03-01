@@ -12,11 +12,14 @@ interface UserInfo {
 }
 
 export default function AdminPage() {
+  const [mounted, setMounted] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
   const [initialConfig, setInitialConfig] = useState<AppConfig | null>(null)
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
   const [customization, setCustomization] = useState<AppConfig["customization"]>(undefined)
+
+  useEffect(() => { setMounted(true) }, [])
 
   const checkAuth = useCallback(async () => {
     try {
@@ -75,7 +78,7 @@ export default function AdminPage() {
     setUserInfo(null)
   }
 
-  if (isChecking) {
+  if (!mounted || isChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">

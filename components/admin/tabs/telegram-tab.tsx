@@ -70,9 +70,7 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
       intervalMinutes: interval,
       messageTemplate,
     }
-    console.log("[v0] Telegram save payload:", JSON.stringify(payload))
     const success = await onUpdate("telegram", payload)
-    console.log("[v0] Telegram save success:", success)
     if (success) setHasChanges(false)
   }
 
