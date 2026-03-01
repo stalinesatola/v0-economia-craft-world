@@ -11,7 +11,7 @@ import { BannersTab } from "@/components/admin/tabs/banners-tab"
 import { SharingTab } from "@/components/admin/tabs/sharing-tab"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useI18n } from "@/lib/i18n"
-import { LogOut, ArrowLeft, RefreshCw, ShieldAlert } from "lucide-react"
+import { LogOut, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, XCircle } from "lucide-react"
 import Link from "next/link"
 import type { AppConfig } from "@/lib/config-manager"
 
@@ -25,13 +25,20 @@ interface AdminDashboardProps {
   onLogout: () => void
   initialConfig?: AppConfig | null
   userInfo?: UserInfo | null
+  authToken?: string | null
 }
 
-export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashboardProps) {
+export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }: AdminDashboardProps) {
   const { t } = useI18n()
   const [config, setConfig] = useState<AppConfig | null>(initialConfig ?? null)
   const [loading, setLoading] = useState(!initialConfig)
   const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
+
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   // Permission check - superadmin (username "admin") always has full access
   const isSuperAdmin = userInfo?.username === "admin" || userInfo?.role === "admin"
@@ -46,9 +53,15 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
     return perms[section] === true
   }
 
+  const authHeaders = useCallback((): Record<string, string> => {
+    const h: Record<string, string> = { "Content-Type": "application/json" }
+    if (authToken) h["Authorization"] = `Bearer ${authToken}`
+    return h
+  }, [authToken])
+
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/config")
+      const res = await fetch("/api/admin/config", { headers: authHeaders() })
       if (res.ok) {
         const data = await res.json()
         setConfig(data)
@@ -58,37 +71,34 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [authHeaders])
 
   useEffect(() => {
     if (!initialConfig) fetchConfig()
   }, [fetchConfig, initialConfig])
 
   const updateSection = async (section: string, data: unknown): Promise<boolean> => {
-    console.log("[v0] updateSection called:", section)
     if (!canEdit(section)) {
-      console.log("[v0] updateSection: no permission for", section)
+      showToast("error", "Sem permissao para editar esta seccao")
       return false
     }
     setSaving(true)
     try {
       const res = await fetch(`/api/admin/config/${section}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(data),
       })
-      console.log("[v0] updateSection response:", res.status, res.statusText)
       if (res.ok) {
-        const resData = await res.json()
-        console.log("[v0] updateSection result:", resData.success)
         await fetchConfig()
+        showToast("success", "Definicoes salvas com sucesso!")
         return true
       }
-      const errText = await res.text()
-      console.error("[v0] updateSection error:", errText)
+      const errData = await res.json().catch(() => ({ error: "Erro desconhecido" }))
+      showToast("error", errData.error || "Erro ao salvar definicoes")
       return false
-    } catch (e) {
-      console.error("[v0] updateSection exception:", e)
+    } catch {
+      showToast("error", "Erro de rede ao salvar definicoes")
       return false
     } finally {
       setSaving(false)
@@ -117,6 +127,23 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo }: AdminDashb
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className={`flex items-center gap-2 rounded-lg border px-4 py-3 shadow-lg ${
+            toast.type === "success"
+              ? "border-primary/30 bg-primary/10 text-primary"
+              : "border-destructive/30 bg-destructive/10 text-destructive"
+          }`}>
+            {toast.type === "success" ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+            ) : (
+              <XCircle className="h-4 w-4 shrink-0" />
+            )}
+            <span className="text-sm font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-6">
           {/* Header */}

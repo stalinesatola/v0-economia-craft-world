@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       authRole = result.role
     }
 
-    await createSession(authUser, authRole)
+    const token = await createSession(authUser, authRole)
 
     const config = await getFullConfig()
     const users = await getUsers()
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      token,
       config: safeConfig,
       user: { username: authUser, role: authRole, permissions },
     })

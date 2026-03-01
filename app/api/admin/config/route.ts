@@ -12,8 +12,6 @@ export async function GET(request: NextRequest) {
 
   try {
     const config = await getFullConfig()
-    console.log("[v0] GET /config - telegram from DB:", JSON.stringify(config.telegram))
-    console.log("[v0] GET /config - all sections:", Object.keys(config))
     const users = await getUsers()
 
     const safeConfig = {
