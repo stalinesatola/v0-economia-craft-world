@@ -16,6 +16,7 @@ interface TelegramTabProps {
   config: AppConfig
   onUpdate: (section: string, data: unknown) => Promise<boolean>
   saving: boolean
+  authToken?: string | null
 }
 
 const DEFAULT_TEMPLATE = `📊 *Craft World Economy Alert*
@@ -37,7 +38,7 @@ const TEMPLATE_VARS = [
   { var: "{TIMESTAMP}", desc: "Data/hora do alerta" },
 ]
 
-export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
+export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTabProps) {
   const { t } = useI18n()
   const tg = config.telegram ?? { botToken: "", chatId: "", enabled: false, intervalMinutes: 30 }
   const [botToken, setBotToken] = useState(tg.botToken || "")
@@ -75,11 +76,17 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
     if (success) setHasChanges(false)
   }
 
+  const getAuthHeaders = (): Record<string, string> => {
+    const h: Record<string, string> = { "Content-Type": "application/json" }
+    if (authToken) h["Authorization"] = `Bearer ${authToken}`
+    return h
+  }
+
   const handleTest = async () => {
     setTesting(true)
     setTestResult(null)
     try {
-      const res = await fetch("/api/admin/telegram/test", { method: "POST" })
+      const res = await fetch("/api/admin/telegram/test", { method: "POST", headers: getAuthHeaders() })
       const data = await res.json()
       setTestResult({
         success: res.ok,
@@ -96,7 +103,7 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
     setChecking(true)
     setCheckResult(null)
     try {
-      const res = await fetch("/api/admin/telegram/check", { method: "POST" })
+      const res = await fetch("/api/admin/telegram/check", { method: "POST", headers: getAuthHeaders() })
       const data = await res.json()
       setCheckResult({
         success: res.ok,

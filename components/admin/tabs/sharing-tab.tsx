@@ -15,9 +15,10 @@ interface SharingTabProps {
   config: AppConfig
   onUpdate: (section: string, data: unknown) => Promise<boolean>
   saving: boolean
+  authToken?: string | null
 }
 
-export function SharingTab({ config, onUpdate, saving }: SharingTabProps) {
+export function SharingTab({ config, onUpdate, saving, authToken }: SharingTabProps) {
   const sharing = config.sharing ?? {
     twitter: {
       enabled: false, apiKey: "", apiSecret: "", accessToken: "", accessSecret: "",
@@ -111,9 +112,11 @@ export function SharingTab({ config, onUpdate, saving }: SharingTabProps) {
     setTesting(true)
     setTestResult("")
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`
       const res = await fetch("/api/admin/share/test", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ platform }),
       })
       const data = await res.json()

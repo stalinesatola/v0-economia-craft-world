@@ -226,12 +226,12 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
               )}
               {canEdit("telegram") && (
                 <TabsContent value="telegram" className="mt-4">
-                  <TelegramTab config={config} onUpdate={updateSection} saving={saving} />
+                  <TelegramTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
                 </TabsContent>
               )}
               {canEdit("sharing") && (
                 <TabsContent value="sharing" className="mt-4">
-                  <SharingTab config={config} onUpdate={updateSection} saving={saving} />
+                  <SharingTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
                 </TabsContent>
               )}
               {canEdit("banners") && (
