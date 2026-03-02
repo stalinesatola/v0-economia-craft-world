@@ -28,17 +28,17 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const { t } = useI18n()
   const [search, setSearch] = useState("")
   const [expandedResource, setExpandedResource] = useState<string | null>(null)
-  const [localPools, setLocalPools] = useState(config.pools ?? {})
-  const [localCosts, setLocalCosts] = useState(config.productionCosts ?? {})
-  const [localAlerts, setLocalAlerts] = useState(config.alertsConfig ?? {})
+  const [localPools, setLocalPools] = useState(config?.pools ?? {})
+  const [localCosts, setLocalCosts] = useState(config?.productionCosts ?? {})
+  const [localAlerts, setLocalAlerts] = useState(config?.alertsConfig ?? {})
   const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
-    setLocalPools(config.pools ?? {})
-    setLocalCosts(config.productionCosts ?? {})
-    setLocalAlerts(config.alertsConfig ?? {})
+    setLocalPools(config?.pools ?? {})
+    setLocalCosts(config?.productionCosts ?? {})
+    setLocalAlerts(config?.alertsConfig ?? {})
     setHasChanges(false)
-  }, [config.pools, config.productionCosts, config.alertsConfig])
+  }, [config?.pools, config?.productionCosts, config?.alertsConfig])
 
   // Add pool form
   const [showAddForm, setShowAddForm] = useState(false)
@@ -48,7 +48,8 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [newCategory, setNewCategory] = useState<"mine" | "factory" | "token">("factory")
   const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
 
-  const symbols = Object.keys(localPools).filter((s) =>
+  const safePools = localPools ?? {}
+  const symbols = Object.keys(safePools).filter((s) =>
     s.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -76,7 +77,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const handleAddPool = () => {
     const symbol = newSymbol.toUpperCase().trim()
     if (!symbol || !newAddress.trim()) return
-    if (localPools[symbol]) return // Already exists
+    if (safePools[symbol]) return // Already exists
 
     setLocalPools((prev) => ({ ...prev, [symbol]: newAddress.trim() }))
     setLocalCosts((prev) => ({
@@ -217,7 +218,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                 <div className="flex items-end">
                   <Button
                     onClick={handleAddPool}
-                    disabled={!newSymbol.trim() || !newAddress.trim() || !!localPools[newSymbol.toUpperCase().trim()]}
+                    disabled={!newSymbol.trim() || !newAddress.trim() || !!safePools[newSymbol.toUpperCase().trim()]}
                     size="sm"
                     className="w-full gap-1.5"
                   >
@@ -226,7 +227,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                   </Button>
                 </div>
               </div>
-              {localPools[newSymbol.toUpperCase().trim()] && newSymbol.trim() && (
+              {safePools[newSymbol.toUpperCase().trim()] && newSymbol.trim() && (
                 <p className="mt-2 text-xs text-destructive">Simbolo ja existe!</p>
               )}
             </div>
@@ -317,7 +318,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                         <div className="flex flex-col gap-1.5">
                           <Label className="text-xs text-muted-foreground">Pool Address</Label>
                           <Input
-                            value={localPools[symbol]}
+                            value={safePools[symbol] ?? ""}
                             onChange={(e) => handlePoolChange(symbol, e.target.value)}
                             className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
                           />
