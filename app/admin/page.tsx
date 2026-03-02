@@ -71,6 +71,9 @@ export default function AdminPage() {
       })
       if (res.ok) {
         const data = await res.json()
+        console.log("[v0] handleLogin: success, data keys:", Object.keys(data))
+        console.log("[v0] handleLogin: config keys:", data.config ? Object.keys(data.config) : "no config")
+        console.log("[v0] handleLogin: config.pools type:", data.config?.pools ? typeof data.config.pools : "no pools", "keys:", data.config?.pools ? Object.keys(data.config.pools).length : 0)
         setIsAuthenticated(true)
         if (data.config) setInitialConfig(data.config)
         if (data.user) setUserInfo(data.user)

@@ -154,6 +154,9 @@ export async function getConfig(): Promise<AppConfig> {
   for (const row of rows) {
     config[row.section] = row.data
   }
+  console.log("[v0] getConfig: rows count:", rows.length, "sections:", Object.keys(config))
+  console.log("[v0] getConfig: pools type:", typeof config.pools, "is null:", config.pools === null)
+  console.log("[v0] getConfig: banners type:", typeof config.banners, "is null:", config.banners === null, "is array:", Array.isArray(config.banners))
 
   // Ensure all required sections have safe defaults when DB is empty
   const defaults: AppConfig = {

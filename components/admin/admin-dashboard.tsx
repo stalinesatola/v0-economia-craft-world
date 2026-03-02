@@ -78,13 +78,22 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
 
   const fetchConfig = useCallback(async () => {
     try {
+      console.log("[v0] fetchConfig: calling /api/admin/config with headers:", JSON.stringify(authHeaders()))
       const res = await fetch("/api/admin/config", { headers: authHeaders() })
+      console.log("[v0] fetchConfig: response status:", res.status)
       if (res.ok) {
         const data = await res.json()
+        console.log("[v0] fetchConfig: data keys:", Object.keys(data))
+        console.log("[v0] fetchConfig: pools type:", typeof data.pools, "keys:", data.pools ? Object.keys(data.pools).length : "null/undefined")
+        console.log("[v0] fetchConfig: banners type:", typeof data.banners, "length:", Array.isArray(data.banners) ? data.banners.length : "not array")
+        console.log("[v0] fetchConfig: productionChains type:", typeof data.productionChains, "length:", Array.isArray(data.productionChains) ? data.productionChains.length : "not array")
         setConfig(sanitizeConfig(data))
+      } else {
+        const errText = await res.text()
+        console.log("[v0] fetchConfig: error response:", errText)
       }
-    } catch {
-      // Error
+    } catch (err) {
+      console.log("[v0] fetchConfig: exception:", err)
     } finally {
       setLoading(false)
     }
