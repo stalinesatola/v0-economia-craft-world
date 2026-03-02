@@ -29,22 +29,19 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [search, setSearch] = useState("")
   const [expandedResource, setExpandedResource] = useState<string | null>(null)
   const [localPools, setLocalPools] = useState(config?.pools ?? {})
-  const [localCosts, setLocalCosts] = useState(config?.productionCosts ?? {})
   const [localAlerts, setLocalAlerts] = useState(config?.alertsConfig ?? {})
   const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
     setLocalPools(config?.pools ?? {})
-    setLocalCosts(config?.productionCosts ?? {})
     setLocalAlerts(config?.alertsConfig ?? {})
     setHasChanges(false)
-  }, [config?.pools, config?.productionCosts, config?.alertsConfig])
+  }, [config?.pools, config?.alertsConfig])
 
   // Add pool form
   const [showAddForm, setShowAddForm] = useState(false)
   const [newSymbol, setNewSymbol] = useState("")
   const [newAddress, setNewAddress] = useState("")
-  const [newCost, setNewCost] = useState("0")
   const [newCategory, setNewCategory] = useState<"mine" | "factory" | "token">("factory")
   const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
 
@@ -55,14 +52,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
 
   const handlePoolChange = (symbol: string, address: string) => {
     setLocalPools((prev) => ({ ...prev, [symbol]: address }))
-    setHasChanges(true)
-  }
-
-  const handleCostChange = (symbol: string, field: string, value: string | number) => {
-    setLocalCosts((prev) => ({
-      ...prev,
-      [symbol]: { ...prev[symbol], [field]: value },
-    }))
     setHasChanges(true)
   }
 
@@ -80,10 +69,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     if (safePools[symbol]) return // Already exists
 
     setLocalPools((prev) => ({ ...prev, [symbol]: newAddress.trim() }))
-    setLocalCosts((prev) => ({
-      ...prev,
-      [symbol]: { cost_usd: parseFloat(newCost) || 0, levels: 1 },
-    }))
     setLocalAlerts((prev) => ({
       ...prev,
       [symbol]: { enabled: true, priority: newPriority, category: newCategory },
@@ -91,18 +76,12 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     setHasChanges(true)
     setNewSymbol("")
     setNewAddress("")
-    setNewCost("0")
     setShowAddForm(false)
   }
 
   const handleDeletePool = (symbol: string) => {
     if (!confirm(`Remover '${symbol}'?`)) return
     setLocalPools((prev) => {
-      const next = { ...prev }
-      delete next[symbol]
-      return next
-    })
-    setLocalCosts((prev) => {
       const next = { ...prev }
       delete next[symbol]
       return next
@@ -118,9 +97,8 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
 
   const handleSave = async () => {
     const r1 = await onUpdate("pools", localPools)
-    const r2 = await onUpdate("productionCosts", localCosts)
-    const r3 = await onUpdate("alertsConfig", localAlerts)
-    if (r1 && r2 && r3) {
+    const r2 = await onUpdate("alertsConfig", localAlerts)
+    if (r1 && r2) {
       setHasChanges(false)
     }
   }
@@ -176,16 +154,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                     value={newAddress}
                     onChange={(e) => setNewAddress(e.target.value)}
                     placeholder="0x..."
-                    className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Custo USD</Label>
-                  <Input
-                    type="number"
-                    step="0.0001"
-                    value={newCost}
-                    onChange={(e) => setNewCost(e.target.value)}
                     className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
                   />
                 </div>
@@ -247,7 +215,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
           {/* Resource List */}
           <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-1">
             {symbols.map((symbol) => {
-              const cost = localCosts[symbol]
               const alert = localAlerts[symbol]
               const isExpanded = expandedResource === symbol
 
@@ -292,9 +259,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                       >
                         {alert?.priority || "low"}
                       </Badge>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        ${cost?.cost_usd ?? 0}
-                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div onClick={(e) => e.stopPropagation()}>
@@ -324,14 +288,10 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                           />
                         </div>
                         <div className="flex flex-col gap-1.5">
-                          <Label className="text-xs text-muted-foreground">{t("table.productionCost")} (USD)</Label>
-                          <Input
-                            type="number"
-                            step="0.0001"
-                            value={cost?.cost_usd ?? 0}
-                            onChange={(e) => handleCostChange(symbol, "cost_usd", parseFloat(e.target.value) || 0)}
-                            className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
-                          />
+                          <Label className="text-xs text-muted-foreground">{t("table.productionCost")}</Label>
+                          <div className="flex items-center h-8 px-2 rounded-md bg-muted border border-border text-xs font-mono text-muted-foreground">
+                            Calculado automaticamente via cadeia de producao
+                          </div>
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Label className="text-xs text-muted-foreground">Categoria</Label>
@@ -365,26 +325,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                             </SelectContent>
                           </Select>
                         </div>
-                        {cost?.source && (
-                          <div className="flex flex-col gap-1.5">
-                            <Label className="text-xs text-muted-foreground">Fonte</Label>
-                            <Input
-                              value={cost.source}
-                              onChange={(e) => handleCostChange(symbol, "source", e.target.value)}
-                              className="bg-background border-border text-card-foreground h-8 text-xs"
-                            />
-                          </div>
-                        )}
-                        {cost?.input && (
-                          <div className="flex flex-col gap-1.5">
-                            <Label className="text-xs text-muted-foreground">Input</Label>
-                            <Input
-                              value={cost.input}
-                              onChange={(e) => handleCostChange(symbol, "input", e.target.value)}
-                              className="bg-background border-border text-card-foreground h-8 text-xs"
-                            />
-                          </div>
-                        )}
+
                       </div>
                       <div className="mt-3 flex justify-end">
                         <Button

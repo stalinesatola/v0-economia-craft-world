@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Save, RotateCcw, Eye, Code, Plus, Trash2, ArrowRight } from "lucide-react"
+import { Save, RotateCcw, Eye, Code, ArrowRight, ImageIcon, ChevronDown, ChevronUp } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
-import { RECIPES, getResourceColor, type Recipe } from "@/lib/resource-images"
+import { RECIPES, getResourceColor, RESOURCE_IMAGES, type Recipe } from "@/lib/resource-images"
 import type { AppConfig, ChainNode } from "@/lib/config-manager"
 
 interface ChainsTabProps {
@@ -80,13 +80,47 @@ const DEFAULT_CHAINS: ChainNode[] = [
   },
 ]
 
-function ResourceIcon({ symbol, size = 28 }: { symbol: string; size?: number }) {
+function ResourceIcon({ symbol, size = 28, imageUrl }: { symbol: string; size?: number; imageUrl?: string }) {
   const color = getResourceColor(symbol)
   const initials = symbol.slice(0, 2)
+  const imgSrc = imageUrl || RESOURCE_IMAGES[symbol]
+
+  if (imgSrc) {
+    return (
+      <img
+        src={imgSrc}
+        alt={symbol}
+        className="rounded-md shrink-0 shadow-sm object-cover"
+        style={{ width: size, height: size }}
+        onError={(e) => {
+          // Fallback para icone colorido se imagem falhar
+          const target = e.target as HTMLImageElement
+          target.style.display = "none"
+          const parent = target.parentElement
+          if (parent) {
+            const fallback = document.createElement("div")
+            fallback.className = "flex items-center justify-center rounded-md font-mono text-[9px] font-bold text-white shrink-0 shadow-sm"
+            fallback.style.width = `${size}px`
+            fallback.style.height = `${size}px`
+            fallback.style.backgroundColor = color
+            fallback.style.textShadow = "0 1px 2px rgba(0,0,0,0.5)"
+            fallback.textContent = initials
+            parent.appendChild(fallback)
+          }
+        }}
+      />
+    )
+  }
+
   return (
     <div
       className="flex items-center justify-center rounded-md font-mono text-[9px] font-bold text-white shrink-0 shadow-sm"
-      style={{ width: size, height: size, backgroundColor: color, textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: color,
+        textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+      }}
       title={symbol}
     >
       {initials}
@@ -94,46 +128,99 @@ function ResourceIcon({ symbol, size = 28 }: { symbol: string; size?: number }) 
   )
 }
 
-function RecipePreview({ recipe }: { recipe: Recipe }) {
+function RecipeCard({ recipe, images, onImageChange }: {
+  recipe: Recipe
+  images: Record<string, string>
+  onImageChange: (symbol: string, url: string) => void
+}) {
+  const [showImageEdit, setShowImageEdit] = useState(false)
+
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2">
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {recipe.inputs.map((inp, i) => (
-          <div key={inp.resource} className="flex items-center gap-1">
-            {i > 0 && <span className="text-[10px] text-muted-foreground font-bold">+</span>}
-            <span className="text-[10px] font-mono font-bold text-primary">{inp.quantity}x</span>
-            <ResourceIcon symbol={inp.resource} size={20} />
-            <span className="text-[10px] font-mono text-muted-foreground">{inp.resource}</span>
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-secondary/30 p-3 transition-all hover:border-primary/30">
+      {/* Receita principal */}
+      <div className="flex items-center gap-2">
+        {/* Inputs */}
+        <div className="flex items-center gap-1.5 flex-wrap flex-1">
+          {recipe.inputs.map((inp, i) => (
+            <div key={inp.resource} className="flex items-center gap-1">
+              {i > 0 && <span className="text-[10px] text-muted-foreground font-bold">+</span>}
+              <span className="text-[10px] font-mono font-bold text-primary">{inp.quantity}x</span>
+              <ResourceIcon symbol={inp.resource} size={24} imageUrl={images[inp.resource]} />
+              <span className="text-[10px] font-mono text-muted-foreground">{inp.resource}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Arrow + Level */}
+        <div className="flex flex-col items-center shrink-0">
+          <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 font-mono border-muted-foreground/30">
+            LVL 1
+          </Badge>
+          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+        </div>
+
+        {/* Output */}
+        <div className="flex items-center gap-1.5">
+          <ResourceIcon symbol={recipe.output} size={28} imageUrl={images[recipe.output]} />
+          <span className="text-xs font-mono font-bold text-card-foreground">{recipe.output}</span>
+        </div>
+
+        {/* Botao imagem */}
+        <button
+          onClick={() => setShowImageEdit(!showImageEdit)}
+          className="ml-auto text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+          title="Editar imagens"
+        >
+          {showImageEdit ? <ChevronUp className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+
+      {/* Editor de imagens (expansivel) */}
+      {showImageEdit && (
+        <div className="flex flex-col gap-2 border-t border-border pt-2">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-[10px] text-muted-foreground font-semibold">
+              Imagem de {recipe.output} (recurso produzido)
+            </Label>
+            <Input
+              value={images[recipe.output] || ""}
+              onChange={(e) => onImageChange(recipe.output, e.target.value)}
+              placeholder="https://...imagem.png"
+              className="bg-background border-border text-card-foreground h-7 text-[10px] font-mono"
+            />
           </div>
-        ))}
-      </div>
-      <div className="flex flex-col items-center shrink-0">
-        <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 font-mono border-muted-foreground/30">
-          LVL {recipe.level}
-        </Badge>
-        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-      </div>
-      <div className="flex items-center gap-1.5">
-        <ResourceIcon symbol={recipe.output} size={24} />
-        <span className="text-xs font-mono font-bold text-card-foreground">{recipe.output}</span>
-      </div>
+          {recipe.inputs.map((inp) => (
+            <div key={inp.resource} className="flex flex-col gap-1.5">
+              <Label className="text-[10px] text-muted-foreground">
+                Imagem de {inp.resource}
+              </Label>
+              <Input
+                value={images[inp.resource] || ""}
+                onChange={(e) => onImageChange(inp.resource, e.target.value)}
+                placeholder="https://...imagem.png"
+                className="bg-background border-border text-card-foreground h-7 text-[10px] font-mono"
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-function ChainTreePreview({ nodes, depth = 0 }: { nodes: ChainNode[]; depth?: number }) {
+function ChainTreePreview({ nodes, depth = 0, images }: { nodes: ChainNode[]; depth?: number; images: Record<string, string> }) {
   return (
     <div className={depth > 0 ? "ml-4 border-l border-border pl-3" : ""}>
       {nodes.map((node) => (
         <div key={node.symbol} className="py-1">
           <div className="flex items-center gap-2">
             {depth > 0 && <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />}
-            <ResourceIcon symbol={node.symbol} size={22} />
+            <ResourceIcon symbol={node.symbol} size={22} imageUrl={images[node.symbol]} />
             <Badge variant="outline" className="font-mono text-xs border-primary/40 text-primary">
               {node.symbol}
             </Badge>
           </div>
-          {node.children.length > 0 && <ChainTreePreview nodes={node.children} depth={depth + 1} />}
+          {node.children.length > 0 && <ChainTreePreview nodes={node.children} depth={depth + 1} images={images} />}
         </div>
       ))}
     </div>
@@ -147,24 +234,47 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
   const [error, setError] = useState("")
   const [hasChanges, setHasChanges] = useState(false)
 
+  // Imagens de recursos armazenadas na config
+  const [resourceImages, setResourceImages] = useState<Record<string, string>>(
+    (config as Record<string, unknown>).resourceImages as Record<string, string> ?? {}
+  )
+
   useEffect(() => {
     setJsonText(JSON.stringify(config.productionChains ?? [], null, 2))
+    setResourceImages((config as Record<string, unknown>).resourceImages as Record<string, string> ?? {})
     setHasChanges(false)
     setError("")
-  }, [config.productionChains])
+  }, [config.productionChains, config])
+
+  const handleImageChange = (symbol: string, url: string) => {
+    setResourceImages((prev) => {
+      const next = { ...prev }
+      if (url.trim()) {
+        next[symbol] = url.trim()
+      } else {
+        delete next[symbol]
+      }
+      return next
+    })
+    setHasChanges(true)
+  }
 
   const handleSave = async () => {
     setError("")
     try {
-      const parsed = JSON.parse(jsonText)
-      if (!Array.isArray(parsed)) {
-        setError(t("chains.mustBeArray"))
-        return
+      if (mode === "json") {
+        const parsed = JSON.parse(jsonText)
+        if (!Array.isArray(parsed)) {
+          setError("Deve ser um array JSON valido")
+          return
+        }
+        await onUpdate("productionChains", parsed)
       }
-      const success = await onUpdate("productionChains", parsed)
+      // Salvar imagens de recursos
+      const success = await onUpdate("resourceImages", resourceImages)
       if (success) setHasChanges(false)
     } catch {
-      setError(t("chains.invalidJson"))
+      setError("JSON invalido")
     }
   }
 
@@ -176,13 +286,12 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Recipes visual reference */}
       <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base text-card-foreground">{t("chains.title")}</CardTitle>
-              <CardDescription>{t("chains.description")}</CardDescription>
+              <CardTitle className="text-base text-card-foreground">Cadeia de Producao</CardTitle>
+              <CardDescription>Receitas e arvore de dependencias dos recursos. Os precos sao extraidos automaticamente das pools.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -192,43 +301,52 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
                 className="gap-1.5"
               >
                 {mode === "visual" ? (
-                  <><Code className="h-3.5 w-3.5" /> {t("chains.jsonEditor")}</>
+                  <><Code className="h-3.5 w-3.5" /> JSON</>
                 ) : (
-                  <><Eye className="h-3.5 w-3.5" /> {t("chains.preview")}</>
+                  <><Eye className="h-3.5 w-3.5" /> Visual</>
                 )}
               </Button>
               {mode === "json" && (
-                <>
-                  <Button variant="outline" size="sm" onClick={handleReset} className="gap-1.5">
-                    <RotateCcw className="h-3.5 w-3.5" /> {t("chains.reset")}
-                  </Button>
-                  <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
-                    <Save className="h-3.5 w-3.5" />
-                    {saving ? t("admin.saving") : t("admin.save")}
-                  </Button>
-                </>
+                <Button variant="outline" size="sm" onClick={handleReset} className="gap-1.5">
+                  <RotateCcw className="h-3.5 w-3.5" /> Reset
+                </Button>
               )}
+              <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "..." : "Guardar"}
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {mode === "visual" ? (
             <div className="flex flex-col gap-4">
-              {/* Recipe cards - visual representation */}
+              {/* Cadeia de Producao - Recipe cards */}
               <div className="flex flex-col gap-3">
-                <h3 className="text-sm font-semibold text-card-foreground">Receitas de Producao</h3>
+                <h3 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
+                  Cadeia de Producao
+                  <Badge variant="secondary" className="text-[10px]">{RECIPES.length} receitas</Badge>
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Clique no icone de imagem para adicionar URLs de imagens aos recursos. LVL 1 para todas as receitas.
+                </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {RECIPES.map((recipe) => (
-                    <RecipePreview key={recipe.output} recipe={recipe} />
+                    <RecipeCard
+                      key={recipe.output}
+                      recipe={recipe}
+                      images={resourceImages}
+                      onImageChange={handleImageChange}
+                    />
                   ))}
                 </div>
               </div>
 
-              {/* Chain tree preview */}
+              {/* Arvore de Dependencias */}
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <h3 className="text-sm font-semibold text-card-foreground">Arvore de Dependencias</h3>
                 <div className="rounded-lg border border-border bg-secondary/50 p-4 max-h-[400px] overflow-y-auto">
-                  <ChainTreePreview nodes={config.productionChains ?? []} />
+                  <ChainTreePreview nodes={config.productionChains ?? []} images={resourceImages} />
                 </div>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getConfig } from "@/lib/config-manager"
 import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "@/lib/craft-data"
+import { calculateAllProductionCosts } from "@/lib/resource-images"
 
 export const dynamic = "force-dynamic"
 
@@ -97,11 +98,14 @@ export async function GET() {
     }
   }
 
+  // Calcular custos de producao automaticamente a partir dos precos das pools
+  const calculatedCosts = calculateAllProductionCosts(symbolPrices)
+
   return NextResponse.json({
     prices: symbolPrices,
     timestamp: new Date().toISOString(),
     count: Object.keys(symbolPrices).length,
-    productionCosts,
+    productionCosts: calculatedCosts,
     thresholds,
     alertsConfig,
     banners,

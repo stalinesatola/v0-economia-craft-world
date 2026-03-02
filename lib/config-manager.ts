@@ -119,7 +119,7 @@ export interface ChainNode {
 const VALID_SECTIONS = [
   "pools", "productionCosts", "alertsConfig", "productionChains",
   "thresholds", "telegram", "network", "users", "banners",
-  "sharing", "customization", "maintenance",
+  "sharing", "customization", "maintenance", "resourceImages",
 ]
 
 // ── Config section read/write ──────────────────────
