@@ -28,24 +28,21 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const { t } = useI18n()
   const [search, setSearch] = useState("")
   const [expandedResource, setExpandedResource] = useState<string | null>(null)
-  const [localPools, setLocalPools] = useState(config?.pools ?? {})
-  const [localCosts, setLocalCosts] = useState(config?.productionCosts ?? {})
-  const [localAlerts, setLocalAlerts] = useState(config?.alertsConfig ?? {})
+  const [localPools, setLocalPools] = useState<Record<string, string>>(config?.pools ?? {})
+  const [localAlerts, setLocalAlerts] = useState<Record<string, { enabled?: boolean; priority?: string; category?: string }>>(config?.alertsConfig ?? {})
   const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
     setLocalPools(config?.pools ?? {})
-    setLocalCosts(config?.productionCosts ?? {})
     setLocalAlerts(config?.alertsConfig ?? {})
     setHasChanges(false)
-  }, [config?.pools, config?.productionCosts, config?.alertsConfig])
+  }, [config?.pools, config?.alertsConfig])
 
   // Add pool form
   const [showAddForm, setShowAddForm] = useState(false)
   const [newSymbol, setNewSymbol] = useState("")
   const [newAddress, setNewAddress] = useState("")
-  const [newCost, setNewCost] = useState("0")
-  const [newCategory, setNewCategory] = useState<"mine" | "factory" | "token">("factory")
+  const [newCategory, setNewCategory] = useState<string>("factory")
   const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
 
   const safePools = localPools ?? {}
@@ -55,14 +52,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
 
   const handlePoolChange = (symbol: string, address: string) => {
     setLocalPools((prev) => ({ ...prev, [symbol]: address }))
-    setHasChanges(true)
-  }
-
-  const handleCostChange = (symbol: string, field: string, value: string | number) => {
-    setLocalCosts((prev) => ({
-      ...prev,
-      [symbol]: { ...prev[symbol], [field]: value },
-    }))
     setHasChanges(true)
   }
 
@@ -80,10 +69,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     if (safePools[symbol]) return // Already exists
 
     setLocalPools((prev) => ({ ...prev, [symbol]: newAddress.trim() }))
-    setLocalCosts((prev) => ({
-      ...prev,
-      [symbol]: { cost_usd: parseFloat(newCost) || 0, levels: 1 },
-    }))
     setLocalAlerts((prev) => ({
       ...prev,
       [symbol]: { enabled: true, priority: newPriority, category: newCategory },
@@ -91,18 +76,12 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     setHasChanges(true)
     setNewSymbol("")
     setNewAddress("")
-    setNewCost("0")
     setShowAddForm(false)
   }
 
   const handleDeletePool = (symbol: string) => {
     if (!confirm(`Remover '${symbol}'?`)) return
     setLocalPools((prev) => {
-      const next = { ...prev }
-      delete next[symbol]
-      return next
-    })
-    setLocalCosts((prev) => {
       const next = { ...prev }
       delete next[symbol]
       return next
@@ -118,9 +97,8 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
 
   const handleSave = async () => {
     const r1 = await onUpdate("pools", localPools)
-    const r2 = await onUpdate("productionCosts", localCosts)
-    const r3 = await onUpdate("alertsConfig", localAlerts)
-    if (r1 && r2 && r3) {
+    const r2 = await onUpdate("alertsConfig", localAlerts)
+    if (r1 && r2) {
       setHasChanges(false)
     }
   }
@@ -180,27 +158,31 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Custo USD</Label>
-                  <Input
-                    type="number"
-                    step="0.0001"
-                    value={newCost}
-                    onChange={(e) => setNewCost(e.target.value)}
-                    className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">Categoria</Label>
-                  <Select value={newCategory} onValueChange={(v) => setNewCategory(v as "mine" | "factory" | "token")}>
-                    <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mine">{t("table.mine")}</SelectItem>
-                      <SelectItem value="factory">{t("table.factory")}</SelectItem>
-                      <SelectItem value="token">{t("table.token")}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-1.5">
+                    <Select value={["mine","factory","token","base","advanced","defi"].includes(newCategory) ? newCategory : "_custom"} onValueChange={(v) => { if (v !== "_custom") setNewCategory(v) }}>
+                      <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mine">{t("table.mine")}</SelectItem>
+                        <SelectItem value="factory">{t("table.factory")}</SelectItem>
+                        <SelectItem value="token">{t("table.token")}</SelectItem>
+                        <SelectItem value="base">Base</SelectItem>
+                        <SelectItem value="advanced">Avancado</SelectItem>
+                        <SelectItem value="defi">DeFi</SelectItem>
+                        <SelectItem value="_custom">Personalizada...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {!["mine","factory","token","base","advanced","defi"].includes(newCategory) && (
+                      <Input
+                        value={newCategory === "_custom" ? "" : newCategory}
+                        onChange={(e) => setNewCategory(e.target.value.toLowerCase().trim())}
+                        placeholder="nome..."
+                        className="bg-secondary border-border text-card-foreground h-9 text-sm w-24"
+                      />
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">Prioridade</Label>
@@ -247,7 +229,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
           {/* Resource List */}
           <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-1">
             {symbols.map((symbol) => {
-              const cost = localCosts[symbol]
               const alert = localAlerts[symbol]
               const isExpanded = expandedResource === symbol
 
@@ -275,7 +256,13 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                             ? "border-chart-3 text-chart-3"
                             : alert?.category === "token"
                               ? "border-chart-2 text-chart-2"
-                              : "border-primary text-primary"
+                              : alert?.category === "base"
+                                ? "border-chart-4 text-chart-4"
+                                : alert?.category === "advanced"
+                                  ? "border-chart-5 text-chart-5"
+                                  : alert?.category === "defi"
+                                    ? "border-destructive text-destructive"
+                                    : "border-primary text-primary"
                         }
                       >
                         {alert?.category || "factory"}
@@ -292,9 +279,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                       >
                         {alert?.priority || "low"}
                       </Badge>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        ${cost?.cost_usd ?? 0}
-                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div onClick={(e) => e.stopPropagation()}>
@@ -324,30 +308,40 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                           />
                         </div>
                         <div className="flex flex-col gap-1.5">
-                          <Label className="text-xs text-muted-foreground">{t("table.productionCost")} (USD)</Label>
-                          <Input
-                            type="number"
-                            step="0.0001"
-                            value={cost?.cost_usd ?? 0}
-                            onChange={(e) => handleCostChange(symbol, "cost_usd", parseFloat(e.target.value) || 0)}
-                            className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
-                          />
+                          <Label className="text-xs text-muted-foreground">{t("table.productionCost")}</Label>
+                          <div className="flex items-center h-8 px-2 rounded-md bg-muted border border-border text-xs font-mono text-muted-foreground">
+                            Calculado automaticamente via cadeia de producao
+                          </div>
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Label className="text-xs text-muted-foreground">Categoria</Label>
-                          <Select
-                            value={alert?.category || "factory"}
-                            onValueChange={(v) => handleAlertChange(symbol, "category", v)}
-                          >
-                            <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mine">{t("table.mine")}</SelectItem>
-                              <SelectItem value="factory">{t("table.factory")}</SelectItem>
-                              <SelectItem value="token">{t("table.token")}</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-1.5">
+                            <Select
+                              value={["mine","factory","token","base","advanced","defi"].includes(alert?.category || "") ? (alert?.category || "factory") : "_custom"}
+                              onValueChange={(v) => { if (v !== "_custom") handleAlertChange(symbol, "category", v); else handleAlertChange(symbol, "category", "") }}
+                            >
+                              <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs flex-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="mine">{t("table.mine")}</SelectItem>
+                                <SelectItem value="factory">{t("table.factory")}</SelectItem>
+                                <SelectItem value="token">{t("table.token")}</SelectItem>
+                                <SelectItem value="base">Base</SelectItem>
+                                <SelectItem value="advanced">Avancado</SelectItem>
+                                <SelectItem value="defi">DeFi</SelectItem>
+                                <SelectItem value="_custom">Personalizada...</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {!["mine","factory","token","base","advanced","defi"].includes(alert?.category || "factory") && (
+                              <Input
+                                value={alert?.category || ""}
+                                onChange={(e) => handleAlertChange(symbol, "category", e.target.value.toLowerCase().trim())}
+                                placeholder="nome..."
+                                className="bg-background border-border text-card-foreground h-8 text-xs w-20"
+                              />
+                            )}
+                          </div>
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Label className="text-xs text-muted-foreground">Prioridade</Label>
@@ -365,26 +359,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                             </SelectContent>
                           </Select>
                         </div>
-                        {cost?.source && (
-                          <div className="flex flex-col gap-1.5">
-                            <Label className="text-xs text-muted-foreground">Fonte</Label>
-                            <Input
-                              value={cost.source}
-                              onChange={(e) => handleCostChange(symbol, "source", e.target.value)}
-                              className="bg-background border-border text-card-foreground h-8 text-xs"
-                            />
-                          </div>
-                        )}
-                        {cost?.input && (
-                          <div className="flex flex-col gap-1.5">
-                            <Label className="text-xs text-muted-foreground">Input</Label>
-                            <Input
-                              value={cost.input}
-                              onChange={(e) => handleCostChange(symbol, "input", e.target.value)}
-                              className="bg-background border-border text-card-foreground h-8 text-xs"
-                            />
-                          </div>
-                        )}
+
                       </div>
                       <div className="mt-3 flex justify-end">
                         <Button

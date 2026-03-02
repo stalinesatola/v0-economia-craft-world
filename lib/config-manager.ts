@@ -13,17 +13,11 @@ export interface MaintenanceConfig {
 
 export interface AppConfig {
   pools: Record<string, string>
-  productionCosts: Record<string, {
-    cost_usd: number
-    source?: string
-    input?: string
-    ratio?: number
-    levels: number
-  }>
+  productionCosts: Record<string, number>
   alertsConfig: Record<string, {
     enabled: boolean
-    priority: "high" | "medium" | "low"
-    category: "mine" | "factory" | "token"
+    priority: string
+    category: string
   }>
   productionChains: ChainNode[]
   thresholds: {
@@ -119,7 +113,7 @@ export interface ChainNode {
 const VALID_SECTIONS = [
   "pools", "productionCosts", "alertsConfig", "productionChains",
   "thresholds", "telegram", "network", "users", "banners",
-  "sharing", "customization", "maintenance",
+  "sharing", "customization", "maintenance", "resourceImages",
 ]
 
 // ── Config section read/write ──────────────────────

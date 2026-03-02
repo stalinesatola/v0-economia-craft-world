@@ -29,20 +29,25 @@ export default function AdminPage() {
 
   const checkAuth = useCallback(async () => {
     const savedToken = sessionStorage.getItem("cw_admin_token")
+    // Sem token no sessionStorage = nao autenticado, ir directo para login
+    if (!savedToken) {
+      setIsChecking(false)
+      return
+    }
     try {
-      const headers: Record<string, string> = {}
-      if (savedToken) headers["Authorization"] = `Bearer ${savedToken}`
-      const res = await fetch("/api/admin/check", { headers })
+      const res = await fetch("/api/admin/check", {
+        headers: { "Authorization": `Bearer ${savedToken}` },
+      })
       if (res.ok) {
         const data = await res.json()
         setIsAuthenticated(true)
         setUserInfo(data.user || null)
-        if (savedToken) setAuthToken(savedToken)
+        setAuthToken(savedToken)
       } else {
         sessionStorage.removeItem("cw_admin_token")
       }
     } catch {
-      // Not authenticated
+      sessionStorage.removeItem("cw_admin_token")
     } finally {
       setIsChecking(false)
     }

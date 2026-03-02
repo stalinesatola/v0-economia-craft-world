@@ -70,8 +70,14 @@ export const RESOURCE_LEVELS: Record<string, number> = {
 // Production recipes with correct quantities from the game image
 export interface Recipe {
   output: string
-  inputs: { resource: string; quantity: number }[]
+  outputImage?: string
+  inputs: { resource: string; quantity: number; image?: string }[]
   level: number
+}
+
+// Resource image URLs - configurable per resource
+export const RESOURCE_IMAGES: Record<string, string> = {
+  // Deixar vazio por defeito; o admin pode inserir URLs de imagens reais
 }
 
 export const RECIPES: Recipe[] = [
@@ -113,4 +119,52 @@ export function getResourceLevel(symbol: string): number {
 
 export function getRecipeFor(symbol: string): Recipe | undefined {
   return RECIPES.find(r => r.output === symbol)
+}
+
+/**
+ * Calcula o custo de producao de um recurso com base nos precos em tempo real das pools.
+ * Para cada input da receita, soma (preco_pool_input * quantidade).
+ * Recursos base (sem receita) usam directamente o preco da pool.
+ * Usa cache interno para evitar recalculos recursivos.
+ */
+export function calculateProductionCost(
+  symbol: string,
+  prices: Record<string, { price_usd: number }>,
+  _cache?: Map<string, number>
+): number {
+  const cache = _cache ?? new Map<string, number>()
+  if (cache.has(symbol)) return cache.get(symbol)!
+
+  const recipe = getRecipeFor(symbol)
+  if (!recipe) {
+    // Recurso base (EARTH, FIRE, WATER, COIN) - custo = preco da pool
+    const cost = prices[symbol]?.price_usd ?? 0
+    cache.set(symbol, cost)
+    return cost
+  }
+
+  let totalCost = 0
+  for (const inp of recipe.inputs) {
+    const inputPrice = calculateProductionCost(inp.resource, prices, cache)
+    totalCost += inputPrice * inp.quantity
+  }
+
+  cache.set(symbol, totalCost)
+  return totalCost
+}
+
+/**
+ * Calcula todos os custos de producao para todos os recursos com receita.
+ */
+export function calculateAllProductionCosts(
+  prices: Record<string, { price_usd: number }>
+): Record<string, number> {
+  const cache = new Map<string, number>()
+  const result: Record<string, number> = {}
+
+  for (const recipe of RECIPES) {
+    result[recipe.output] = calculateProductionCost(recipe.output, prices, cache)
+  }
+
+  return result
 }

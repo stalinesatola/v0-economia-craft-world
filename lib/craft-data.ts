@@ -37,7 +37,7 @@ export const POOLS: Record<string, string> = {
   DYNAMITE: "0x85172e7ff5040366fa5a3caf7b1bd969bb06b570",
 }
 
-export type ResourceCategory = "mine" | "factory" | "token"
+export type ResourceCategory = "mine" | "factory" | "token" | "base" | "advanced" | "defi"
 export type Priority = "high" | "medium" | "low"
 
 export interface ProductionCost {
@@ -62,8 +62,8 @@ export interface ResourceInfo {
   input?: string
   ratio?: number
   levels: number
-  category: ResourceCategory
-  priority: Priority
+  category: string
+  priority: string
   enabled: boolean
   source?: string
 }

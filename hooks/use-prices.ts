@@ -6,13 +6,15 @@ interface PriceData {
   price_usd: number
   volume_usd_24h: number
   price_change_24h: number
+  image_url?: string
+  token_name?: string
 }
 
 interface PricesResponse {
   prices: Record<string, PriceData>
   timestamp: string
   count: number
-  productionCosts?: Record<string, { cost_usd: number; input?: string; ratio?: number; levels: number; source?: string }>
+  productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
   banners?: Array<{ id: string; position: string; enabled: boolean; imageUrl: string; linkUrl: string; altText: string; adScript: string }>

@@ -5,22 +5,34 @@ import { ChevronRight, ChevronDown, ArrowRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  PRODUCTION_COSTS,
   BUY_THRESHOLD,
   SELL_THRESHOLD,
   formatPrice,
 } from "@/lib/craft-data"
-import { RECIPES, getResourceColor, type Recipe } from "@/lib/resource-images"
+import { RECIPES, getResourceColor, calculateProductionCost, type Recipe } from "@/lib/resource-images"
 import { useI18n } from "@/lib/i18n"
 
 interface ProductionChainProps {
-  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
-  productionCosts?: Record<string, { cost_usd: number; input?: string; ratio?: number }>
+  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string; token_name?: string }>
+  productionCosts?: Record<string, number>
 }
 
-function ResourceIcon({ symbol, size = 28 }: { symbol: string; size?: number }) {
+function ResourceIcon({ symbol, size = 28, imageUrl }: { symbol: string; size?: number; imageUrl?: string }) {
   const color = getResourceColor(symbol)
   const initials = symbol.slice(0, 2)
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={symbol}
+        className="rounded-md shrink-0 shadow-sm object-cover"
+        style={{ width: size, height: size }}
+        onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+      />
+    )
+  }
+
   return (
     <div
       className="flex items-center justify-center rounded-md font-mono text-[9px] font-bold text-white shrink-0 shadow-sm"
@@ -42,10 +54,10 @@ function RecipeCard({
   prices,
 }: {
   recipe: Recipe
-  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
+  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string }>
 }) {
   const outputPrice = prices[recipe.output]?.price_usd ?? 0
-  const cost = PRODUCTION_COSTS[recipe.output]?.cost_usd ?? 0
+  const cost = calculateProductionCost(recipe.output, prices)
   const deviation = cost > 0 && outputPrice > 0 ? ((outputPrice - cost) / cost) * 100 : 0
 
   let signal: "buy" | "sell" | "neutral" = "neutral"
@@ -66,7 +78,7 @@ function RecipeCard({
           <div key={inp.resource} className="flex items-center gap-1">
             {i > 0 && <span className="text-[10px] text-muted-foreground font-bold">+</span>}
             <span className="text-[10px] font-mono font-bold text-muted-foreground">{inp.quantity}x</span>
-            <ResourceIcon symbol={inp.resource} size={22} />
+            <ResourceIcon symbol={inp.resource} size={22} imageUrl={prices[inp.resource]?.image_url} />
             <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">{inp.resource}</span>
           </div>
         ))}
@@ -75,28 +87,31 @@ function RecipeCard({
       {/* Arrow */}
       <div className="flex flex-col items-center gap-0 shrink-0">
         <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 font-mono border-muted-foreground/30">
-          LVL {recipe.level}
+          LVL 1
         </Badge>
         <ArrowRight className="h-3 w-3 text-muted-foreground" />
       </div>
 
       {/* Output */}
       <div className="flex items-center gap-1.5">
-        <ResourceIcon symbol={recipe.output} size={26} />
+        <ResourceIcon symbol={recipe.output} size={26} imageUrl={prices[recipe.output]?.image_url} />
         <div className="flex flex-col">
           <span className="text-xs font-mono font-bold text-card-foreground">{recipe.output}</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-col gap-0.5">
             {outputPrice > 0 && (
-              <span className="text-[10px] font-mono text-muted-foreground">{formatPrice(outputPrice)}</span>
+              <span className="text-[10px] font-mono text-muted-foreground">Mercado: {formatPrice(outputPrice)}</span>
             )}
-            {cost > 0 && outputPrice > 0 && (
-              <span className={`text-[10px] font-mono font-semibold ${
-                signal === "buy" ? "text-primary" : signal === "sell" ? "text-destructive" : "text-muted-foreground"
-              }`}>
-                {deviation > 0 ? "+" : ""}{deviation.toFixed(0)}%
-              </span>
+            {cost > 0 && (
+              <span className="text-[10px] font-mono text-muted-foreground/70">Custo: {formatPrice(cost)}</span>
             )}
           </div>
+          {cost > 0 && outputPrice > 0 && (
+            <span className={`text-[10px] font-mono font-semibold ${
+              signal === "buy" ? "text-primary" : signal === "sell" ? "text-destructive" : "text-muted-foreground"
+            }`}>
+              {deviation > 0 ? "+" : ""}{deviation.toFixed(0)}%
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -9,6 +9,9 @@ import {
   Pickaxe,
   Factory,
   Coins,
+  Layers,
+  Zap,
+  TrendingUp,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,7 +20,6 @@ import { Badge } from "@/components/ui/badge"
 import {
   getAllResources,
   POOLS,
-  PRODUCTION_COSTS,
   BUY_THRESHOLD,
   SELL_THRESHOLD,
   formatPrice,
@@ -26,11 +28,12 @@ import {
 } from "@/lib/craft-data"
 import { AssetChart } from "@/components/asset-chart"
 import { useI18n } from "@/lib/i18n"
+import { getResourceColor } from "@/lib/resource-images"
 
 interface PriceTableProps {
-  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
+  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string; token_name?: string }>
   isLoading?: boolean
-  productionCosts?: Record<string, { cost_usd: number }>
+  productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
 }
@@ -42,6 +45,9 @@ const categoryIcons: Record<ResourceCategory, typeof Pickaxe> = {
   mine: Pickaxe,
   factory: Factory,
   token: Coins,
+  base: Layers,
+  advanced: Zap,
+  defi: TrendingUp,
 }
 
 const priorityColors: Record<Priority, string> = {
@@ -57,6 +63,9 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
     mine: t("table.mine"),
     factory: t("table.factory"),
     token: t("table.token"),
+    base: "Base",
+    advanced: "Avancado",
+    defi: "DeFi",
   }
 
   const priorityLabels: Record<Priority, string> = {
@@ -73,8 +82,8 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
     signal: "buy" | "sell" | "neutral"
   } | null>(null)
   const [search, setSearch] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "all">("all")
-  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all")
+  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [sortField, setSortField] = useState<SortField>("priority")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
 
@@ -84,7 +93,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
     return resources.map((res) => {
       const priceData = prices[res.symbol]
       const marketPrice = priceData?.price_usd ?? 0
-      const cost = dynCosts?.[res.symbol]?.cost_usd ?? PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
+      const cost = dynCosts?.[res.symbol] ?? 0
       const deviation = cost > 0 && marketPrice > 0 ? ((marketPrice - cost) / cost) * 100 : 0
       const volume = priceData?.volume_usd_24h ?? 0
       const change24h = priceData?.price_change_24h ?? 0
@@ -104,6 +113,8 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
         change24h,
         signal,
         hasPrice: !!priceData,
+        imageUrl: priceData?.image_url,
+        tokenName: priceData?.token_name,
       }
     })
   }, [resources, prices, dynCosts, dynThresholds])
@@ -192,7 +203,10 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {(["all", "mine", "factory", "token"] as const).map((cat) => (
+          {["all", "mine", "factory", "token", "base", "advanced", "defi",
+            ...Object.values(dynAlerts ?? {}).map(a => a.category).filter(c => c && !["mine","factory","token","base","advanced","defi"].includes(c))
+            .filter((v, i, a) => a.indexOf(v) === i)
+          ].map((cat) => (
             <Button
               key={cat}
               variant={categoryFilter === cat ? "default" : "secondary"}
@@ -200,7 +214,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
               className="h-7 text-xs px-2.5"
               onClick={() => setCategoryFilter(cat)}
             >
-              {cat === "all" ? t("table.all") : categoryLabels[cat]}
+              {cat === "all" ? t("table.all") : (categoryLabels[cat as ResourceCategory] || cat)}
             </Button>
           ))}
           <div className="mx-1 h-7 w-px bg-border" />
@@ -259,7 +273,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
             </thead>
             <tbody>
               {filtered.map((res) => {
-                const CategoryIcon = categoryIcons[res.category]
+                    const CategoryIcon = categoryIcons[res.category as ResourceCategory] || Factory
                 return (
                   <tr
                     key={res.symbol}
@@ -277,8 +291,28 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
                   >
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        <CategoryIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="font-mono font-semibold text-card-foreground">{res.symbol}</span>
+                        {res.imageUrl ? (
+                          <img
+                            src={res.imageUrl}
+                            alt={res.symbol}
+                            className="h-6 w-6 rounded-full shrink-0 object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                          />
+                        ) : (
+                          <div
+                            className="h-6 w-6 rounded-full shrink-0 flex items-center justify-center text-[8px] font-bold text-white"
+                            style={{ backgroundColor: getResourceColor(res.symbol) }}
+                          >
+                            {res.symbol.slice(0, 2)}
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="font-mono font-semibold text-card-foreground leading-tight">{res.symbol}</span>
+                          {res.tokenName && (
+                            <span className="text-[10px] text-muted-foreground leading-tight">{res.tokenName}</span>
+                          )}
+                        </div>
+                        <CategoryIcon className="h-3 w-3 text-muted-foreground/50 shrink-0 ml-auto hidden sm:block" />
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono text-card-foreground">
