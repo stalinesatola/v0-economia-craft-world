@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
+</div>
+
 # Craft World Economy
 
 Dashboard de monitoramento de precos e oportunidades de trading para o jogo Craft World na rede Ronin.
@@ -107,4 +111,6 @@ data/
 
 ## Licenca
 
-Projecto privado. Todos os direitos reservados.
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+You are free to use, modify, and distribute this code in personal and commercial projects.
