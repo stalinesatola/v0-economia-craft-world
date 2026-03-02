@@ -6,6 +6,8 @@ interface PriceData {
   price_usd: number
   volume_usd_24h: number
   price_change_24h: number
+  image_url?: string
+  token_name?: string
 }
 
 interface PricesResponse {

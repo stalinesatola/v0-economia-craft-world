@@ -128,10 +128,12 @@ function ResourceIcon({ symbol, size = 28, imageUrl }: { symbol: string; size?: 
   )
 }
 
-function RecipeCard({ recipe, images, onImageChange }: {
+function RecipeCard({ recipe, images, onImageChange, pools, onPoolChange }: {
   recipe: Recipe
   images: Record<string, string>
   onImageChange: (symbol: string, url: string) => void
+  pools: Record<string, string>
+  onPoolChange: (symbol: string, address: string) => void
 }) {
   const [showImageEdit, setShowImageEdit] = useState(false)
 
@@ -175,31 +177,58 @@ function RecipeCard({ recipe, images, onImageChange }: {
         </button>
       </div>
 
-      {/* Editor de imagens (expansivel) */}
+      {/* Editor de imagens e pools (expansivel) */}
       {showImageEdit && (
-        <div className="flex flex-col gap-2 border-t border-border pt-2">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[10px] text-muted-foreground font-semibold">
-              Imagem de {recipe.output} (recurso produzido)
-            </Label>
-            <Input
-              value={images[recipe.output] || ""}
-              onChange={(e) => onImageChange(recipe.output, e.target.value)}
-              placeholder="https://...imagem.png"
-              className="bg-background border-border text-card-foreground h-7 text-[10px] font-mono"
-            />
+        <div className="flex flex-col gap-3 border-t border-border pt-2">
+          {/* Output: imagem + pool */}
+          <div className="rounded-md bg-secondary/50 p-2">
+            <p className="text-[10px] font-semibold text-card-foreground mb-1.5">{recipe.output} (recurso produzido)</p>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <Label className="text-[9px] text-muted-foreground">Imagem URL</Label>
+                <Input
+                  value={images[recipe.output] || ""}
+                  onChange={(e) => onImageChange(recipe.output, e.target.value)}
+                  placeholder="https://...imagem.png"
+                  className="bg-background border-border text-card-foreground h-6 text-[10px] font-mono"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-[9px] text-muted-foreground">Pool Address</Label>
+                <Input
+                  value={pools[recipe.output] || ""}
+                  onChange={(e) => onPoolChange(recipe.output, e.target.value)}
+                  placeholder="0x..."
+                  className="bg-background border-border text-card-foreground h-6 text-[10px] font-mono"
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Inputs: imagem + pool (ate 3) */}
           {recipe.inputs.map((inp) => (
-            <div key={inp.resource} className="flex flex-col gap-1.5">
-              <Label className="text-[10px] text-muted-foreground">
-                Imagem de {inp.resource}
-              </Label>
-              <Input
-                value={images[inp.resource] || ""}
-                onChange={(e) => onImageChange(inp.resource, e.target.value)}
-                placeholder="https://...imagem.png"
-                className="bg-background border-border text-card-foreground h-7 text-[10px] font-mono"
-              />
+            <div key={inp.resource} className="rounded-md bg-secondary/30 p-2">
+              <p className="text-[10px] font-medium text-muted-foreground mb-1.5">{inp.resource} ({inp.quantity}x input)</p>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <Label className="text-[9px] text-muted-foreground">Imagem URL</Label>
+                  <Input
+                    value={images[inp.resource] || ""}
+                    onChange={(e) => onImageChange(inp.resource, e.target.value)}
+                    placeholder="https://...imagem.png"
+                    className="bg-background border-border text-card-foreground h-6 text-[10px] font-mono"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label className="text-[9px] text-muted-foreground">Pool Address</Label>
+                  <Input
+                    value={pools[inp.resource] || ""}
+                    onChange={(e) => onPoolChange(inp.resource, e.target.value)}
+                    placeholder="0x..."
+                    className="bg-background border-border text-card-foreground h-6 text-[10px] font-mono"
+                  />
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -239,12 +268,31 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
     (config as Record<string, unknown>).resourceImages as Record<string, string> ?? {}
   )
 
+  // Pools de recursos (sincronizado com pools-tab)
+  const [localPools, setLocalPools] = useState<Record<string, string>>(
+    config.pools ?? {}
+  )
+
   useEffect(() => {
     setJsonText(JSON.stringify(config.productionChains ?? [], null, 2))
     setResourceImages((config as Record<string, unknown>).resourceImages as Record<string, string> ?? {})
+    setLocalPools(config.pools ?? {})
     setHasChanges(false)
     setError("")
-  }, [config.productionChains, config])
+  }, [config.productionChains, config, config.pools])
+
+  const handlePoolChange = (symbol: string, address: string) => {
+    setLocalPools((prev) => {
+      const next = { ...prev }
+      if (address.trim()) {
+        next[symbol] = address.trim()
+      } else {
+        delete next[symbol]
+      }
+      return next
+    })
+    setHasChanges(true)
+  }
 
   const handleImageChange = (symbol: string, url: string) => {
     setResourceImages((prev) => {
@@ -270,8 +318,9 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
         }
         await onUpdate("productionChains", parsed)
       }
-      // Salvar imagens de recursos
-      const success = await onUpdate("resourceImages", resourceImages)
+      // Salvar imagens de recursos e pools
+      await onUpdate("resourceImages", resourceImages)
+      const success = await onUpdate("pools", localPools)
       if (success) setHasChanges(false)
     } catch {
       setError("JSON invalido")
@@ -337,6 +386,8 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
                       recipe={recipe}
                       images={resourceImages}
                       onImageChange={handleImageChange}
+                      pools={localPools}
+                      onPoolChange={handlePoolChange}
                     />
                   ))}
                 </div>

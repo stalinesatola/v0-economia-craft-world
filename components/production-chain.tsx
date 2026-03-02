@@ -13,13 +13,26 @@ import { RECIPES, getResourceColor, calculateProductionCost, type Recipe } from 
 import { useI18n } from "@/lib/i18n"
 
 interface ProductionChainProps {
-  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
-  productionCosts?: Record<string, { cost_usd: number; input?: string; ratio?: number }>
+  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string; token_name?: string }>
+  productionCosts?: Record<string, number>
 }
 
-function ResourceIcon({ symbol, size = 28 }: { symbol: string; size?: number }) {
+function ResourceIcon({ symbol, size = 28, imageUrl }: { symbol: string; size?: number; imageUrl?: string }) {
   const color = getResourceColor(symbol)
   const initials = symbol.slice(0, 2)
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={symbol}
+        className="rounded-md shrink-0 shadow-sm object-cover"
+        style={{ width: size, height: size }}
+        onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+      />
+    )
+  }
+
   return (
     <div
       className="flex items-center justify-center rounded-md font-mono text-[9px] font-bold text-white shrink-0 shadow-sm"
@@ -41,7 +54,7 @@ function RecipeCard({
   prices,
 }: {
   recipe: Recipe
-  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
+  prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string }>
 }) {
   const outputPrice = prices[recipe.output]?.price_usd ?? 0
   const cost = calculateProductionCost(recipe.output, prices)
@@ -65,7 +78,7 @@ function RecipeCard({
           <div key={inp.resource} className="flex items-center gap-1">
             {i > 0 && <span className="text-[10px] text-muted-foreground font-bold">+</span>}
             <span className="text-[10px] font-mono font-bold text-muted-foreground">{inp.quantity}x</span>
-            <ResourceIcon symbol={inp.resource} size={22} />
+            <ResourceIcon symbol={inp.resource} size={22} imageUrl={prices[inp.resource]?.image_url} />
             <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">{inp.resource}</span>
           </div>
         ))}
@@ -81,7 +94,7 @@ function RecipeCard({
 
       {/* Output */}
       <div className="flex items-center gap-1.5">
-        <ResourceIcon symbol={recipe.output} size={26} />
+        <ResourceIcon symbol={recipe.output} size={26} imageUrl={prices[recipe.output]?.image_url} />
         <div className="flex flex-col">
           <span className="text-xs font-mono font-bold text-card-foreground">{recipe.output}</span>
           <div className="flex flex-col gap-0.5">

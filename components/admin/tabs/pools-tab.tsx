@@ -28,8 +28,8 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const { t } = useI18n()
   const [search, setSearch] = useState("")
   const [expandedResource, setExpandedResource] = useState<string | null>(null)
-  const [localPools, setLocalPools] = useState(config?.pools ?? {})
-  const [localAlerts, setLocalAlerts] = useState(config?.alertsConfig ?? {})
+  const [localPools, setLocalPools] = useState<Record<string, string>>(config?.pools ?? {})
+  const [localAlerts, setLocalAlerts] = useState<Record<string, { enabled?: boolean; priority?: string; category?: string }>>(config?.alertsConfig ?? {})
   const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [newSymbol, setNewSymbol] = useState("")
   const [newAddress, setNewAddress] = useState("")
-  const [newCategory, setNewCategory] = useState<"mine" | "factory" | "token">("factory")
+  const [newCategory, setNewCategory] = useState<string>("factory")
   const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
 
   const safePools = localPools ?? {}
@@ -159,7 +159,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">Categoria</Label>
-                  <Select value={newCategory} onValueChange={(v) => setNewCategory(v as "mine" | "factory" | "token")}>
+                  <Select value={newCategory} onValueChange={(v) => setNewCategory(v)}>
                     <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm">
                       <SelectValue />
                     </SelectTrigger>
@@ -167,6 +167,9 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                       <SelectItem value="mine">{t("table.mine")}</SelectItem>
                       <SelectItem value="factory">{t("table.factory")}</SelectItem>
                       <SelectItem value="token">{t("table.token")}</SelectItem>
+                      <SelectItem value="base">Base</SelectItem>
+                      <SelectItem value="advanced">Avancado</SelectItem>
+                      <SelectItem value="defi">DeFi</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -242,7 +245,13 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                             ? "border-chart-3 text-chart-3"
                             : alert?.category === "token"
                               ? "border-chart-2 text-chart-2"
-                              : "border-primary text-primary"
+                              : alert?.category === "base"
+                                ? "border-chart-4 text-chart-4"
+                                : alert?.category === "advanced"
+                                  ? "border-chart-5 text-chart-5"
+                                  : alert?.category === "defi"
+                                    ? "border-destructive text-destructive"
+                                    : "border-primary text-primary"
                         }
                       >
                         {alert?.category || "factory"}
@@ -306,6 +315,9 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                               <SelectItem value="mine">{t("table.mine")}</SelectItem>
                               <SelectItem value="factory">{t("table.factory")}</SelectItem>
                               <SelectItem value="token">{t("table.token")}</SelectItem>
+                              <SelectItem value="base">Base</SelectItem>
+                              <SelectItem value="advanced">Avancado</SelectItem>
+                              <SelectItem value="defi">DeFi</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

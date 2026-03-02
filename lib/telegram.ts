@@ -1,4 +1,5 @@
 import { getConfig } from "./config-manager"
+import { calculateAllProductionCosts } from "./resource-images"
 
 const TELEGRAM_API = "https://api.telegram.org"
 const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
@@ -150,7 +151,6 @@ export async function runMonitorCycle(): Promise<{
 }> {
   const config = await getConfig()
   const pools = config.pools || {}
-  const productionCosts = config.productionCosts || {}
   const alertsConfig = config.alertsConfig || {}
   const thresholds = config.thresholds || { buy: 15, sell: 15 }
   const network = config.network || "ronin"
@@ -162,21 +162,24 @@ export async function runMonitorCycle(): Promise<{
     return { success: false, message: "Nao foi possivel obter precos da GeckoTerminal", alerts: [], opportunities: [] }
   }
 
+  // Calcular custos de producao automaticamente a partir dos precos das pools
+  const calculatedCosts = calculateAllProductionCosts(prices)
+
   const opportunities: Opportunity[] = []
   const alertMessages: string[] = []
 
   for (const [symbol, price] of Object.entries(prices)) {
-    const cost = productionCosts[symbol]
+    const costValue = calculatedCosts[symbol] ?? 0
     const alertCfg = alertsConfig[symbol]
-    if (!cost || !alertCfg || !alertCfg.enabled || cost.cost_usd === 0) continue
+    if (!alertCfg || !alertCfg.enabled || costValue === 0) continue
 
-    const deviation = ((price.price_usd - cost.cost_usd) / cost.cost_usd) * 100
+    const deviation = ((price.price_usd - costValue) / costValue) * 100
 
     if (deviation < -thresholds.buy) {
-      opportunities.push({ symbol, signal: "buy", marketPrice: price.price_usd, costPrice: cost.cost_usd, deviation, priority: alertCfg.priority, category: alertCfg.category })
+      opportunities.push({ symbol, signal: "buy", marketPrice: price.price_usd, costPrice: costValue, deviation, priority: alertCfg.priority, category: alertCfg.category })
       alertMessages.push(`COMPRAR ${symbol}: ${deviation.toFixed(1)}% abaixo do custo`)
     } else if (deviation > thresholds.sell) {
-      opportunities.push({ symbol, signal: "sell", marketPrice: price.price_usd, costPrice: cost.cost_usd, deviation, priority: alertCfg.priority, category: alertCfg.category })
+      opportunities.push({ symbol, signal: "sell", marketPrice: price.price_usd, costPrice: costValue, deviation, priority: alertCfg.priority, category: alertCfg.category })
       alertMessages.push(`VENDER ${symbol}: +${deviation.toFixed(1)}% acima do custo`)
     }
   }
