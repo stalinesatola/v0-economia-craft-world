@@ -155,7 +155,23 @@ export async function getConfig(): Promise<AppConfig> {
     config[row.section] = row.data
   }
 
-  return config as unknown as AppConfig
+  // Ensure all required sections have safe defaults when DB is empty
+  const defaults: AppConfig = {
+    pools: {},
+    productionCosts: {},
+    alertsConfig: {},
+    productionChains: [],
+    thresholds: { buy: 15, sell: 15 },
+    telegram: { botToken: "", chatId: "", enabled: false, intervalMinutes: 30 },
+    network: "ronin",
+    users: [],
+    banners: [],
+    sharing: undefined,
+    customization: undefined,
+    maintenance: { enabled: false, message: "" },
+  }
+
+  return { ...defaults, ...config } as AppConfig
 }
 
 export async function getFullConfig(): Promise<AppConfig> {
