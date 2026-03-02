@@ -4,7 +4,6 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   getAllResources,
-  PRODUCTION_COSTS,
   BUY_THRESHOLD,
   SELL_THRESHOLD,
   formatPrice,
@@ -14,7 +13,7 @@ import { useI18n } from "@/lib/i18n"
 interface StatsCardsProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
   isLoading?: boolean
-  productionCosts?: Record<string, { cost_usd: number }>
+  productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
 }
@@ -33,7 +32,7 @@ export function StatsCards({ prices, isLoading, productionCosts: dynCosts, thres
     const priceData = prices[res.symbol]
     if (!priceData) continue
 
-    const cost = dynCosts?.[res.symbol]?.cost_usd ?? PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
+    const cost = dynCosts?.[res.symbol] ?? 0
     const marketPrice = priceData.price_usd
     const buyTh = dynThresholds?.buy ?? BUY_THRESHOLD
     const sellTh = dynThresholds?.sell ?? SELL_THRESHOLD

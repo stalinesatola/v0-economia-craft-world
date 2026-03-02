@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge"
 import {
   getAllResources,
   POOLS,
-  PRODUCTION_COSTS,
   BUY_THRESHOLD,
   SELL_THRESHOLD,
   formatPrice,
@@ -30,7 +29,7 @@ import { useI18n } from "@/lib/i18n"
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number }>
   isLoading?: boolean
-  productionCosts?: Record<string, { cost_usd: number }>
+  productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
 }
@@ -84,7 +83,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
     return resources.map((res) => {
       const priceData = prices[res.symbol]
       const marketPrice = priceData?.price_usd ?? 0
-      const cost = dynCosts?.[res.symbol]?.cost_usd ?? PRODUCTION_COSTS[res.symbol]?.cost_usd ?? 0
+      const cost = dynCosts?.[res.symbol] ?? 0
       const deviation = cost > 0 && marketPrice > 0 ? ((marketPrice - cost) / cost) * 100 : 0
       const volume = priceData?.volume_usd_24h ?? 0
       const change24h = priceData?.price_change_24h ?? 0
