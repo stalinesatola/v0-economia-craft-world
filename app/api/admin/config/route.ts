@@ -12,11 +12,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const config = await getFullConfig()
-    console.log("[v0] GET /api/admin/config: config keys:", Object.keys(config))
-    console.log("[v0] GET /api/admin/config: pools type:", typeof config.pools, "pools keys:", config.pools ? Object.keys(config.pools).length : "null")
-    console.log("[v0] GET /api/admin/config: banners type:", typeof config.banners, "is array:", Array.isArray(config.banners))
     const users = await getUsers()
-    console.log("[v0] GET /api/admin/config: users count:", users.length)
 
     const safeConfig = {
       ...config,
