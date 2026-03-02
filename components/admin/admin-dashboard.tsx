@@ -15,6 +15,23 @@ import { LogOut, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, XCircle } from
 import Link from "next/link"
 import type { AppConfig } from "@/lib/config-manager"
 
+function sanitizeConfig(raw: AppConfig): AppConfig {
+  return {
+    pools: raw.pools ?? {},
+    productionCosts: raw.productionCosts ?? {},
+    alertsConfig: raw.alertsConfig ?? {},
+    productionChains: raw.productionChains ?? [],
+    thresholds: raw.thresholds ?? { buy: 15, sell: 15 },
+    telegram: raw.telegram ?? { botToken: "", chatId: "", enabled: false, intervalMinutes: 30 },
+    network: raw.network ?? "ronin",
+    users: raw.users ?? [],
+    banners: raw.banners ?? [],
+    sharing: raw.sharing,
+    customization: raw.customization,
+    maintenance: raw.maintenance ?? { enabled: false, message: "" },
+  }
+}
+
 interface UserInfo {
   username: string
   role: string
@@ -30,7 +47,7 @@ interface AdminDashboardProps {
 
 export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }: AdminDashboardProps) {
   const { t } = useI18n()
-  const [config, setConfig] = useState<AppConfig | null>(initialConfig ?? null)
+  const [config, setConfig] = useState<AppConfig | null>(initialConfig ? sanitizeConfig(initialConfig) : null)
   const [loading, setLoading] = useState(!initialConfig)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
@@ -64,10 +81,10 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
       const res = await fetch("/api/admin/config", { headers: authHeaders() })
       if (res.ok) {
         const data = await res.json()
-        setConfig(data)
+        setConfig(sanitizeConfig(data))
       }
     } catch {
-      // Error
+      // Error fetching config
     } finally {
       setLoading(false)
     }
@@ -209,12 +226,12 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
               )}
               {canEdit("telegram") && (
                 <TabsContent value="telegram" className="mt-4">
-                  <TelegramTab config={config} onUpdate={updateSection} saving={saving} />
+                  <TelegramTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
                 </TabsContent>
               )}
               {canEdit("sharing") && (
                 <TabsContent value="sharing" className="mt-4">
-                  <SharingTab config={config} onUpdate={updateSection} saving={saving} />
+                  <SharingTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
                 </TabsContent>
               )}
               {canEdit("banners") && (

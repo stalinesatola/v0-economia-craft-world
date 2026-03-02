@@ -24,11 +24,6 @@ export default function Home() {
     revalidateOnFocus: true,
   })
 
-  // Show maintenance page if enabled (except for admin which has its own route)
-  if (maintenance?.enabled) {
-    return <MaintenancePage message={maintenance.message} />
-  }
-
   // Fetch public customization
   const { data: customization } = useSWR("/api/customization", fetcher, {
     revalidateOnFocus: false,
@@ -42,6 +37,12 @@ export default function Home() {
     }
     return map
   }, [banners])
+
+  // Show maintenance page if enabled (except for admin which has its own route)
+  // IMPORTANT: This check must be AFTER all hooks to avoid "Rendered fewer hooks" error
+  if (maintenance?.enabled) {
+    return <MaintenancePage message={maintenance.message} />
+  }
 
   const footerCredits = customization?.footerCredits || "Craft World Economy v1.0.0 | Desenvolvido por Plum com Qwen"
   const footerLinks = customization?.footerLinks || "Telegram: @bondsbtc | Dados via GeckoTerminal API | Rede Ronin"

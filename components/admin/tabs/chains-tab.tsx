@@ -143,12 +143,12 @@ function ChainTreePreview({ nodes, depth = 0 }: { nodes: ChainNode[]; depth?: nu
 export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
   const { t } = useI18n()
   const [mode, setMode] = useState<"visual" | "json">("visual")
-  const [jsonText, setJsonText] = useState(JSON.stringify(config.productionChains, null, 2))
+  const [jsonText, setJsonText] = useState(JSON.stringify(config.productionChains ?? [], null, 2))
   const [error, setError] = useState("")
   const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
-    setJsonText(JSON.stringify(config.productionChains, null, 2))
+    setJsonText(JSON.stringify(config.productionChains ?? [], null, 2))
     setHasChanges(false)
     setError("")
   }, [config.productionChains])
@@ -228,7 +228,7 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
               <div className="flex flex-col gap-3 border-t border-border pt-4">
                 <h3 className="text-sm font-semibold text-card-foreground">Arvore de Dependencias</h3>
                 <div className="rounded-lg border border-border bg-secondary/50 p-4 max-h-[400px] overflow-y-auto">
-                  <ChainTreePreview nodes={config.productionChains} />
+                  <ChainTreePreview nodes={config.productionChains ?? []} />
                 </div>
               </div>
             </div>
