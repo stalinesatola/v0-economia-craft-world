@@ -45,9 +45,9 @@ const PERMISSION_KEYS = [
 
 export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const { t } = useI18n()
-  const [buyThreshold, setBuyThreshold] = useState(config.thresholds.buy)
-  const [sellThreshold, setSellThreshold] = useState(config.thresholds.sell)
-  const [network, setNetwork] = useState(config.network)
+  const [buyThreshold, setBuyThreshold] = useState(config.thresholds?.buy ?? 15)
+  const [sellThreshold, setSellThreshold] = useState(config.thresholds?.sell ?? 15)
+  const [network, setNetwork] = useState(config.network ?? "ronin")
   const [hasChanges, setHasChanges] = useState(false)
 
   // Customization

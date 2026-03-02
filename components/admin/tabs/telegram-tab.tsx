@@ -39,12 +39,13 @@ const TEMPLATE_VARS = [
 
 export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
   const { t } = useI18n()
-  const [botToken, setBotToken] = useState(config.telegram.botToken || "")
-  const [chatId, setChatId] = useState(config.telegram.chatId || "")
-  const [enabled, setEnabled] = useState(config.telegram.enabled)
-  const [interval, setInterval] = useState(config.telegram.intervalMinutes || 5)
+  const tg = config.telegram ?? { botToken: "", chatId: "", enabled: false, intervalMinutes: 30 }
+  const [botToken, setBotToken] = useState(tg.botToken || "")
+  const [chatId, setChatId] = useState(tg.chatId || "")
+  const [enabled, setEnabled] = useState(tg.enabled ?? false)
+  const [interval, setInterval] = useState(tg.intervalMinutes || 5)
   const [messageTemplate, setMessageTemplate] = useState(
-    (config.telegram as Record<string, unknown>).messageTemplate as string || DEFAULT_TEMPLATE
+    (tg as Record<string, unknown>).messageTemplate as string || DEFAULT_TEMPLATE
   )
   const [hasChanges, setHasChanges] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
@@ -64,7 +65,7 @@ export function TelegramTab({ config, onUpdate, saving }: TelegramTabProps) {
 
   const handleSave = async () => {
     const payload = {
-      botToken: botToken.startsWith("****") ? config.telegram.botToken : botToken,
+      botToken: botToken.startsWith("****") ? (config.telegram?.botToken ?? "") : botToken,
       chatId,
       enabled,
       intervalMinutes: interval,

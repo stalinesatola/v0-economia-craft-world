@@ -28,15 +28,15 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const { t } = useI18n()
   const [search, setSearch] = useState("")
   const [expandedResource, setExpandedResource] = useState<string | null>(null)
-  const [localPools, setLocalPools] = useState(config.pools)
-  const [localCosts, setLocalCosts] = useState(config.productionCosts)
-  const [localAlerts, setLocalAlerts] = useState(config.alertsConfig)
+  const [localPools, setLocalPools] = useState(config.pools ?? {})
+  const [localCosts, setLocalCosts] = useState(config.productionCosts ?? {})
+  const [localAlerts, setLocalAlerts] = useState(config.alertsConfig ?? {})
   const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
-    setLocalPools(config.pools)
-    setLocalCosts(config.productionCosts)
-    setLocalAlerts(config.alertsConfig)
+    setLocalPools(config.pools ?? {})
+    setLocalCosts(config.productionCosts ?? {})
+    setLocalAlerts(config.alertsConfig ?? {})
     setHasChanges(false)
   }, [config.pools, config.productionCosts, config.alertsConfig])
 
