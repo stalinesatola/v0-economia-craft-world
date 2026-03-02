@@ -82,8 +82,8 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
     signal: "buy" | "sell" | "neutral"
   } | null>(null)
   const [search, setSearch] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState<ResourceCategory | "all">("all")
-  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all")
+  const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [sortField, setSortField] = useState<SortField>("priority")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
 
@@ -203,7 +203,10 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {(["all", "mine", "factory", "token", "base", "advanced", "defi"] as const).map((cat) => (
+          {["all", "mine", "factory", "token", "base", "advanced", "defi",
+            ...Object.values(dynAlerts ?? {}).map(a => a.category).filter(c => c && !["mine","factory","token","base","advanced","defi"].includes(c))
+            .filter((v, i, a) => a.indexOf(v) === i)
+          ].map((cat) => (
             <Button
               key={cat}
               variant={categoryFilter === cat ? "default" : "secondary"}
@@ -211,7 +214,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
               className="h-7 text-xs px-2.5"
               onClick={() => setCategoryFilter(cat)}
             >
-              {cat === "all" ? t("table.all") : categoryLabels[cat]}
+              {cat === "all" ? t("table.all") : (categoryLabels[cat as ResourceCategory] || cat)}
             </Button>
           ))}
           <div className="mx-1 h-7 w-px bg-border" />
@@ -270,7 +273,7 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
             </thead>
             <tbody>
               {filtered.map((res) => {
-                const CategoryIcon = categoryIcons[res.category]
+                    const CategoryIcon = categoryIcons[res.category as ResourceCategory] || Factory
                 return (
                   <tr
                     key={res.symbol}

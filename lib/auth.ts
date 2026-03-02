@@ -99,20 +99,19 @@ export async function validateUserLogin(username: string, password: string): Pro
 
 export async function createSession(username: string, role: string): Promise<string> {
   const token = generateToken(username, role)
-  const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: SESSION_MAX_AGE,
-    path: "/",
-  })
+  // Nao setar cookie persistente - usar apenas Bearer token via sessionStorage
+  // Isso garante que o utilizador precisa fazer login a cada sessao de browser
   return token
 }
 
 export async function clearSession(): Promise<void> {
-  const cookieStore = await cookies()
-  cookieStore.delete(SESSION_COOKIE)
+  // Limpar cookie antigo se existir (de sessoes anteriores)
+  try {
+    const cookieStore = await cookies()
+    cookieStore.delete(SESSION_COOKIE)
+  } catch {
+    // Cookie may not exist
+  }
 }
 
 export async function isAuthenticated(): Promise<{ authenticated: boolean; username: string; role: string }> {

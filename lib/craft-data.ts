@@ -62,8 +62,8 @@ export interface ResourceInfo {
   input?: string
   ratio?: number
   levels: number
-  category: ResourceCategory
-  priority: Priority
+  category: string
+  priority: string
   enabled: boolean
   source?: string
 }
