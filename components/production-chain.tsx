@@ -21,30 +21,22 @@ interface ProductionChainProps {
   productionCosts?: Record<string, number>
 }
 
-// Calcula custo de producao recursivo usando precos reais das pools
+// Calcula custo de producao directo: soma(preco_pool_input * quantidade)
+// NAO recursivo - usa o preco real da pool de cada materia-prima
 function calcCost(
   symbol: string,
   prices: Record<string, { price_usd: number }>,
   recipes: Recipe[],
-  cache: Map<string, number>
 ): number {
-  if (cache.has(symbol)) return cache.get(symbol)!
-
   const recipe = recipes.find(r => r.output === symbol)
-  if (!recipe) {
-    // Recurso base - custo = preco real da pool
-    const cost = prices[symbol]?.price_usd ?? 0
-    cache.set(symbol, cost)
-    return cost
-  }
+  if (!recipe) return 0 // Recurso base - sem custo de producao
 
   let totalCost = 0
   for (const inp of recipe.inputs) {
-    const inputCost = calcCost(inp.resource, prices, recipes, cache)
-    totalCost += inputCost * inp.quantity
+    const inputPoolPrice = prices[inp.resource]?.price_usd ?? 0
+    totalCost += inputPoolPrice * inp.quantity
   }
 
-  cache.set(symbol, totalCost)
   return totalCost
 }
 
@@ -232,12 +224,11 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
 
   const recipes = dbRecipes && dbRecipes.length > 0 ? dbRecipes : FALLBACK_RECIPES
 
-  // Calcular custos de producao com precos reais das pools
+  // Calcular custos de producao: soma(preco_pool_input * quantidade) para cada input
   const productionCosts = useMemo(() => {
-    const cache = new Map<string, number>()
     const costs: Record<string, number> = {}
     for (const recipe of recipes) {
-      costs[recipe.output] = calcCost(recipe.output, prices, recipes, cache)
+      costs[recipe.output] = calcCost(recipe.output, prices, recipes)
     }
     return costs
   }, [recipes, prices])
