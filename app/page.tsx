@@ -4,7 +4,6 @@ import { usePrices } from "@/hooks/use-prices"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { StatsCards } from "@/components/stats-cards"
 import { PriceTable } from "@/components/price-table"
-import { ProductionChain } from "@/components/production-chain"
 import { OpportunitiesPanel } from "@/components/opportunities-panel"
 import { AdBanner } from "@/components/ad-banner"
 import { MaintenancePage } from "@/components/maintenance-page"
@@ -15,7 +14,7 @@ import useSWR from "swr"
 const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
 
 export default function Home() {
-  const { prices, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners } = usePrices()
+  const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners } = usePrices()
   const { t } = useI18n()
 
   // Check maintenance mode
@@ -48,6 +47,11 @@ export default function Home() {
   const footerLinks = customization?.footerLinks || "Telegram: @bondsbtc | Dados via GeckoTerminal API | Rede Ronin"
   const footerDisclaimer = customization?.footerDisclaimer || t("footer.disclaimer")
 
+  // Module visibility from customization
+  const showStats = customization?.modules?.showStats !== false
+  const showOpportunities = customization?.modules?.showOpportunities !== false
+  const showBanners = customization?.modules?.showBanners !== false
+
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -61,7 +65,7 @@ export default function Home() {
           />
 
           {/* Top Banner */}
-          {bannersByPosition.top && (
+          {showBanners && bannersByPosition.top && (
             <AdBanner
               position="top"
               enabled={bannersByPosition.top.enabled}
@@ -72,10 +76,12 @@ export default function Home() {
             />
           )}
 
-          <StatsCards prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+          {showStats && (
+            <StatsCards prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+          )}
 
           {/* Between Banner */}
-          {bannersByPosition.between && (
+          {showBanners && bannersByPosition.between && (
             <AdBanner
               position="between"
               enabled={bannersByPosition.between.enabled}
@@ -86,28 +92,24 @@ export default function Home() {
             />
           )}
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <PriceTable prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
-            </div>
-            <div className="flex flex-col gap-6">
-              <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+          {showOpportunities && (
+            <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+          )}
 
-              {/* Sidebar Banner */}
-              {bannersByPosition.sidebar && (
-                <AdBanner
-                  position="sidebar"
-                  enabled={bannersByPosition.sidebar.enabled}
-                  imageUrl={bannersByPosition.sidebar.imageUrl}
-                  linkUrl={bannersByPosition.sidebar.linkUrl}
-                  altText={bannersByPosition.sidebar.altText}
-                  adScript={bannersByPosition.sidebar.adScript}
-                />
-              )}
+          {/* Sidebar Banner (shown as full width) */}
+          {showBanners && bannersByPosition.sidebar && (
+            <AdBanner
+              position="sidebar"
+              enabled={bannersByPosition.sidebar.enabled}
+              imageUrl={bannersByPosition.sidebar.imageUrl}
+              linkUrl={bannersByPosition.sidebar.linkUrl}
+              altText={bannersByPosition.sidebar.altText}
+              adScript={bannersByPosition.sidebar.adScript}
+            />
+          )}
 
-              <ProductionChain prices={prices} productionCosts={productionCosts} />
-            </div>
-          </div>
+          {/* Resource Cards */}
+          <PriceTable prices={prices} pools={pools} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
 
           <footer className="border-t border-border pt-4 pb-6">
             <div className="flex flex-col items-center gap-1 text-center">

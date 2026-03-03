@@ -159,30 +159,28 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">Categoria</Label>
-                  <div className="flex gap-1.5">
-                    <Select value={["mine","factory","token","base","advanced","defi"].includes(newCategory) ? newCategory : "_custom"} onValueChange={(v) => { if (v !== "_custom") setNewCategory(v) }}>
-                      <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm flex-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mine">{t("table.mine")}</SelectItem>
-                        <SelectItem value="factory">{t("table.factory")}</SelectItem>
-                        <SelectItem value="token">{t("table.token")}</SelectItem>
-                        <SelectItem value="base">Base</SelectItem>
-                        <SelectItem value="advanced">Avancado</SelectItem>
-                        <SelectItem value="defi">DeFi</SelectItem>
-                        <SelectItem value="_custom">Personalizada...</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {!["mine","factory","token","base","advanced","defi"].includes(newCategory) && (
-                      <Input
-                        value={newCategory === "_custom" ? "" : newCategory}
-                        onChange={(e) => setNewCategory(e.target.value.toLowerCase().trim())}
-                        placeholder="nome..."
-                        className="bg-secondary border-border text-card-foreground h-9 text-sm w-24"
-                      />
-                    )}
-                  </div>
+                  <Select value={newCategory} onValueChange={(v) => setNewCategory(v)}>
+                    <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(config.categories ?? []).filter(c => c.enabled).map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <span className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                            {cat.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                      {(!config.categories || config.categories.length === 0) && (
+                        <>
+                          <SelectItem value="mine">{t("table.mine")}</SelectItem>
+                          <SelectItem value="factory">{t("table.factory")}</SelectItem>
+                          <SelectItem value="token">{t("table.token")}</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">Prioridade</Label>
@@ -249,24 +247,16 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                       <span className="font-mono text-sm font-semibold text-card-foreground w-20">
                         {symbol}
                       </span>
-                      <Badge
-                        variant="outline"
-                        className={
-                          alert?.category === "mine"
-                            ? "border-chart-3 text-chart-3"
-                            : alert?.category === "token"
-                              ? "border-chart-2 text-chart-2"
-                              : alert?.category === "base"
-                                ? "border-chart-4 text-chart-4"
-                                : alert?.category === "advanced"
-                                  ? "border-chart-5 text-chart-5"
-                                  : alert?.category === "defi"
-                                    ? "border-destructive text-destructive"
-                                    : "border-primary text-primary"
-                        }
-                      >
-                        {alert?.category || "factory"}
-                      </Badge>
+                      {(() => {
+                        const catConfig = (config.categories ?? []).find(c => c.id === alert?.category)
+                        const catLabel = catConfig?.label || alert?.category || "factory"
+                        const catColor = catConfig?.color || "var(--primary)"
+                        return (
+                          <Badge variant="outline" style={{ borderColor: catColor, color: catColor }}>
+                            {catLabel}
+                          </Badge>
+                        )
+                      })()}
                       <Badge
                         variant="outline"
                         className={
@@ -315,33 +305,31 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Label className="text-xs text-muted-foreground">Categoria</Label>
-                          <div className="flex gap-1.5">
-                            <Select
-                              value={["mine","factory","token","base","advanced","defi"].includes(alert?.category || "") ? (alert?.category || "factory") : "_custom"}
-                              onValueChange={(v) => { if (v !== "_custom") handleAlertChange(symbol, "category", v); else handleAlertChange(symbol, "category", "") }}
-                            >
-                              <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs flex-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="mine">{t("table.mine")}</SelectItem>
-                                <SelectItem value="factory">{t("table.factory")}</SelectItem>
-                                <SelectItem value="token">{t("table.token")}</SelectItem>
-                                <SelectItem value="base">Base</SelectItem>
-                                <SelectItem value="advanced">Avancado</SelectItem>
-                                <SelectItem value="defi">DeFi</SelectItem>
-                                <SelectItem value="_custom">Personalizada...</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {!["mine","factory","token","base","advanced","defi"].includes(alert?.category || "factory") && (
-                              <Input
-                                value={alert?.category || ""}
-                                onChange={(e) => handleAlertChange(symbol, "category", e.target.value.toLowerCase().trim())}
-                                placeholder="nome..."
-                                className="bg-background border-border text-card-foreground h-8 text-xs w-20"
-                              />
-                            )}
-                          </div>
+                          <Select
+                            value={alert?.category || "factory"}
+                            onValueChange={(v) => handleAlertChange(symbol, "category", v)}
+                          >
+                            <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(config.categories ?? []).filter(c => c.enabled).map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                                    {cat.label}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                              {(!config.categories || config.categories.length === 0) && (
+                                <>
+                                  <SelectItem value="mine">{t("table.mine")}</SelectItem>
+                                  <SelectItem value="factory">{t("table.factory")}</SelectItem>
+                                  <SelectItem value="token">{t("table.token")}</SelectItem>
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Label className="text-xs text-muted-foreground">Prioridade</Label>

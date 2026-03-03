@@ -12,6 +12,7 @@ interface PriceData {
 
 interface PricesResponse {
   prices: Record<string, PriceData>
+  pools?: Record<string, string>
   timestamp: string
   count: number
   productionCosts?: Record<string, number>
@@ -35,6 +36,7 @@ export function usePrices() {
 
   return {
     prices: data?.prices ?? {},
+    pools: data?.pools ?? {},
     timestamp: data?.timestamp,
     count: data?.count ?? 0,
     productionCosts: data?.productionCosts,

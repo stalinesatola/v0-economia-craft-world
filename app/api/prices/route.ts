@@ -110,6 +110,7 @@ export async function GET() {
 
   return NextResponse.json({
     prices: symbolPrices,
+    pools,
     timestamp: new Date().toISOString(),
     count: Object.keys(symbolPrices).length,
     productionCosts: calculatedCosts,

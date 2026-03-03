@@ -32,7 +32,7 @@ const positionIcons: Record<string, typeof LayoutTemplate> = {
 const positionDescriptions: Record<string, string> = {
   top: "Banner horizontal no topo do dashboard, abaixo do header",
   sidebar: "Banner na barra lateral direita, ao lado da cadeia de producao",
-  between: "Banner horizontal entre as stats cards e a tabela de precos",
+  between: "Banner horizontal entre as stats cards e os recursos",
 }
 
 export function BannersTab({ config, onUpdate, saving }: BannersTabProps) {

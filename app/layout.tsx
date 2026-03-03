@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import { I18nProvider } from '@/lib/i18n'
 import './globals.css'
 
@@ -36,7 +35,6 @@ export default function RootLayout({
         <I18nProvider>
           {children}
         </I18nProvider>
-        <Analytics />
       </body>
     </html>
   )

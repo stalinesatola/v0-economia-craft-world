@@ -25,7 +25,7 @@ const translations = {
     "stats.totalCombined": "total combinado",
     "stats.volume24h": "Volume 24h",
     // Table
-    "table.title": "Tabela de Precos",
+    "table.title": "Recursos",
     "table.search": "Pesquisar recurso...",
     "table.all": "Todos",
     "table.allCategories": "Todas",
@@ -184,7 +184,7 @@ const translations = {
     "stats.totalCombined": "total combined",
     "stats.volume24h": "Volume 24h",
     // Table
-    "table.title": "Price Table",
+    "table.title": "Resources",
     "table.search": "Search resource...",
     "table.all": "All",
     "table.allCategories": "All",

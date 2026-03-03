@@ -9,6 +9,7 @@ import { TelegramTab } from "@/components/admin/tabs/telegram-tab"
 import { SettingsTab } from "@/components/admin/tabs/settings-tab"
 import { BannersTab } from "@/components/admin/tabs/banners-tab"
 import { SharingTab } from "@/components/admin/tabs/sharing-tab"
+import { CategoriesTab } from "@/components/admin/tabs/categories-tab"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useI18n } from "@/lib/i18n"
 import { LogOut, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, XCircle } from "lucide-react"
@@ -29,6 +30,8 @@ function sanitizeConfig(raw: AppConfig): AppConfig {
     sharing: raw.sharing,
     customization: raw.customization,
     maintenance: raw.maintenance ?? { enabled: false, message: "" },
+    categories: raw.categories ?? [],
+    recipes: raw.recipes ?? [],
   }
 }
 
@@ -137,6 +140,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
     { id: "telegram", label: t("admin.telegram"), perm: "telegram" },
     { id: "sharing", label: t("admin.sharing"), perm: "sharing" },
     { id: "banners", label: t("admin.banners"), perm: "banners" },
+    { id: "categories", label: "Categorias", perm: "settings" },
     { id: "settings", label: t("admin.config"), perm: "settings" },
   ].filter((tab) => isSuperAdmin || canEdit(tab.perm))
 
@@ -237,6 +241,11 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
               {canEdit("banners") && (
                 <TabsContent value="banners" className="mt-4">
                   <BannersTab config={config} onUpdate={updateSection} saving={saving} />
+                </TabsContent>
+              )}
+              {canEdit("settings") && (
+                <TabsContent value="categories" className="mt-4">
+                  <CategoriesTab config={config} onUpdate={updateSection} saving={saving} />
                 </TabsContent>
               )}
               {canEdit("settings") && (
