@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -144,7 +144,7 @@ function RecipeForm({ initial, onSave, onCancel }: {
 }
 
 // ---- Recipe Display Card ----
-function RecipeCard({ recipe, onEdit, onDelete, onMove, isFirst, isLast }: {
+const RecipeCard = memo(function RecipeCard({ recipe, onEdit, onDelete, onMove, isFirst, isLast }: {
   recipe: RecipeConfig
   onEdit: () => void
   onDelete: () => void
@@ -194,9 +194,11 @@ function RecipeCard({ recipe, onEdit, onDelete, onMove, isFirst, isLast }: {
       </div>
     </div>
   )
-}
+})
 
-function ChainTreePreview({ nodes, depth = 0 }: { nodes: ChainNode[]; depth?: number }) {
+const ChainTreePreview = memo(function ChainTreePreview({ nodes, depth = 0 }: { nodes: ChainNode[]; depth?: number }) {
+  // Limit depth to 4 levels for performance
+  if (depth > 4) return <span className="text-[9px] text-muted-foreground ml-4">...</span>
   return (
     <div className={depth > 0 ? "ml-4 border-l border-border pl-3" : ""}>
       {nodes.map((node) => (
@@ -211,7 +213,7 @@ function ChainTreePreview({ nodes, depth = 0 }: { nodes: ChainNode[]; depth?: nu
       ))}
     </div>
   )
-}
+})
 
 export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
   const { t } = useI18n()
