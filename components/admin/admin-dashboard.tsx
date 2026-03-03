@@ -64,6 +64,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
   const [loading, setLoading] = useState(!initialConfig)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [activeTab, setActiveTab] = useState("pools")
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message })
@@ -155,7 +156,6 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
   ].filter((tab) => isSuperAdmin || canEdit(tab.perm))
 
   const defaultTab = visibleTabs[0]?.id || "pools"
-  const [activeTab, setActiveTab] = useState(defaultTab)
 
   const handleTabChange = (value: string) => {
     startTransition(() => {
