@@ -1,20 +1,30 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, lazy, Suspense, startTransition } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { PoolsTab } from "@/components/admin/tabs/pools-tab"
-import { ChainsTab } from "@/components/admin/tabs/chains-tab"
-import { TelegramTab } from "@/components/admin/tabs/telegram-tab"
 import { SettingsTab } from "@/components/admin/tabs/settings-tab"
-import { BannersTab } from "@/components/admin/tabs/banners-tab"
-import { SharingTab } from "@/components/admin/tabs/sharing-tab"
-import { CategoriesTab } from "@/components/admin/tabs/categories-tab"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useI18n } from "@/lib/i18n"
 import { LogOut, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, XCircle } from "lucide-react"
 import Link from "next/link"
 import type { AppConfig } from "@/lib/config-manager"
+
+// Lazy load heavy tabs to reduce INP on tab switch
+const ChainsTab = lazy(() => import("@/components/admin/tabs/chains-tab").then(m => ({ default: m.ChainsTab })))
+const TelegramTab = lazy(() => import("@/components/admin/tabs/telegram-tab").then(m => ({ default: m.TelegramTab })))
+const BannersTab = lazy(() => import("@/components/admin/tabs/banners-tab").then(m => ({ default: m.BannersTab })))
+const SharingTab = lazy(() => import("@/components/admin/tabs/sharing-tab").then(m => ({ default: m.SharingTab })))
+const CategoriesTab = lazy(() => import("@/components/admin/tabs/categories-tab").then(m => ({ default: m.CategoriesTab })))
+
+function TabFallback() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  )
+}
 
 function sanitizeConfig(raw: AppConfig): AppConfig {
   return {
@@ -54,6 +64,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
   const [loading, setLoading] = useState(!initialConfig)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [activeTab, setActiveTab] = useState("pools")
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message })
@@ -146,6 +157,12 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
 
   const defaultTab = visibleTabs[0]?.id || "pools"
 
+  const handleTabChange = (value: string) => {
+    startTransition(() => {
+      setActiveTab(value)
+    })
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Toast notification */}
@@ -209,7 +226,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
               <p className="text-sm text-muted-foreground">Sem permissoes de acesso a configuracoes.</p>
             </div>
           ) : (
-            <Tabs defaultValue={defaultTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="flex w-full overflow-x-auto bg-secondary">
                 {visibleTabs.map((tab) => (
                   <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
@@ -225,27 +242,37 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
               )}
               {canEdit("chains") && (
                 <TabsContent value="chains" className="mt-4">
-                  <ChainsTab config={config} onUpdate={updateSection} saving={saving} />
+                  <Suspense fallback={<TabFallback />}>
+                    <ChainsTab config={config} onUpdate={updateSection} saving={saving} />
+                  </Suspense>
                 </TabsContent>
               )}
               {canEdit("telegram") && (
                 <TabsContent value="telegram" className="mt-4">
-                  <TelegramTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
+                  <Suspense fallback={<TabFallback />}>
+                    <TelegramTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
+                  </Suspense>
                 </TabsContent>
               )}
               {canEdit("sharing") && (
                 <TabsContent value="sharing" className="mt-4">
-                  <SharingTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
+                  <Suspense fallback={<TabFallback />}>
+                    <SharingTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
+                  </Suspense>
                 </TabsContent>
               )}
               {canEdit("banners") && (
                 <TabsContent value="banners" className="mt-4">
-                  <BannersTab config={config} onUpdate={updateSection} saving={saving} />
+                  <Suspense fallback={<TabFallback />}>
+                    <BannersTab config={config} onUpdate={updateSection} saving={saving} />
+                  </Suspense>
                 </TabsContent>
               )}
               {canEdit("settings") && (
                 <TabsContent value="categories" className="mt-4">
-                  <CategoriesTab config={config} onUpdate={updateSection} saving={saving} />
+                  <Suspense fallback={<TabFallback />}>
+                    <CategoriesTab config={config} onUpdate={updateSection} saving={saving} />
+                  </Suspense>
                 </TabsContent>
               )}
               {canEdit("settings") && (
