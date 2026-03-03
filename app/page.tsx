@@ -4,7 +4,6 @@ import { usePrices } from "@/hooks/use-prices"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { StatsCards } from "@/components/stats-cards"
 import { PriceTable } from "@/components/price-table"
-import { ProductionChain } from "@/components/production-chain"
 import { OpportunitiesPanel } from "@/components/opportunities-panel"
 import { AdBanner } from "@/components/ad-banner"
 import { MaintenancePage } from "@/components/maintenance-page"
@@ -48,6 +47,11 @@ export default function Home() {
   const footerLinks = customization?.footerLinks || "Telegram: @bondsbtc | Dados via GeckoTerminal API | Rede Ronin"
   const footerDisclaimer = customization?.footerDisclaimer || t("footer.disclaimer")
 
+  // Module visibility from customization
+  const showStats = customization?.modules?.showStats !== false
+  const showOpportunities = customization?.modules?.showOpportunities !== false
+  const showBanners = customization?.modules?.showBanners !== false
+
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -61,7 +65,7 @@ export default function Home() {
           />
 
           {/* Top Banner */}
-          {bannersByPosition.top && (
+          {showBanners && bannersByPosition.top && (
             <AdBanner
               position="top"
               enabled={bannersByPosition.top.enabled}
@@ -72,10 +76,12 @@ export default function Home() {
             />
           )}
 
-          <StatsCards prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+          {showStats && (
+            <StatsCards prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+          )}
 
           {/* Between Banner */}
-          {bannersByPosition.between && (
+          {showBanners && bannersByPosition.between && (
             <AdBanner
               position="between"
               enabled={bannersByPosition.between.enabled}
@@ -91,10 +97,12 @@ export default function Home() {
               <PriceTable prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
             </div>
             <div className="flex flex-col gap-6">
-              <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+              {showOpportunities && (
+                <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+              )}
 
               {/* Sidebar Banner */}
-              {bannersByPosition.sidebar && (
+              {showBanners && bannersByPosition.sidebar && (
                 <AdBanner
                   position="sidebar"
                   enabled={bannersByPosition.sidebar.enabled}
@@ -105,7 +113,6 @@ export default function Home() {
                 />
               )}
 
-              <ProductionChain prices={prices} productionCosts={productionCosts} />
             </div>
           </div>
 

@@ -29,6 +29,9 @@ import {
 import { AssetChart } from "@/components/asset-chart"
 import { useI18n } from "@/lib/i18n"
 import { getResourceColor } from "@/lib/resource-images"
+import useSWR from "swr"
+
+const configFetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null)
 
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string; token_name?: string }>
@@ -86,6 +89,10 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [sortField, setSortField] = useState<SortField>("priority")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
+
+  // Fetch dynamic categories from config
+  const { data: catData } = useSWR("/api/categories", configFetcher, { revalidateOnFocus: false, dedupingInterval: 60000 })
+  const dynamicCategories: { id: string; label: string; color: string; enabled: boolean }[] = catData ?? []
 
   const resources = getAllResources()
 
@@ -203,18 +210,29 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {["all", "mine", "factory", "token", "base", "advanced", "defi",
-            ...Object.values(dynAlerts ?? {}).map(a => a.category).filter(c => c && !["mine","factory","token","base","advanced","defi"].includes(c))
-            .filter((v, i, a) => a.indexOf(v) === i)
+          {[
+            { id: "all", label: t("table.all"), color: "" },
+            ...(dynamicCategories.length > 0
+              ? dynamicCategories.filter(c => c.enabled)
+              : [
+                  { id: "mine", label: categoryLabels.mine, color: "#f59e0b", enabled: true },
+                  { id: "factory", label: categoryLabels.factory, color: "#3b82f6", enabled: true },
+                  { id: "token", label: categoryLabels.token, color: "#8b5cf6", enabled: true },
+                  { id: "base", label: "Base", color: "#10b981", enabled: true },
+                  { id: "advanced", label: "Avancado", color: "#ef4444", enabled: true },
+                  { id: "defi", label: "DeFi", color: "#ec4899", enabled: true },
+                ]
+            ),
           ].map((cat) => (
             <Button
-              key={cat}
-              variant={categoryFilter === cat ? "default" : "secondary"}
+              key={cat.id}
+              variant={categoryFilter === cat.id ? "default" : "secondary"}
               size="sm"
-              className="h-7 text-xs px-2.5"
-              onClick={() => setCategoryFilter(cat)}
+              className="h-7 text-xs px-2.5 gap-1.5"
+              onClick={() => setCategoryFilter(cat.id)}
             >
-              {cat === "all" ? t("table.all") : (categoryLabels[cat as ResourceCategory] || cat)}
+              {cat.color && <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
+              {cat.label}
             </Button>
           ))}
           <div className="mx-1 h-7 w-px bg-border" />

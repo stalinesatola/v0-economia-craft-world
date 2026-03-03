@@ -12,6 +12,11 @@ export async function GET() {
       footerDisclaimer: "",
       loginTitle: "Seja Bem-vindo",
       loginCredits: "",
+      primaryColor: "",
+      accentColor: "",
+      backgroundColor: "",
+      modules: { showOpportunities: true, showStats: true, showBanners: true, showChain: true },
+      template: "default",
     })
   } catch {
     return NextResponse.json({})

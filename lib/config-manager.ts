@@ -36,6 +36,8 @@ export interface AppConfig {
   sharing?: SharingConfig
   customization?: CustomizationConfig
   maintenance?: MaintenanceConfig
+  categories?: CategoryConfig[]
+  recipes?: RecipeConfig[]
 }
 
 export interface UserPermissions {
@@ -93,6 +95,21 @@ export interface SharingConfig {
   }
 }
 
+export interface CategoryConfig {
+  id: string
+  label: string
+  color: string
+  icon: string
+  enabled: boolean
+  order: number
+}
+
+export interface RecipeConfig {
+  output: string
+  inputs: { resource: string; quantity: number }[]
+  level: number
+}
+
 export interface CustomizationConfig {
   headerLogo: string
   headerText: string
@@ -101,6 +118,16 @@ export interface CustomizationConfig {
   footerDisclaimer: string
   loginTitle: string
   loginCredits: string
+  primaryColor?: string
+  accentColor?: string
+  backgroundColor?: string
+  modules?: {
+    showOpportunities: boolean
+    showStats: boolean
+    showBanners: boolean
+    showChain: boolean
+  }
+  template?: "default" | "compact" | "cards"
 }
 
 export interface ChainNode {
@@ -114,6 +141,7 @@ const VALID_SECTIONS = [
   "pools", "productionCosts", "alertsConfig", "productionChains",
   "thresholds", "telegram", "network", "users", "banners",
   "sharing", "customization", "maintenance", "resourceImages",
+  "categories", "recipes",
 ]
 
 // ── Config section read/write ──────────────────────

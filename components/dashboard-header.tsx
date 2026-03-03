@@ -1,10 +1,11 @@
 "use client"
 
-import { RefreshCw, Activity, Zap } from "lucide-react"
+import { RefreshCw, Activity, Zap, Link2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RonPrice } from "@/components/ron-price"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useI18n } from "@/lib/i18n"
+import Link from "next/link"
 
 interface DashboardHeaderProps {
   timestamp?: string
@@ -14,6 +15,9 @@ interface DashboardHeaderProps {
   customization?: {
     headerLogo?: string
     headerText?: string
+    modules?: {
+      showChain?: boolean
+    }
   }
 }
 
@@ -60,6 +64,15 @@ export function DashboardHeader({ timestamp, count, isValidating, onRefresh, cus
 
       <div className="flex flex-wrap items-center gap-2">
         <RonPrice />
+
+        {customization?.modules?.showChain !== false && (
+          <Link href="/producao">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Link2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Producao</span>
+            </Button>
+          </Link>
+        )}
 
         <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2">
           <Activity className={`h-3.5 w-3.5 ${isValidating ? "text-primary animate-pulse" : "text-primary"}`} />

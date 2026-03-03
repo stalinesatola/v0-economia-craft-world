@@ -62,6 +62,11 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const [footerDisclaimer, setFooterDisclaimer] = useState(cust.footerDisclaimer)
   const [loginTitle, setLoginTitle] = useState(cust.loginTitle)
   const [loginCredits, setLoginCredits] = useState(cust.loginCredits)
+  const [primaryColor, setPrimaryColor] = useState(cust.primaryColor ?? "#6366f1")
+  const [accentColor, setAccentColor] = useState(cust.accentColor ?? "#10b981")
+  const [backgroundColor, setBackgroundColor] = useState(cust.backgroundColor ?? "#0a0a14")
+  const [modules, setModules] = useState(cust.modules ?? { showOpportunities: true, showStats: true, showBanners: true, showChain: true })
+  const [template, setTemplate] = useState<"default" | "compact" | "cards">(cust.template ?? "default")
   const [hasCustomChanges, setHasCustomChanges] = useState(false)
 
   useEffect(() => {
@@ -83,6 +88,11 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
     setFooterDisclaimer(c.footerDisclaimer)
     setLoginTitle(c.loginTitle)
     setLoginCredits(c.loginCredits)
+    setPrimaryColor(c.primaryColor ?? "#6366f1")
+    setAccentColor(c.accentColor ?? "#10b981")
+    setBackgroundColor(c.backgroundColor ?? "#0a0a14")
+    setModules(c.modules ?? { showOpportunities: true, showStats: true, showBanners: true, showChain: true })
+    setTemplate(c.template ?? "default")
     setHasCustomChanges(false)
   }, [config.customization])
 
@@ -143,6 +153,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const handleSaveCustomization = async () => {
     const success = await onUpdate("customization", {
       headerLogo, headerText, footerCredits, footerLinks, footerDisclaimer, loginTitle, loginCredits,
+      primaryColor, accentColor, backgroundColor, modules, template,
     })
     if (success) setHasCustomChanges(false)
   }
@@ -392,6 +403,87 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
               placeholder="Texto adicional exibido abaixo do login"
               className="bg-secondary border-border text-card-foreground h-9 text-sm"
             />
+          </div>
+
+          {/* Cores */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Cores do Tema</h4>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">Cor Primaria</Label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={primaryColor} onChange={(e) => { setPrimaryColor(e.target.value); setHasCustomChanges(true) }} className="h-9 w-12 rounded border border-border cursor-pointer" />
+                  <Input value={primaryColor} onChange={(e) => { setPrimaryColor(e.target.value); setHasCustomChanges(true) }} className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono flex-1" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">Cor Accent</Label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={accentColor} onChange={(e) => { setAccentColor(e.target.value); setHasCustomChanges(true) }} className="h-9 w-12 rounded border border-border cursor-pointer" />
+                  <Input value={accentColor} onChange={(e) => { setAccentColor(e.target.value); setHasCustomChanges(true) }} className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono flex-1" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">Cor de Fundo</Label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={backgroundColor} onChange={(e) => { setBackgroundColor(e.target.value); setHasCustomChanges(true) }} className="h-9 w-12 rounded border border-border cursor-pointer" />
+                  <Input value={backgroundColor} onChange={(e) => { setBackgroundColor(e.target.value); setHasCustomChanges(true) }} className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono flex-1" />
+                </div>
+              </div>
+            </div>
+            {/* Preview */}
+            <div className="mt-3 rounded-lg border border-border p-3 flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">Preview:</span>
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-12 rounded" style={{ backgroundColor: primaryColor }} title="Primaria" />
+                <div className="h-6 w-12 rounded" style={{ backgroundColor: accentColor }} title="Accent" />
+                <div className="h-6 w-12 rounded border border-border" style={{ backgroundColor: backgroundColor }} title="Fundo" />
+              </div>
+            </div>
+          </div>
+
+          {/* Modulos */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Modulos Visiveis</h4>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { key: "showOpportunities" as const, label: "Oportunidades de Trading" },
+                { key: "showStats" as const, label: "Cards de Estatisticas" },
+                { key: "showBanners" as const, label: "Banners Publicitarios" },
+                { key: "showChain" as const, label: "Link Cadeia de Producao" },
+              ].map((mod) => (
+                <div key={mod.key} className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 px-3 py-2">
+                  <span className="text-xs text-card-foreground">{mod.label}</span>
+                  <Switch
+                    checked={modules[mod.key]}
+                    onCheckedChange={(v) => { setModules({ ...modules, [mod.key]: v }); setHasCustomChanges(true) }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Template */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Template da Tabela</h4>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                { value: "default" as const, label: "Default", desc: "Tabela completa com todas as colunas" },
+                { value: "compact" as const, label: "Compacto", desc: "Tabela reduzida, ideal para mobile" },
+                { value: "cards" as const, label: "Cards", desc: "Layout em grelha de cartoes" },
+              ].map((tmpl) => (
+                <button
+                  key={tmpl.value}
+                  onClick={() => { setTemplate(tmpl.value); setHasCustomChanges(true) }}
+                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-all ${
+                    template === tmpl.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                  }`}
+                >
+                  <span className="text-sm font-medium text-card-foreground">{tmpl.label}</span>
+                  <span className="text-[10px] text-muted-foreground">{tmpl.desc}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
