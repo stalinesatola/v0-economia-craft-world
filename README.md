@@ -235,7 +235,7 @@ RONIN_NETWORK=
 
 # 📄 Licença
 
-Este projeto pode ser distribuído sob licença MIT (ou definir conforme necessário).
+Este projeto pode ser distribuído sob licença MIT
 
 ---
 
