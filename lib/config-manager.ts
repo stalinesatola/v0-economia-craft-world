@@ -145,7 +145,7 @@ const VALID_SECTIONS = [
   "pools", "productionCosts", "alertsConfig", "productionChains",
   "thresholds", "telegram", "network", "users", "banners",
   "sharing", "customization", "maintenance", "resourceImages",
-  "categories", "recipes",
+  "categories", "recipes", "alertHistory",
 ]
 
 // ── Config section read/write ──────────────────────
