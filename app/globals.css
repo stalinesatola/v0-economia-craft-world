@@ -3,47 +3,56 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Craft World Economy - Dark Gaming Theme */
+/* Craft World Economy - Inspired by craft-world.gg */
 :root {
-  --background: oklch(0.13 0.005 260);
-  --foreground: oklch(0.95 0.01 250);
-  --card: oklch(0.17 0.008 260);
-  --card-foreground: oklch(0.95 0.01 250);
-  --popover: oklch(0.17 0.008 260);
-  --popover-foreground: oklch(0.95 0.01 250);
-  --primary: oklch(0.72 0.19 165);
-  --primary-foreground: oklch(0.13 0.005 260);
-  --secondary: oklch(0.22 0.01 260);
-  --secondary-foreground: oklch(0.88 0.01 250);
-  --muted: oklch(0.22 0.01 260);
-  --muted-foreground: oklch(0.65 0.02 250);
-  --accent: oklch(0.72 0.19 165);
-  --accent-foreground: oklch(0.13 0.005 260);
-  --destructive: oklch(0.60 0.20 25);
-  --destructive-foreground: oklch(0.95 0.01 250);
-  --border: oklch(0.26 0.015 260);
-  --input: oklch(0.22 0.01 260);
-  --ring: oklch(0.72 0.19 165);
-  --chart-1: oklch(0.72 0.19 165);
-  --chart-2: oklch(0.65 0.17 250);
-  --chart-3: oklch(0.75 0.15 80);
-  --chart-4: oklch(0.60 0.20 25);
-  --chart-5: oklch(0.70 0.15 300);
+  /* Deep volcanic dark background */
+  --background: oklch(0.12 0.01 270);
+  --foreground: oklch(0.95 0.005 90);
+  /* Card surfaces - slightly elevated */
+  --card: oklch(0.16 0.012 270);
+  --card-foreground: oklch(0.95 0.005 90);
+  --popover: oklch(0.16 0.012 270);
+  --popover-foreground: oklch(0.95 0.005 90);
+  /* Primary: Craft World orange/fire energy */
+  --primary: oklch(0.75 0.18 55);
+  --primary-foreground: oklch(0.12 0.01 270);
+  /* Secondary: muted dark panels */
+  --secondary: oklch(0.20 0.012 270);
+  --secondary-foreground: oklch(0.85 0.01 90);
+  /* Muted for subtle elements */
+  --muted: oklch(0.22 0.01 270);
+  --muted-foreground: oklch(0.60 0.02 260);
+  /* Accent: teal/water element */
+  --accent: oklch(0.70 0.14 190);
+  --accent-foreground: oklch(0.12 0.01 270);
+  /* Destructive: lava red */
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.95 0.005 90);
+  /* Borders */
+  --border: oklch(0.25 0.015 270);
+  --input: oklch(0.20 0.012 270);
+  --ring: oklch(0.75 0.18 55);
+  /* Charts - elemental colors */
+  --chart-1: oklch(0.75 0.18 55);
+  --chart-2: oklch(0.70 0.14 190);
+  --chart-3: oklch(0.72 0.15 130);
+  --chart-4: oklch(0.62 0.22 25);
+  --chart-5: oklch(0.68 0.14 300);
   --radius: 0.625rem;
-  --sidebar: oklch(0.15 0.008 260);
-  --sidebar-foreground: oklch(0.95 0.01 250);
-  --sidebar-primary: oklch(0.72 0.19 165);
-  --sidebar-primary-foreground: oklch(0.13 0.005 260);
-  --sidebar-accent: oklch(0.22 0.01 260);
-  --sidebar-accent-foreground: oklch(0.88 0.01 250);
-  --sidebar-border: oklch(0.26 0.015 260);
-  --sidebar-ring: oklch(0.72 0.19 165);
-
+  /* Sidebar */
+  --sidebar: oklch(0.14 0.012 270);
+  --sidebar-foreground: oklch(0.95 0.005 90);
+  --sidebar-primary: oklch(0.75 0.18 55);
+  --sidebar-primary-foreground: oklch(0.12 0.01 270);
+  --sidebar-accent: oklch(0.20 0.012 270);
+  --sidebar-accent-foreground: oklch(0.85 0.01 90);
+  --sidebar-border: oklch(0.25 0.015 270);
+  --sidebar-ring: oklch(0.75 0.18 55);
   /* Custom tokens */
-  --success: oklch(0.72 0.19 165);
-  --success-foreground: oklch(0.13 0.005 260);
+  --success: oklch(0.72 0.15 130);
+  --success-foreground: oklch(0.12 0.01 270);
   --warning: oklch(0.80 0.16 80);
-  --warning-foreground: oklch(0.13 0.005 260);
+  --warning-foreground: oklch(0.12 0.01 270);
 }
 
 @theme inline {

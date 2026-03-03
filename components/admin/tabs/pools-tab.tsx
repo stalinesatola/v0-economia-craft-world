@@ -44,6 +44,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [newAddress, setNewAddress] = useState("")
   const [newCategory, setNewCategory] = useState<string>("factory")
   const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
+  const [newImageUrl, setNewImageUrl] = useState("")
 
   const safePools = localPools ?? {}
   const symbols = Object.keys(safePools).filter((s) =>
@@ -71,11 +72,12 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     setLocalPools((prev) => ({ ...prev, [symbol]: newAddress.trim() }))
     setLocalAlerts((prev) => ({
       ...prev,
-      [symbol]: { enabled: true, priority: newPriority, category: newCategory },
+      [symbol]: { enabled: true, priority: newPriority, category: newCategory, imageUrl: newImageUrl.trim() || undefined },
     }))
     setHasChanges(true)
     setNewSymbol("")
     setNewAddress("")
+    setNewImageUrl("")
     setShowAddForm(false)
   }
 
@@ -183,6 +185,25 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                   </Select>
                 </div>
                 <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">URL da Imagem</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      placeholder="https://... (opcional)"
+                      className="bg-secondary border-border text-card-foreground h-9 text-sm"
+                    />
+                    {newImageUrl && (
+                      <img
+                        src={newImageUrl}
+                        alt="preview"
+                        className="h-9 w-9 rounded-md object-cover border border-border shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">Prioridade</Label>
                   <Select value={newPriority} onValueChange={(v) => setNewPriority(v as "high" | "medium" | "low")}>
                     <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm">
@@ -244,6 +265,18 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                     className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-secondary/80 transition-colors rounded-lg cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
+                      {(alert as Record<string, unknown>)?.imageUrl ? (
+                        <img
+                          src={(alert as Record<string, unknown>).imageUrl as string}
+                          alt={symbol}
+                          className="h-7 w-7 rounded-full object-cover border border-border shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                        />
+                      ) : (
+                        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground shrink-0">
+                          {symbol.slice(0, 2)}
+                        </div>
+                      )}
                       <span className="font-mono text-sm font-semibold text-card-foreground w-20">
                         {symbol}
                       </span>
@@ -348,6 +381,25 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                           </Select>
                         </div>
 
+                        <div className="flex flex-col gap-1.5 sm:col-span-2">
+                          <Label className="text-xs text-muted-foreground">URL da Imagem</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={(alert as Record<string, unknown>)?.imageUrl as string || ""}
+                              onChange={(e) => handleAlertChange(symbol, "imageUrl", e.target.value)}
+                              placeholder="https://... (opcional)"
+                              className="bg-background border-border text-card-foreground h-8 text-xs flex-1"
+                            />
+                            {(alert as Record<string, unknown>)?.imageUrl && (
+                              <img
+                                src={(alert as Record<string, unknown>)?.imageUrl as string}
+                                alt={symbol}
+                                className="h-8 w-8 rounded-md object-cover border border-border shrink-0"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                              />
+                            )}
+                          </div>
+                        </div>
                       </div>
                       <div className="mt-3 flex justify-end">
                         <Button

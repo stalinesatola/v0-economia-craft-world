@@ -69,7 +69,7 @@ export function DashboardHeader({ timestamp, count, isValidating, onRefresh, cus
           <Link href="/producao">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Link2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Producao</span>
+              <span className="hidden sm:inline">{t("dashboard.production")}</span>
             </Button>
           </Link>
         )}

@@ -17,6 +17,7 @@ import {
   Bar,
 } from "recharts"
 import { formatPrice } from "@/lib/craft-data"
+import { useI18n } from "@/lib/i18n"
 
 interface Candle {
   timestamp: number
@@ -53,6 +54,7 @@ export function AssetChart({
   signal,
   onClose,
 }: AssetChartProps) {
+  const { t, locale } = useI18n()
   const [candles, setCandles] = useState<Candle[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTimeframe, setActiveTimeframe] = useState(2) // default 7D
@@ -91,7 +93,7 @@ export function AssetChart({
   const isPositive = priceChange >= 0
 
   const chartData = candles.map((c) => ({
-    date: new Date(c.timestamp).toLocaleDateString("pt-PT", {
+    date: new Date(c.timestamp).toLocaleDateString(locale === "pt" ? "pt-PT" : "en-US", {
       day: "2-digit",
       month: "2-digit",
       ...(activeTimeframe <= 1 ? { hour: "2-digit", minute: "2-digit" } : {}),
@@ -116,21 +118,21 @@ export function AssetChart({
                   {symbol}
                 </CardTitle>
                 {signal === "buy" && (
-                  <Badge className="bg-primary/20 text-primary text-xs">COMPRAR</Badge>
+                  <Badge className="bg-primary/20 text-primary text-xs">{t("table.buy")}</Badge>
                 )}
                 {signal === "sell" && (
-                  <Badge className="bg-destructive/20 text-destructive text-xs">VENDER</Badge>
+                  <Badge className="bg-destructive/20 text-destructive text-xs">{t("table.sell")}</Badge>
                 )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>Preco: <span className="font-mono text-card-foreground">{formatPrice(currentPrice)}</span></span>
-                <span>Custo: <span className="font-mono">{formatPrice(cost)}</span></span>
-                <span>Desvio: <span className={`font-mono font-semibold ${signal === "buy" ? "text-primary" : signal === "sell" ? "text-destructive" : ""}`}>{deviation > 0 ? "+" : ""}{deviation.toFixed(1)}%</span></span>
+                <span>{t("chart.price")}: <span className="font-mono text-card-foreground">{formatPrice(currentPrice)}</span></span>
+                <span>{t("opps.cost")}: <span className="font-mono">{formatPrice(cost)}</span></span>
+                <span>{t("opps.deviation")}: <span className={`font-mono font-semibold ${signal === "buy" ? "text-primary" : signal === "sell" ? "text-destructive" : ""}`}>{deviation > 0 ? "+" : ""}{deviation.toFixed(1)}%</span></span>
               </div>
             </div>
             <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
               <X className="h-4 w-4" />
-              <span className="sr-only">Fechar</span>
+              <span className="sr-only">{t("chart.close")}</span>
             </Button>
           </div>
 
@@ -145,7 +147,7 @@ export function AssetChart({
               <span className={`text-xs font-mono font-semibold ${isPositive ? "text-primary" : "text-destructive"}`}>
                 {isPositive ? "+" : ""}{priceChangePercent.toFixed(2)}%
               </span>
-              <span className="text-xs text-muted-foreground">no periodo</span>
+              <span className="text-xs text-muted-foreground">{locale === "pt" ? "no periodo" : "in period"}</span>
             </div>
           )}
 
@@ -181,7 +183,7 @@ export function AssetChart({
             </div>
           ) : candles.length === 0 ? (
             <div className="flex items-center justify-center h-56 text-sm text-muted-foreground">
-              Sem dados disponiveis para este periodo.
+              {t("chart.noData")}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -191,20 +193,20 @@ export function AssetChart({
                   <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={isPositive ? "oklch(0.72 0.19 165)" : "oklch(0.60 0.20 25)"} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={isPositive ? "oklch(0.72 0.19 165)" : "oklch(0.60 0.20 25)"} stopOpacity={0} />
+                        <stop offset="5%" stopColor={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 260)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0.015 270)" />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 10, fill: "oklch(0.65 0.02 250)" }}
+                      tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <YAxis
                       domain={[minPrice, maxPrice]}
-                      tick={{ fontSize: 10, fill: "oklch(0.65 0.02 250)" }}
+                      tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(v: number) => formatPrice(v)}
@@ -212,19 +214,19 @@ export function AssetChart({
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "oklch(0.17 0.008 260)",
-                        border: "1px solid oklch(0.26 0.015 260)",
+                        backgroundColor: "oklch(0.16 0.012 270)",
+                        border: "1px solid oklch(0.25 0.015 270)",
                         borderRadius: "8px",
                         fontSize: "11px",
-                        color: "oklch(0.95 0.01 250)",
+                        color: "oklch(0.95 0.005 90)",
                       }}
-                      formatter={(value: string | number) => [formatPrice(Number(value)), "Preco"]}
-                      labelFormatter={(label: string) => `Data: ${label}`}
+                      formatter={(value: string | number) => [formatPrice(Number(value)), t("chart.price")]}
+                      labelFormatter={(label: string) => `${locale === "pt" ? "Data" : "Date"}: ${label}`}
                     />
                     <Area
                       type="monotone"
                       dataKey="price"
-                      stroke={isPositive ? "oklch(0.72 0.19 165)" : "oklch(0.60 0.20 25)"}
+                      stroke={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"}
                       strokeWidth={2}
                       fill={`url(#gradient-${symbol})`}
                     />
@@ -237,15 +239,15 @@ export function AssetChart({
                 <div className="h-28">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.015 260)" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0.015 270)" />
                       <XAxis
                         dataKey="date"
-                        tick={{ fontSize: 10, fill: "oklch(0.65 0.02 250)" }}
+                        tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
                         tickLine={false}
                         axisLine={false}
                       />
                       <YAxis
-                        tick={{ fontSize: 10, fill: "oklch(0.65 0.02 250)" }}
+                        tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
@@ -253,15 +255,15 @@ export function AssetChart({
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "oklch(0.17 0.008 260)",
-                          border: "1px solid oklch(0.26 0.015 260)",
+                          backgroundColor: "oklch(0.16 0.012 270)",
+                          border: "1px solid oklch(0.25 0.015 270)",
                           borderRadius: "8px",
                           fontSize: "11px",
-                          color: "oklch(0.95 0.01 250)",
+                          color: "oklch(0.95 0.005 90)",
                         }}
                         formatter={(value: string | number) => [`$${Number(value).toFixed(2)}`, "Volume"]}
                       />
-                      <Bar dataKey="volume" fill="oklch(0.65 0.17 250)" radius={[3, 3, 0, 0]} opacity={0.7} />
+                      <Bar dataKey="volume" fill="oklch(0.70 0.14 190)" radius={[3, 3, 0, 0]} opacity={0.7} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -270,7 +272,7 @@ export function AssetChart({
               {/* Cost line indicator */}
               {cost > 0 && cost >= minPrice && cost <= maxPrice && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Linha de custo de producao: {formatPrice(cost)}
+                  {t("chart.prodCost")}: {formatPrice(cost)}
                 </p>
               )}
             </div>

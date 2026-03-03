@@ -13,6 +13,7 @@ const translations = {
     "dashboard.admin": "Admin",
     "dashboard.pools": "pools",
     "dashboard.loading": "A carregar...",
+    "dashboard.production": "Producao",
     // Stats
     "stats.activePools": "Pools Ativas",
     "stats.ofTotal": "de {0} total",
@@ -24,7 +25,7 @@ const translations = {
     "stats.aboveThreshold": "acima de",
     "stats.totalCombined": "total combinado",
     "stats.volume24h": "Volume 24h",
-    // Table
+    // Table / Cards
     "table.title": "Recursos",
     "table.search": "Pesquisar recurso...",
     "table.all": "Todos",
@@ -47,6 +48,15 @@ const translations = {
     "table.high": "Alta",
     "table.medium": "Media",
     "table.low": "Baixa",
+    "table.noResources": "Nenhum recurso cadastrado",
+    "table.noResourcesDesc": "Adicione pools no painel de administracao para ver recursos aqui.",
+    "table.cost": "Custo",
+    "table.viewChart": "Ver grafico",
+    "table.vol": "Vol",
+    "table.allSignals": "Todos",
+    "table.inputs": "Inputs",
+    "table.noRecipe": "Recurso base",
+    "table.unitPrice": "un.",
     // Opportunities
     "opps.title": "Oportunidades Ativas",
     "opps.active": "ativas",
@@ -60,14 +70,24 @@ const translations = {
     "opps.price": "Preco",
     "opps.market": "Mercado",
     "opps.vol": "Vol",
-    // Chain
+    // Chain / Production
     "chain.title": "Cadeia de Producao",
-    "chain.description": "Expanda para ver a hierarquia de producao. Cores indicam oportunidades.",
+    "chain.description": "Precos das materias-primas vem directamente das pools cadastradas.",
     "chain.expandAll": "Expandir Tudo",
     "chain.collapseAll": "Recolher Tudo",
     "chain.buy": "Comprar",
     "chain.sell": "Vender",
     "chain.neutral": "Neutro",
+    "chain.loading": "A carregar recursos...",
+    "chain.outputResource": "Recurso Produzido",
+    "chain.rawMaterials": "Materias-Primas (Preco Pool)",
+    "chain.productionCost": "Custo Producao",
+    "chain.marketPrice": "Preco Mercado",
+    "chain.viewPool": "Ver pool",
+    "chain.costFormula": "Custo = soma(preco_pool x quantidade)",
+    "chain.buySignalDesc": "Comprar (mercado < custo)",
+    "chain.sellSignalDesc": "Vender (mercado > custo)",
+    "chain.others": "Outros",
     // Chart
     "chart.title": "Grafico de Precos",
     "chart.price": "Preco",
@@ -150,7 +170,7 @@ const translations = {
     "admin.maintenanceMessage": "Mensagem de Manutencao",
     // Chain editor
     "chains.title": "Cadeia de Producao",
-    "chains.description": "Visualizar e editar a arvore de dependencias entre recursos",
+    "chains.description": "Visualizar e editar os recursos e suas dependencias",
     "chains.jsonEditor": "Editor JSON",
     "chains.preview": "Preview",
     "chains.reset": "Reset",
@@ -163,6 +183,10 @@ const translations = {
     // Language
     "lang.pt": "Portugues",
     "lang.en": "English",
+    // Producao page
+    "producao.title": "Cadeia de Producao",
+    "producao.subtitle": "Monitor de custos de producao | Rede Ronin",
+    "producao.backToDashboard": "Voltar ao Dashboard",
   },
   en: {
     // Dashboard
@@ -172,6 +196,7 @@ const translations = {
     "dashboard.admin": "Admin",
     "dashboard.pools": "pools",
     "dashboard.loading": "Loading...",
+    "dashboard.production": "Production",
     // Stats
     "stats.activePools": "Active Pools",
     "stats.ofTotal": "of {0} total",
@@ -183,7 +208,7 @@ const translations = {
     "stats.aboveThreshold": "above",
     "stats.totalCombined": "total combined",
     "stats.volume24h": "Volume 24h",
-    // Table
+    // Table / Cards
     "table.title": "Resources",
     "table.search": "Search resource...",
     "table.all": "All",
@@ -206,6 +231,15 @@ const translations = {
     "table.high": "High",
     "table.medium": "Medium",
     "table.low": "Low",
+    "table.noResources": "No resources registered",
+    "table.noResourcesDesc": "Add pools in the admin panel to see resources here.",
+    "table.cost": "Cost",
+    "table.viewChart": "View chart",
+    "table.vol": "Vol",
+    "table.allSignals": "All",
+    "table.inputs": "Inputs",
+    "table.noRecipe": "Base resource",
+    "table.unitPrice": "ea.",
     // Opportunities
     "opps.title": "Active Opportunities",
     "opps.active": "active",
@@ -219,14 +253,24 @@ const translations = {
     "opps.price": "Price",
     "opps.market": "Market",
     "opps.vol": "Vol",
-    // Chain
+    // Chain / Production
     "chain.title": "Production Chain",
-    "chain.description": "Expand to see the production hierarchy. Colors indicate opportunities.",
+    "chain.description": "Raw material prices come directly from registered pools.",
     "chain.expandAll": "Expand All",
     "chain.collapseAll": "Collapse All",
     "chain.buy": "Buy",
     "chain.sell": "Sell",
     "chain.neutral": "Neutral",
+    "chain.loading": "Loading resources...",
+    "chain.outputResource": "Produced Resource",
+    "chain.rawMaterials": "Raw Materials (Pool Price)",
+    "chain.productionCost": "Production Cost",
+    "chain.marketPrice": "Market Price",
+    "chain.viewPool": "View pool",
+    "chain.costFormula": "Cost = sum(pool_price x quantity)",
+    "chain.buySignalDesc": "Buy (market < cost)",
+    "chain.sellSignalDesc": "Sell (market > cost)",
+    "chain.others": "Others",
     // Chart
     "chart.title": "Price Chart",
     "chart.price": "Price",
@@ -309,7 +353,7 @@ const translations = {
     "admin.maintenanceMessage": "Maintenance Message",
     // Chain editor
     "chains.title": "Production Chain",
-    "chains.description": "View and edit resource dependency tree",
+    "chains.description": "View and edit resources and their dependencies",
     "chains.jsonEditor": "JSON Editor",
     "chains.preview": "Preview",
     "chains.reset": "Reset",
@@ -322,6 +366,10 @@ const translations = {
     // Language
     "lang.pt": "Portugues",
     "lang.en": "English",
+    // Production page
+    "producao.title": "Production Chain",
+    "producao.subtitle": "Production cost monitor | Ronin Network",
+    "producao.backToDashboard": "Back to Dashboard",
   },
 } as const
 

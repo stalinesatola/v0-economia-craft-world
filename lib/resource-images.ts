@@ -122,49 +122,44 @@ export function getRecipeFor(symbol: string): Recipe | undefined {
 }
 
 /**
- * Calcula o custo de producao de um recurso com base nos precos em tempo real das pools.
- * Para cada input da receita, soma (preco_pool_input * quantidade).
- * Recursos base (sem receita) usam directamente o preco da pool.
- * Usa cache interno para evitar recalculos recursivos.
+ * Calcula o custo de producao de um recurso.
+ * Custo = soma de (preco_pool_do_input * quantidade_necessaria)
+ * Usa o preco DIRECTO da pool de cada materia-prima, NAO recursivo.
+ * Ex: STEEL precisa de 5 COPPER -> custo = 5 x preco_pool_COPPER
  */
 export function calculateProductionCost(
   symbol: string,
   prices: Record<string, { price_usd: number }>,
-  _cache?: Map<string, number>
 ): number {
-  const cache = _cache ?? new Map<string, number>()
-  if (cache.has(symbol)) return cache.get(symbol)!
-
   const recipe = getRecipeFor(symbol)
   if (!recipe) {
-    // Recurso base (EARTH, FIRE, WATER, COIN) - custo = preco da pool
-    const cost = prices[symbol]?.price_usd ?? 0
-    cache.set(symbol, cost)
-    return cost
+    // Recurso base (sem receita) - nao tem custo de producao
+    return 0
   }
 
   let totalCost = 0
   for (const inp of recipe.inputs) {
-    const inputPrice = calculateProductionCost(inp.resource, prices, cache)
-    totalCost += inputPrice * inp.quantity
+    // Usar preco REAL da pool do input (nao recursivo)
+    const inputPoolPrice = prices[inp.resource]?.price_usd ?? 0
+    totalCost += inputPoolPrice * inp.quantity
   }
 
-  cache.set(symbol, totalCost)
   return totalCost
 }
 
 /**
  * Calcula todos os custos de producao para todos os recursos com receita.
+ * Custo = soma de (preco_pool_input * quantidade) para cada input.
  */
 export function calculateAllProductionCosts(
   prices: Record<string, { price_usd: number }>
 ): Record<string, number> {
-  const cache = new Map<string, number>()
   const result: Record<string, number> = {}
 
   for (const recipe of RECIPES) {
-    result[recipe.output] = calculateProductionCost(recipe.output, prices, cache)
+    result[recipe.output] = calculateProductionCost(recipe.output, prices)
   }
 
+  // Tambem incluir recursos base com preco da pool como "custo" = 0
   return result
 }

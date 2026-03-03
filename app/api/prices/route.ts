@@ -101,7 +101,13 @@ export async function GET() {
   for (const [symbol, addr] of poolEntries) {
     const lowerAddr = addr.toLowerCase()
     if (allPrices[lowerAddr]) {
-      symbolPrices[symbol] = allPrices[lowerAddr]
+      const priceData = allPrices[lowerAddr]
+      // Usar imagem do alertsConfig (cadastrada pelo admin) se disponivel
+      const adminImageUrl = (alertsConfig[symbol] as Record<string, unknown>)?.imageUrl as string | undefined
+      if (adminImageUrl) {
+        priceData.image_url = adminImageUrl
+      }
+      symbolPrices[symbol] = priceData
     }
   }
 
