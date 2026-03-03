@@ -6,6 +6,7 @@ const VALID_SECTIONS = [
   "pools", "productionCosts", "alertsConfig", "productionChains",
   "thresholds", "telegram", "network", "users", "banners",
   "sharing", "customization", "maintenance", "categories", "recipes",
+  "alertHistory",
 ]
 
 export async function PUT(
