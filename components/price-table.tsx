@@ -122,8 +122,8 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-12 text-center">
         <BarChart3 className="h-10 w-10 text-muted-foreground/40 mb-3" />
-        <p className="text-sm font-medium text-card-foreground">Nenhum recurso cadastrado</p>
-        <p className="text-xs text-muted-foreground mt-1">Adicione pools no painel de administracao para ver recursos aqui.</p>
+        <p className="text-sm font-medium text-card-foreground">{t("table.noResources")}</p>
+        <p className="text-xs text-muted-foreground mt-1">{t("table.noResourcesDesc")}</p>
       </div>
     )
   }
@@ -173,7 +173,7 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
               className="h-7 text-xs px-2.5"
               onClick={() => setSignalFilter(sig)}
             >
-              {sig === "all" ? "Todos" : sig === "buy" ? t("table.buy") : t("table.sell")}
+              {sig === "all" ? t("table.allSignals") : sig === "buy" ? t("table.buy") : t("table.sell")}
             </Button>
           ))}
         </div>
@@ -268,7 +268,7 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                     )}
                     {res.cost > 0 && (
                       <span className="text-[10px] text-muted-foreground">
-                        Custo: {formatPrice(res.cost)}
+                        {t("table.cost")}: {formatPrice(res.cost)}
                       </span>
                     )}
                   </div>
@@ -286,13 +286,13 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                     <span className="text-[10px] text-muted-foreground">--</span>
                   )}
                   <span className="text-[10px] text-muted-foreground font-mono">
-                    Vol: {formatPrice(res.volume)}
+                    {t("table.vol")}: {formatPrice(res.volume)}
                   </span>
                 </div>
 
                 {/* Hover hint */}
                 <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-[10px] text-primary font-medium">Ver grafico →</span>
+                  <span className="text-[10px] text-primary font-medium">{t("table.viewChart")} →</span>
                 </div>
               </CardContent>
             </Card>

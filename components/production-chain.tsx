@@ -73,11 +73,13 @@ function ResourceCard({
   prices,
   pools,
   productionCost,
+  t,
 }: {
   recipe: Recipe
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string }>
   pools?: Record<string, string>
   productionCost: number
+  t: (key: string) => string
 }) {
   const outputPrice = prices[recipe.output]?.price_usd ?? 0
   const cost = productionCost
@@ -109,7 +111,7 @@ function ResourceCard({
                 LVL {recipe.level}
               </Badge>
             </div>
-            <span className="text-[10px] text-muted-foreground">Recurso Produzido</span>
+            <span className="text-[10px] text-muted-foreground">{t("chain.outputResource")}</span>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -128,7 +130,7 @@ function ResourceCard({
 
       {/* Materias-Primas com precos da pool */}
       <div className="flex flex-col gap-1.5 mb-2.5">
-        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Materias-Primas (Preco Pool)</span>
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t("chain.rawMaterials")}</span>
         {recipe.inputs.map((inp) => {
           const inputPrice = prices[inp.resource]?.price_usd ?? 0
           const inputTotal = inputPrice * inp.quantity
@@ -145,7 +147,7 @@ function ResourceCard({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground/50 hover:text-primary transition-colors shrink-0"
-                    title="Ver pool"
+                    title={t("chain.viewPool")}
                   >
                     <ExternalLink className="h-2.5 w-2.5" />
                   </a>
@@ -167,7 +169,7 @@ function ResourceCard({
       {/* Custo vs Mercado */}
       <div className="border-t border-border pt-2 flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-[10px] text-muted-foreground">Custo Producao</span>
+          <span className="text-[10px] text-muted-foreground">{t("chain.productionCost")}</span>
           <span className="text-sm font-mono font-bold text-card-foreground">
             {cost > 0 ? formatPrice(cost) : "N/A"}
           </span>
@@ -175,14 +177,14 @@ function ResourceCard({
         <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mx-1" />
         <div className="flex flex-col items-end">
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-muted-foreground">Preco Mercado</span>
+            <span className="text-[10px] text-muted-foreground">{t("chain.marketPrice")}</span>
             {poolAddress && (
               <a
                 href={`https://app.geckoterminal.com/ronin/pools/${poolAddress}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground/50 hover:text-primary transition-colors"
-                title="Ver pool"
+                title={t("chain.viewPool")}
               >
                 <ExternalLink className="h-2.5 w-2.5" />
               </a>
@@ -249,7 +251,7 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
       const assignedOutputs = new Set(catGroups.flatMap(g => g.recipes.map(r => r.output)))
       const unassigned = recipes.filter(r => !assignedOutputs.has(r.output))
       if (unassigned.length > 0) {
-        catGroups.push({ id: "_other", label: "Outros", color: "#9E9E9E", recipes: unassigned })
+        catGroups.push({ id: "_other", label: t("chain.others"), color: "#9E9E9E", recipes: unassigned })
       }
       return catGroups.filter(g => g.recipes.length > 0)
     }
@@ -270,7 +272,7 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
       <Card className="bg-card">
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">A carregar recursos...</span>
+          <span className="ml-2 text-sm text-muted-foreground">{t("chain.loading")}</span>
         </CardContent>
       </Card>
     )
@@ -292,7 +294,7 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
           </button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Precos das materias-primas vem directamente das pools cadastradas. Custo = soma(preco_pool x quantidade).
+          {t("chain.description")} {t("chain.costFormula")}
         </p>
       </CardHeader>
 
@@ -327,6 +329,7 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
                   prices={prices}
                   pools={pools}
                   productionCost={productionCosts[recipe.output] ?? 0}
+                  t={t}
                 />
               ))}
             </div>
@@ -336,15 +339,15 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
           <div className="flex flex-wrap gap-4 border-t border-border pt-2">
             <div className="flex items-center gap-1.5">
               <TrendingDown className="h-3 w-3 text-primary" />
-              <span className="text-[10px] text-muted-foreground">{'Comprar (mercado < custo)'}</span>
+              <span className="text-[10px] text-muted-foreground">{t("chain.buySignalDesc")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-3 w-3 text-destructive" />
-              <span className="text-[10px] text-muted-foreground">{'Vender (mercado > custo)'}</span>
+              <span className="text-[10px] text-muted-foreground">{t("chain.sellSignalDesc")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Minus className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">Neutro</span>
+              <span className="text-[10px] text-muted-foreground">{t("chain.neutral")}</span>
             </div>
           </div>
         </CardContent>

@@ -3,6 +3,7 @@
 import { usePrices } from "@/hooks/use-prices"
 import { ProductionChain } from "@/components/production-chain"
 import { DashboardHeader } from "@/components/dashboard-header"
+import { useI18n } from "@/lib/i18n"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import useSWR from "swr"
@@ -11,6 +12,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
 
 export default function ProducaoPage() {
   const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts } = usePrices()
+  const { t } = useI18n()
   const { data: customization } = useSWR("/api/customization", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
@@ -34,9 +36,9 @@ export default function ProducaoPage() {
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-3 w-3" />
-              Voltar ao Dashboard
+              {t("producao.backToDashboard")}
             </Link>
-            <h2 className="text-lg font-bold text-foreground">Cadeia de Producao</h2>
+            <h2 className="text-lg font-bold text-foreground">{t("producao.title")}</h2>
           </div>
 
           <ProductionChain prices={prices} pools={pools} productionCosts={productionCosts} />
