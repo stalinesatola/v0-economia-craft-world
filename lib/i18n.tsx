@@ -54,6 +54,9 @@ const translations = {
     "table.viewChart": "Ver grafico",
     "table.vol": "Vol",
     "table.allSignals": "Todos",
+    "table.inputs": "Inputs",
+    "table.noRecipe": "Recurso base",
+    "table.unitPrice": "un.",
     // Opportunities
     "opps.title": "Oportunidades Ativas",
     "opps.active": "ativas",
@@ -234,6 +237,9 @@ const translations = {
     "table.viewChart": "View chart",
     "table.vol": "Vol",
     "table.allSignals": "All",
+    "table.inputs": "Inputs",
+    "table.noRecipe": "Base resource",
+    "table.unitPrice": "ea.",
     // Opportunities
     "opps.title": "Active Opportunities",
     "opps.active": "active",

@@ -50,6 +50,19 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
   const { data: catData } = useSWR("/api/categories", configFetcher, { revalidateOnFocus: false, dedupingInterval: 60000 })
   const dynamicCategories: { id: string; label: string; color: string; enabled: boolean }[] = catData ?? []
 
+  // Fetch recipes for production chain details
+  const { data: recipesData } = useSWR("/api/recipes", configFetcher, { revalidateOnFocus: false, dedupingInterval: 60000 })
+  const recipes: { output: string; inputs: { resource: string; quantity: number }[] }[] = recipesData ?? []
+
+  // Build a map of recipes by output symbol
+  const recipeMap = useMemo(() => {
+    const map: Record<string, { resource: string; quantity: number }[]> = {}
+    for (const r of recipes) {
+      map[r.output] = r.inputs
+    }
+    return map
+  }, [recipes])
+
   // Build resource list purely from prices (dynamic, from admin-registered pools)
   const resources = useMemo(() => {
     return Object.entries(prices).map(([symbol, priceData]) => {
@@ -273,6 +286,48 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                     )}
                   </div>
                 </div>
+
+                {/* Production inputs */}
+                {recipeMap[res.symbol] && recipeMap[res.symbol].length > 0 && (
+                  <div className="mb-2 rounded-lg bg-secondary/40 border border-border/30 p-2">
+                    <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{t("table.inputs")}</span>
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      {recipeMap[res.symbol].map((inp) => {
+                        const inputPrice = prices[inp.resource]?.price_usd ?? 0
+                        const subtotal = inputPrice * inp.quantity
+                        return (
+                          <div key={inp.resource} className="flex items-center justify-between text-[10px]">
+                            <div className="flex items-center gap-1.5">
+                              {prices[inp.resource]?.image_url ? (
+                                <img
+                                  src={prices[inp.resource].image_url}
+                                  alt={inp.resource}
+                                  className="h-3.5 w-3.5 rounded-full object-cover"
+                                />
+                              ) : (
+                                <span
+                                  className="h-3.5 w-3.5 rounded-full flex items-center justify-center text-[6px] font-bold text-white"
+                                  style={{ backgroundColor: getResourceColor(inp.resource) }}
+                                >
+                                  {inp.resource.slice(0, 1)}
+                                </span>
+                              )}
+                              <span className="font-mono text-muted-foreground">
+                                {inp.quantity}x {inp.resource}
+                              </span>
+                              <span className="text-muted-foreground/60">
+                                ({inputPrice > 0 ? `$${inputPrice.toFixed(6)}` : "?"} {t("table.unitPrice")})
+                              </span>
+                            </div>
+                            <span className="font-mono font-medium text-card-foreground">
+                              {subtotal > 0 ? formatPrice(subtotal) : "--"}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Bottom row: deviation + volume */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/50">
