@@ -2,30 +2,19 @@
 
 import { useState, useMemo } from "react"
 import {
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   Search,
-  Pickaxe,
-  Factory,
-  Coins,
-  Layers,
-  Zap,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
   TrendingUp,
+  TrendingDown,
+  BarChart3,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  getAllResources,
-  POOLS,
-  BUY_THRESHOLD,
-  SELL_THRESHOLD,
-  formatPrice,
-  type ResourceCategory,
-  type Priority,
-} from "@/lib/craft-data"
+import { formatPrice } from "@/lib/craft-data"
 import { AssetChart } from "@/components/asset-chart"
 import { useI18n } from "@/lib/i18n"
 import { getResourceColor } from "@/lib/resource-images"
@@ -35,47 +24,16 @@ const configFetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : nu
 
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string; token_name?: string }>
+  pools?: Record<string, string>
   isLoading?: boolean
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
 }
 
-type SortField = "symbol" | "market_price" | "cost" | "deviation" | "volume" | "priority"
-type SortDir = "asc" | "desc"
-
-const categoryIcons: Record<ResourceCategory, typeof Pickaxe> = {
-  mine: Pickaxe,
-  factory: Factory,
-  token: Coins,
-  base: Layers,
-  advanced: Zap,
-  defi: TrendingUp,
-}
-
-const priorityColors: Record<Priority, string> = {
-  high: "bg-destructive/20 text-destructive",
-  medium: "bg-warning/20 text-warning",
-  low: "bg-muted text-muted-foreground",
-}
-
-export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts }: PriceTableProps) {
+export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts }: PriceTableProps) {
   const { t } = useI18n()
 
-  const categoryLabels: Record<ResourceCategory, string> = {
-    mine: t("table.mine"),
-    factory: t("table.factory"),
-    token: t("table.token"),
-    base: "Base",
-    advanced: "Avancado",
-    defi: "DeFi",
-  }
-
-  const priorityLabels: Record<Priority, string> = {
-    high: t("table.high"),
-    medium: t("table.medium"),
-    low: t("table.low"),
-  }
   const [selectedAsset, setSelectedAsset] = useState<{
     symbol: string
     poolAddress: string
@@ -86,144 +44,114 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
   } | null>(null)
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
-  const [priorityFilter, setPriorityFilter] = useState<string>("all")
-  const [sortField, setSortField] = useState<SortField>("priority")
-  const [sortDir, setSortDir] = useState<SortDir>("desc")
+  const [signalFilter, setSignalFilter] = useState<string>("all")
 
   // Fetch dynamic categories from config
   const { data: catData } = useSWR("/api/categories", configFetcher, { revalidateOnFocus: false, dedupingInterval: 60000 })
   const dynamicCategories: { id: string; label: string; color: string; enabled: boolean }[] = catData ?? []
 
-  const resources = getAllResources()
-
-  const enrichedResources = useMemo(() => {
-    return resources.map((res) => {
-      const priceData = prices[res.symbol]
-      const marketPrice = priceData?.price_usd ?? 0
-      const cost = dynCosts?.[res.symbol] ?? 0
+  // Build resource list purely from prices (dynamic, from admin-registered pools)
+  const resources = useMemo(() => {
+    return Object.entries(prices).map(([symbol, priceData]) => {
+      const cost = dynCosts?.[symbol] ?? 0
+      const marketPrice = priceData.price_usd
       const deviation = cost > 0 && marketPrice > 0 ? ((marketPrice - cost) / cost) * 100 : 0
-      const volume = priceData?.volume_usd_24h ?? 0
-      const change24h = priceData?.price_change_24h ?? 0
-      const buyTh = dynThresholds?.buy ?? BUY_THRESHOLD
-      const sellTh = dynThresholds?.sell ?? SELL_THRESHOLD
+      const buyTh = dynThresholds?.buy ?? 15
+      const sellTh = dynThresholds?.sell ?? 20
+      const alertCfg = dynAlerts?.[symbol]
 
       let signal: "buy" | "sell" | "neutral" = "neutral"
       if (deviation < -buyTh) signal = "buy"
       else if (deviation > sellTh) signal = "sell"
 
       return {
-        ...res,
+        symbol,
         marketPrice,
         cost,
         deviation,
-        volume,
-        change24h,
+        volume: priceData.volume_usd_24h,
+        change24h: priceData.price_change_24h,
         signal,
-        hasPrice: !!priceData,
-        imageUrl: priceData?.image_url,
-        tokenName: priceData?.token_name,
+        imageUrl: priceData.image_url,
+        tokenName: priceData.token_name,
+        category: alertCfg?.category ?? "factory",
+        priority: alertCfg?.priority ?? "low",
+        enabled: alertCfg?.enabled ?? true,
+        poolAddress: poolMap?.[symbol] ?? "",
       }
     })
-  }, [resources, prices, dynCosts, dynThresholds])
+  }, [prices, dynCosts, dynThresholds, dynAlerts])
 
   const filtered = useMemo(() => {
-    let list = enrichedResources
+    let list = resources
 
     if (search) {
       const term = search.toLowerCase()
-      list = list.filter((r) => r.symbol.toLowerCase().includes(term))
+      list = list.filter((r) => r.symbol.toLowerCase().includes(term) || (r.tokenName?.toLowerCase().includes(term)))
     }
 
     if (categoryFilter !== "all") {
       list = list.filter((r) => r.category === categoryFilter)
     }
 
-    if (priorityFilter !== "all") {
-      list = list.filter((r) => r.priority === priorityFilter)
+    if (signalFilter !== "all") {
+      list = list.filter((r) => r.signal === signalFilter)
     }
 
-    const priorityOrder: Record<Priority, number> = { high: 3, medium: 2, low: 1 }
-
+    // Sort: buy signals first, then sell, then neutral. Within each, by absolute deviation desc
     list.sort((a, b) => {
-      let compare = 0
-      switch (sortField) {
-        case "symbol":
-          compare = a.symbol.localeCompare(b.symbol)
-          break
-        case "market_price":
-          compare = a.marketPrice - b.marketPrice
-          break
-        case "cost":
-          compare = a.cost - b.cost
-          break
-        case "deviation":
-          compare = a.deviation - b.deviation
-          break
-        case "volume":
-          compare = a.volume - b.volume
-          break
-        case "priority":
-          compare = priorityOrder[a.priority] - priorityOrder[b.priority]
-          break
-      }
-      return sortDir === "asc" ? compare : -compare
+      const signalOrder = { buy: 0, sell: 1, neutral: 2 }
+      const orderDiff = signalOrder[a.signal] - signalOrder[b.signal]
+      if (orderDiff !== 0) return orderDiff
+      return Math.abs(b.deviation) - Math.abs(a.deviation)
     })
 
     return list
-  }, [enrichedResources, search, categoryFilter, priorityFilter, sortField, sortDir])
+  }, [resources, search, categoryFilter, signalFilter])
 
-  function toggleSort(field: SortField) {
-    if (sortField === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-    } else {
-      setSortField(field)
-      setSortDir("desc")
+  // Active category list from dynamic categories or unique categories in data
+  const activeCategories = useMemo(() => {
+    if (dynamicCategories.length > 0) {
+      return dynamicCategories.filter(c => c.enabled)
     }
-  }
+    const unique = [...new Set(resources.map(r => r.category))]
+    return unique.map(id => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), color: "", enabled: true }))
+  }, [dynamicCategories, resources])
 
-  function SortIcon({ field }: { field: SortField }) {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />
-    return sortDir === "asc" ? (
-      <ArrowUp className="h-3 w-3 text-primary" />
-    ) : (
-      <ArrowDown className="h-3 w-3 text-primary" />
+  if (resources.length === 0 && !isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-12 text-center">
+        <BarChart3 className="h-10 w-10 text-muted-foreground/40 mb-3" />
+        <p className="text-sm font-medium text-card-foreground">Nenhum recurso cadastrado</p>
+        <p className="text-xs text-muted-foreground mt-1">Adicione pools no painel de administracao para ver recursos aqui.</p>
+      </div>
     )
   }
 
   return (
-    <Card className="bg-card">
-      <CardHeader className="pb-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base font-semibold text-card-foreground">
-            {t("table.title")}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={t("table.search")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-8 w-40 pl-8 text-xs bg-secondary"
-              />
-            </div>
-          </div>
+    <div className="flex flex-col gap-4">
+      {/* Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={t("table.search")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 w-full sm:w-56 pl-8 text-xs bg-card border-border"
+          />
         </div>
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {[
-            { id: "all", label: t("table.all"), color: "" },
-            ...(dynamicCategories.length > 0
-              ? dynamicCategories.filter(c => c.enabled)
-              : [
-                  { id: "mine", label: categoryLabels.mine, color: "#f59e0b", enabled: true },
-                  { id: "factory", label: categoryLabels.factory, color: "#3b82f6", enabled: true },
-                  { id: "token", label: categoryLabels.token, color: "#8b5cf6", enabled: true },
-                  { id: "base", label: "Base", color: "#10b981", enabled: true },
-                  { id: "advanced", label: "Avancado", color: "#ef4444", enabled: true },
-                  { id: "defi", label: "DeFi", color: "#ec4899", enabled: true },
-                ]
-            ),
-          ].map((cat) => (
+        <div className="flex flex-wrap gap-1.5">
+          {/* Category filters */}
+          <Button
+            variant={categoryFilter === "all" ? "default" : "secondary"}
+            size="sm"
+            className="h-7 text-xs px-2.5"
+            onClick={() => setCategoryFilter("all")}
+          >
+            {t("table.all")}
+          </Button>
+          {activeCategories.map((cat) => (
             <Button
               key={cat.id}
               variant={categoryFilter === cat.id ? "default" : "secondary"}
@@ -236,170 +164,147 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
             </Button>
           ))}
           <div className="mx-1 h-7 w-px bg-border" />
-          {(["all", "high", "medium", "low"] as const).map((pri) => (
+          {/* Signal filters */}
+          {(["all", "buy", "sell"] as const).map((sig) => (
             <Button
-              key={pri}
-              variant={priorityFilter === pri ? "default" : "secondary"}
+              key={sig}
+              variant={signalFilter === sig ? "default" : "secondary"}
               size="sm"
               className="h-7 text-xs px-2.5"
-              onClick={() => setPriorityFilter(pri)}
+              onClick={() => setSignalFilter(sig)}
             >
-              {pri === "all" ? t("table.allPriorities") : priorityLabels[pri]}
+              {sig === "all" ? "Todos" : sig === "buy" ? t("table.buy") : t("table.sell")}
             </Button>
           ))}
         </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border bg-secondary/50">
-                <th className="px-3 py-2.5 text-left">
-                  <button onClick={() => toggleSort("symbol")} className="flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    {t("table.resource")} <SortIcon field="symbol" />
-                  </button>
-                </th>
-                <th className="px-3 py-2.5 text-right">
-                  <button onClick={() => toggleSort("market_price")} className="ml-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    {t("table.marketPrice")} <SortIcon field="market_price" />
-                  </button>
-                </th>
-                <th className="hidden px-3 py-2.5 text-right sm:table-cell">
-                  <button onClick={() => toggleSort("cost")} className="ml-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    {t("table.productionCost")} <SortIcon field="cost" />
-                  </button>
-                </th>
-                <th className="px-3 py-2.5 text-right">
-                  <button onClick={() => toggleSort("deviation")} className="ml-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    {t("table.deviation")} <SortIcon field="deviation" />
-                  </button>
-                </th>
-                <th className="hidden px-3 py-2.5 text-right md:table-cell">
-                  <button onClick={() => toggleSort("volume")} className="ml-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    {t("table.volume24h")} <SortIcon field="volume" />
-                  </button>
-                </th>
-                <th className="hidden px-3 py-2.5 text-center lg:table-cell">
-                  <button onClick={() => toggleSort("priority")} className="mx-auto flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
-                    {t("table.priority")} <SortIcon field="priority" />
-                  </button>
-                </th>
-                <th className="px-3 py-2.5 text-center">
-                  <span className="font-medium text-muted-foreground">{t("table.signal")}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((res) => {
-                    const CategoryIcon = categoryIcons[res.category as ResourceCategory] || Factory
-                return (
-                  <tr
-                    key={res.symbol}
-                    className="border-b border-border/50 transition-colors hover:bg-secondary/30 cursor-pointer"
-                    onClick={() =>
-                      setSelectedAsset({
-                        symbol: res.symbol,
-                        poolAddress: POOLS[res.symbol] ?? "",
-                        currentPrice: res.marketPrice,
-                        cost: res.cost,
-                        deviation: res.deviation,
-                        signal: res.signal,
-                      })
-                    }
-                  >
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2">
-                        {res.imageUrl ? (
-                          <img
-                            src={res.imageUrl}
-                            alt={res.symbol}
-                            className="h-6 w-6 rounded-full shrink-0 object-cover"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
-                          />
-                        ) : (
-                          <div
-                            className="h-6 w-6 rounded-full shrink-0 flex items-center justify-center text-[8px] font-bold text-white"
-                            style={{ backgroundColor: getResourceColor(res.symbol) }}
-                          >
-                            {res.symbol.slice(0, 2)}
-                          </div>
-                        )}
-                        <div className="flex flex-col">
-                          <span className="font-mono font-semibold text-card-foreground leading-tight">{res.symbol}</span>
-                          {res.tokenName && (
-                            <span className="text-[10px] text-muted-foreground leading-tight">{res.tokenName}</span>
-                          )}
-                        </div>
-                        <CategoryIcon className="h-3 w-3 text-muted-foreground/50 shrink-0 ml-auto hidden sm:block" />
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-card-foreground">
-                      {res.hasPrice ? formatPrice(res.marketPrice) : isLoading ? (
-                        <span className="inline-block h-4 w-16 animate-pulse rounded bg-secondary ml-auto" />
-                      ) : (
-                        <span className="text-muted-foreground">--</span>
-                      )}
-                    </td>
-                    <td className="hidden px-3 py-2.5 text-right font-mono text-muted-foreground sm:table-cell">
-                      {formatPrice(res.cost)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right">
-                      {res.hasPrice && res.cost > 0 ? (
-                        <span
-                          className={`font-mono font-semibold ${
-                            res.signal === "buy"
-                              ? "text-primary"
-                              : res.signal === "sell"
-                              ? "text-destructive"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {res.deviation > 0 ? "+" : ""}
-                          {res.deviation.toFixed(1)}%
-                        </span>
-                      ) : isLoading ? (
-                        <span className="inline-block h-4 w-14 animate-pulse rounded bg-secondary ml-auto" />
-                      ) : (
-                        <span className="text-muted-foreground">--</span>
-                      )}
-                    </td>
-                    <td className="hidden px-3 py-2.5 text-right font-mono text-muted-foreground md:table-cell">
-                      {res.hasPrice ? formatPrice(res.volume) : isLoading ? (
-                        <span className="inline-block h-4 w-14 animate-pulse rounded bg-secondary ml-auto" />
-                      ) : "--"}
-                    </td>
-                    <td className="hidden px-3 py-2.5 text-center lg:table-cell">
-                      <Badge variant="secondary" className={`text-xs ${priorityColors[res.priority]}`}>
-                        {priorityLabels[res.priority]}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      {res.signal === "buy" ? (
-                        <Badge className="bg-primary/20 text-primary text-xs font-semibold">
-                          {t("table.buy")}
-                        </Badge>
-                      ) : res.signal === "sell" ? (
-                        <Badge className="bg-destructive/20 text-destructive text-xs font-semibold">
-                          {t("table.sell")}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
-                    {t("table.noResults")}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      </div>
+
+      {/* Loading skeleton */}
+      {isLoading && resources.length === 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-40 animate-pulse rounded-xl bg-card border border-border" />
+          ))}
         </div>
-      </CardContent>
+      )}
+
+      {/* Cards grid */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {filtered.map((res) => {
+          const signalConfig = {
+            buy: { bg: "border-primary/40 bg-primary/5", badge: "bg-primary/20 text-primary", icon: TrendingUp, label: t("table.buy") },
+            sell: { bg: "border-destructive/40 bg-destructive/5", badge: "bg-destructive/20 text-destructive", icon: TrendingDown, label: t("table.sell") },
+            neutral: { bg: "border-border bg-card", badge: "bg-secondary text-muted-foreground", icon: Minus, label: "-" },
+          }
+          const cfg = signalConfig[res.signal]
+          const SignalIcon = cfg.icon
+          const catConfig = dynamicCategories.find(c => c.id === res.category)
+
+          return (
+            <Card
+              key={res.symbol}
+              className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 ${cfg.bg}`}
+              onClick={() =>
+                setSelectedAsset({
+                  symbol: res.symbol,
+                  poolAddress: res.poolAddress,
+                  currentPrice: res.marketPrice,
+                  cost: res.cost,
+                  deviation: res.deviation,
+                  signal: res.signal,
+                })
+              }
+            >
+              <CardContent className="p-4">
+                {/* Top row: image + name + signal */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    {res.imageUrl ? (
+                      <img
+                        src={res.imageUrl}
+                        alt={res.symbol}
+                        className="h-9 w-9 rounded-full shrink-0 object-cover ring-2 ring-border"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                      />
+                    ) : (
+                      <div
+                        className="h-9 w-9 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-white ring-2 ring-border"
+                        style={{ backgroundColor: getResourceColor(res.symbol) }}
+                      >
+                        {res.symbol.slice(0, 2)}
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="font-mono text-sm font-bold text-card-foreground leading-tight">{res.symbol}</span>
+                      {res.tokenName && (
+                        <span className="text-[10px] text-muted-foreground leading-tight">{res.tokenName}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {catConfig && (
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: catConfig.color }} title={catConfig.label} />
+                    )}
+                    {res.signal !== "neutral" && (
+                      <Badge className={`text-[10px] px-1.5 py-0 ${cfg.badge}`}>
+                        <SignalIcon className="h-3 w-3 mr-0.5" />
+                        {cfg.label}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Price */}
+                <div className="mb-2">
+                  <p className="font-mono text-lg font-bold text-card-foreground leading-none">
+                    {formatPrice(res.marketPrice)}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {res.change24h !== 0 && (
+                      <span className={`flex items-center gap-0.5 text-[11px] font-medium ${res.change24h > 0 ? "text-primary" : "text-destructive"}`}>
+                        {res.change24h > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                        {Math.abs(res.change24h).toFixed(1)}%
+                      </span>
+                    )}
+                    {res.cost > 0 && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Custo: {formatPrice(res.cost)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom row: deviation + volume */}
+                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                  {res.cost > 0 ? (
+                    <span className={`font-mono text-xs font-semibold ${
+                      res.signal === "buy" ? "text-primary" : res.signal === "sell" ? "text-destructive" : "text-muted-foreground"
+                    }`}>
+                      {res.deviation > 0 ? "+" : ""}{res.deviation.toFixed(1)}%
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">--</span>
+                  )}
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Vol: {formatPrice(res.volume)}
+                  </span>
+                </div>
+
+                {/* Hover hint */}
+                <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[10px] text-primary font-medium">Ver grafico →</span>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
+      {filtered.length === 0 && !isLoading && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <p className="text-sm text-muted-foreground">{t("table.noResults")}</p>
+        </div>
+      )}
 
       {/* Asset Chart Modal */}
       {selectedAsset && (
@@ -413,6 +318,6 @@ export function PriceTable({ prices, isLoading, productionCosts: dynCosts, thres
           onClose={() => setSelectedAsset(null)}
         />
       )}
-    </Card>
+    </div>
   )
 }

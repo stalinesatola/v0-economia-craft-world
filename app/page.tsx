@@ -14,7 +14,7 @@ import useSWR from "swr"
 const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
 
 export default function Home() {
-  const { prices, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners } = usePrices()
+  const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners } = usePrices()
   const { t } = useI18n()
 
   // Check maintenance mode
@@ -92,29 +92,24 @@ export default function Home() {
             />
           )}
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <PriceTable prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
-            </div>
-            <div className="flex flex-col gap-6">
-              {showOpportunities && (
-                <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
-              )}
+          {showOpportunities && (
+            <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+          )}
 
-              {/* Sidebar Banner */}
-              {showBanners && bannersByPosition.sidebar && (
-                <AdBanner
-                  position="sidebar"
-                  enabled={bannersByPosition.sidebar.enabled}
-                  imageUrl={bannersByPosition.sidebar.imageUrl}
-                  linkUrl={bannersByPosition.sidebar.linkUrl}
-                  altText={bannersByPosition.sidebar.altText}
-                  adScript={bannersByPosition.sidebar.adScript}
-                />
-              )}
+          {/* Sidebar Banner (shown as full width) */}
+          {showBanners && bannersByPosition.sidebar && (
+            <AdBanner
+              position="sidebar"
+              enabled={bannersByPosition.sidebar.enabled}
+              imageUrl={bannersByPosition.sidebar.imageUrl}
+              linkUrl={bannersByPosition.sidebar.linkUrl}
+              altText={bannersByPosition.sidebar.altText}
+              adScript={bannersByPosition.sidebar.adScript}
+            />
+          )}
 
-            </div>
-          </div>
+          {/* Resource Cards */}
+          <PriceTable prices={prices} pools={pools} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
 
           <footer className="border-t border-border pt-4 pb-6">
             <div className="flex flex-col items-center gap-1 text-center">

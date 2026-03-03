@@ -129,7 +129,7 @@ export function CategoriesTab({ config, onUpdate, saving }: CategoriesTabProps) 
         <div>
           <h2 className="text-base font-semibold text-card-foreground">Categorias de Recursos</h2>
           <p className="text-xs text-muted-foreground">
-            Gerir categorias usadas em pools e na tabela de precos ({categories.length} categorias)
+            Gerir categorias usadas em pools e no dashboard ({categories.length} categorias)
           </p>
         </div>
         <div className="flex items-center gap-2">
