@@ -1,116 +1,245 @@
-<div align="center">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
-</div>
+#  Craft World Economy
 
-# Craft World Economy
+<p align="center">
+  <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEixGz3zwNdZ4IcLNeHbbH7YmTY9HThGYKFK9bppgQKOK4hjXMM0L11CYsIxtZgTHtk-SVWwylD2V9YUbswX2Lo1DqHvnlXRANtbt6QsWLwJlc9eZszsNpNxqZW4s2Ju0HIT29joyCdPcgNsSsBPvEf3pJN6yIrCBaqSlzQSar-B3OsfFotVNPJVBnyf3x8/s320/log_cwe.png?format=webp&resize=400x300&vertical=center" width="300"/>
+</p>
 
-Dashboard de monitoramento de precos e oportunidades de trading para o jogo Craft World na rede Ronin.
+<h1 align="left">🎮 Craft World Economy</h1>
+<p align="left">Dashboard de monitoramento de preços e oportunidades de trading com alertas pelo Telegram para o jogo Craft World na rede Ronin Network.</p>
 
-## Funcionalidades
+---
 
-### Dashboard Publico (`/`)
-- Tabela de precos em tempo real via GeckoTerminal API
-- Cards de estatisticas com contagem de pools e desvios
-- Painel de oportunidades de compra/venda com thresholds configuraveis
-- Cadeia de producao visual dos recursos
-- Preco do RON em tempo real
-- Banners de publicidade configuraveis (imagem ou ad scripts)
-- Suporte bilingue (PT/EN)
+## 📌 Sobre o Projeto
 
-### Painel Admin (`/admin`)
-- Autenticacao com password (superadmin via env var + utilizadores com roles)
-- Sistema de roles: `admin` (acesso total) e `viewer` (permissoes granulares)
-- **Pools**: Editar enderecos de pools, custos de producao, alertas
-- **Cadeias de Producao**: Editor JSON da arvore de producao
-- **Telegram Bot**: Configurar bot token, chat ID, intervalo e testes
-- **Partilha Automatica**: Publicar alertas no X.com (Twitter) e canais Telegram
-- **Banners**: Configurar banners de imagem ou scripts de ad por posicao
-- **Config Geral**: Thresholds, rede, personalizacao de header/footer/login, gestao de utilizadores
+O **Craft World Economy** é uma plataforma web profissional desenvolvida para monitorar, analisar e identificar oportunidades de trading dentro da economia do jogo Craft World.
 
-### Bot Telegram (Cron)
-- Verificacao automatica a cada 5 minutos via Vercel Cron
-- Envia alertas quando recursos desviam dos custos de producao
-- Configuravel via painel admin
+A aplicação integra dados em tempo real via GeckoTerminal API, calcula oportunidades com base em thresholds configuráveis e permite automação de alertas para **Telegram** e **X**.
 
-## Stack Tecnica
+O sistema foi projetado com arquitetura modular, preparado para futura expansão SaaS.
 
-- **Framework**: Next.js 16 (App Router)
-- **UI**: shadcn/ui + Tailwind CSS v4
-- **Dados**: JSON file-based (`data/config.json`) com cache em memoria
-- **Auth**: Cookie-based com tokens assinados (SHA-256)
-- **API de Precos**: GeckoTerminal (rede Ronin)
-- **Bot**: Telegram Bot API
-- **Deploy**: Vercel
+---
 
-## Variaveis de Ambiente
+# 🌍 Funcionalidades
 
-| Variavel | Descricao | Obrigatoria |
-|---|---|---|
-| `ADMIN_PASSWORD` | Password do superadmin | Sim |
-| `CRON_SECRET` | Segredo para proteger o endpoint cron | Sim (para cron) |
-| `TELEGRAM_BOT_TOKEN` | Token do bot Telegram (configuravel via admin) | Nao |
-| `TELEGRAM_CHAT_ID` | Chat ID do Telegram (configuravel via admin) | Nao |
+## 🔓 Dashboard Público (`/`)
 
-## Instalacao
+### 📊 Tabela de Preços em Tempo Real
+
+* Integração com GeckoTerminal API
+* Preço atual
+* Liquidez
+* Volume
+* Spread
+* Desvio percentual
+* Atualização automática
+
+### 📈 Cards de Estatísticas
+
+* Total de pools monitoradas
+* Recursos cadastrados
+* Média de desvio
+* Oportunidades ativas
+* Status da API
+
+### 💹 Painel de Oportunidades
+
+* Compra abaixo do threshold configurado
+* Venda acima do threshold configurado
+* Indicadores visuais
+* Atualização dinâmica
+
+### 🏗 Cadeia de Produção Visual
+
+* Estrutura hierárquica em árvore
+* Baseado em JSON
+* Cálculo automático de custo total
+
+### 🪙 Preço do RON em Tempo Real
+
+* Cotação atual do token da rede Ronin
+* Atualização automática
+* Impacto direto no cálculo produtivo
+
+### 📢 Banners Publicitários
+
+* Upload de imagem
+* Inserção de scripts HTML/Ad
+* Controle por posição (header, sidebar, footer)
+
+### 🌐 Suporte Bilíngue
+
+* Português 🇦🇴
+* English 🇺🇸
+* Alternância dinâmica
+
+---
+
+# 🔐 Painel Administrativo (`/admin`)
+
+## 🔑 Autenticação
+
+* Superadmin via variável de ambiente (`.env`)
+* Sistema de utilizadores
+* Senhas com hash seguro
+* Middleware de proteção
+
+## 👥 Sistema de Roles
+
+* **Admin** – acesso total
+* **Viewer** – permissões granulares
+
+---
+
+## ⚙️ Gestão de Módulos
+
+### 🏦 Pools
+
+* Editar endereços de pools
+* Definir custos de produção
+* Configurar alertas individuais
+* Ativar/desativar pools
+
+### 🌳 Cadeias de Produção
+
+* Editor JSON da árvore produtiva
+* Estrutura dinâmica
+* Cálculo automático
+
+### 🤖 Telegram Bot
+
+* Configurar Bot Token
+* Definir Chat ID
+* Intervalo de envio
+* Teste manual de alertas
+
+### 🔄 Partilha Automática
+
+Publicação automática de alertas em:
+
+* X (Twitter)
+* Canais Telegram
+
+Inclui:
+
+* Mensagem formatada
+* Hashtags automáticas
+* Link direto para o dashboard
+
+### 🖼 Gestão de Banners
+
+* Upload de imagem
+* Inserção de script
+* Controle por posição
+* Ativar/desativar
+
+### 🛠 Configurações Gerais
+
+* Threshold global de compra
+* Threshold global de venda
+* Seleção de rede
+* Personalização de header, footer e login
+* Gestão de utilizadores
+
+---
+
+# 🏗 Arquitetura
+
+## 🔹 Frontend
+
+* Next.js
+* React
+* Tailwind CSS
+* Sistema i18n
+
+## 🔹 Backend
+
+* Node.js
+* API REST
+* Cron jobs para alertas
+* Integração GeckoTerminal
+
+## 🔹 Banco de Dados
+
+* PostgreSQL ou MongoDB
+
+## 🔹 Deploy
+
+* VPS ou Vercel
+* Variáveis sensíveis em `.env`
+
+---
+
+# ⚙️ Instalação
 
 ```bash
-# Clonar o repositorio
-git clone <repo-url>
+# Clonar repositório
+git clone https://github.com/seu-usuario/craft-world-economy.git
+
+# Entrar na pasta
 cd craft-world-economy
 
-# Instalar dependencias
-pnpm install
+# Instalar dependências
+npm install
 
-# Configurar variaveis de ambiente
-cp .env.example .env.local
-# Editar .env.local com as variaveis necessarias
+# Configurar variáveis de ambiente
+cp .env.example .env
 
-# Iniciar em desenvolvimento
-pnpm dev
+# Rodar em desenvolvimento
+npm run dev
 ```
 
-## Estrutura do Projeto
+---
 
-```
-app/
-  page.tsx              # Dashboard publico
-  admin/page.tsx        # Painel admin (login + dashboard)
-  api/
-    prices/             # GET precos do GeckoTerminal
-    ron-price/          # GET preco do RON
-    customization/      # GET personalizacao publica
-    admin/
-      login/            # POST autenticacao
-      logout/           # POST logout
-      check/            # GET verificar sessao
-      config/           # GET config completa
-      config/[section]/ # PUT actualizar seccao
-      users/            # GET/POST/DELETE gestao de utilizadores
-      telegram/test/    # POST enviar mensagem de teste
-      telegram/check/   # POST executar verificacao manual
-      share/test/       # POST teste de partilha
-    cron/monitor/       # POST cron do bot Telegram
-    ohlcv/[pool]/       # GET dados OHLCV
-components/
-  admin/                # Componentes do painel admin
-    tabs/               # Tabs: pools, chains, telegram, sharing, banners, settings
-  dashboard-header.tsx  # Header do dashboard publico
-  price-table.tsx       # Tabela de precos
-  opportunities-panel.tsx
-  production-chain.tsx
-  ad-banner.tsx         # Componente de banners
-lib/
-  auth.ts               # Autenticacao e sessoes
-  config-manager.ts     # Leitura/escrita do config.json
-  craft-data.ts         # Dados default (fallback)
-  i18n.tsx              # Internacionalizacao PT/EN
-  telegram.ts           # Funcoes do bot Telegram
-data/
-  config.json           # Configuracao editavel via admin
+# 🔐 Variáveis de Ambiente (.env)
+
+```env
+SUPERADMIN_PASSWORD=
+DATABASE_URL=
+GECKO_API_URL=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+X_API_KEY=
+X_API_SECRET=
+RONIN_NETWORK=
 ```
 
-## Licenca
+---
 
-This project is licensed under the MIT License — see the LICENSE file for details.
+# 📊 Roadmap
 
-You are free to use, modify, and distribute this code in personal and commercial projects.
+* [ ] Sistema avançado de alertas com histórico
+* [ ] Gráficos de variação histórica
+* [ ] Sistema de assinatura premium
+* [ ] API pública do projeto
+* [ ] Versão SaaS multi-tenant
+
+---
+
+# 💰 Monetização
+
+* Banners patrocinados
+* Publicidade integrada
+* Planos premium (futuro)
+
+---
+
+# 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch (`feature/nova-funcionalidade`)
+3. Commit suas alterações
+4. Push para a branch
+5. Abra um Pull Request
+
+---
+
+# 📄 Licença
+
+Este projeto pode ser distribuído sob licença MIT (ou definir conforme necessário).
+
+---
+
+# 👨‍💻 Autor
+
+Desenvolvido por **Staline Satola** https://t.me/bondsbtc
+Projeto focado na economia do jogo Craft World na rede Ronin.
