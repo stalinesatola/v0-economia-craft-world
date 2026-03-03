@@ -114,26 +114,20 @@ export async function clearSession(): Promise<void> {
   }
 }
 
+/** @deprecated Nao usado - autenticacao agora usa apenas Bearer token via validateAdminRequest */
 export async function isAuthenticated(): Promise<{ authenticated: boolean; username: string; role: string }> {
-  const cookieStore = await cookies()
-  const token = cookieStore.get(SESSION_COOKIE)?.value
-  if (!token) return { authenticated: false, username: "", role: "" }
-  const result = verifyToken(token)
-  return { authenticated: result.valid, username: result.username, role: result.role }
+  return { authenticated: false, username: "", role: "" }
 }
 
 // Synchronous token validation for API routes (does not need DB)
 // Checks both cookie and Authorization header for token
 export function validateAdminRequest(request: NextRequest): { valid: boolean; username: string; role: string } {
-  // Try cookie first
-  let token = request.cookies.get(SESSION_COOKIE)?.value
-  // Fallback to Authorization header
-  if (!token) {
-    const authHeader = request.headers.get("Authorization")
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.slice(7)
-    }
+  // Usar APENAS Bearer token no Authorization header (nao cookies)
+  const authHeader = request.headers.get("Authorization")
+  if (!authHeader?.startsWith("Bearer ")) {
+    return { valid: false, username: "", role: "" }
   }
+  const token = authHeader.slice(7)
   if (!token) return { valid: false, username: "", role: "" }
   return verifyToken(token)
 }
