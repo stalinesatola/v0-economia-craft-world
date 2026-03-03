@@ -21,7 +21,7 @@ interface Opportunity {
   category: string
 }
 
-// Send a message via Telegram Bot API
+// ── Send message via Telegram Bot API ──
 export async function sendTelegramMessage(text: string, botToken?: string, chatId?: string): Promise<{ success: boolean; message: string }> {
   let token = botToken
   let chat = chatId
@@ -65,18 +65,20 @@ export async function sendTelegramMessage(text: string, botToken?: string, chatI
   }
 }
 
-// Send test message
+// ── Send test message ──
 export async function sendTestMessage(): Promise<{ success: boolean; message: string }> {
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
   const text = `<b>Craft World Economy - Teste</b>\n\nMensagem de teste enviada com sucesso.\nData: ${now}`
   return sendTelegramMessage(text)
 }
 
-// Fetch prices from GeckoTerminal
+// ── Fetch prices from GeckoTerminal ──
 async function fetchPrices(pools: Record<string, string>, network: string): Promise<Record<string, PriceResult>> {
   const poolEntries = Object.entries(pools)
   const addresses = poolEntries.map(([, addr]) => addr).filter((a) => a.startsWith("0x"))
   const results: Record<string, PriceResult> = {}
+
+  if (addresses.length === 0) return results
 
   const joined = addresses.join(",")
   const url = `${GECKO_BASE_URL}/networks/${network}/pools/multi/${joined}`
@@ -124,12 +126,17 @@ function formatOpportunity(opp: Opportunity): string {
   return `${arrow} <b>${icon} ${opp.symbol}</b> | Mercado: $${opp.marketPrice.toFixed(8)} | Custo: $${opp.costPrice.toFixed(8)} | Desvio: ${deviation} | ${opp.priority.toUpperCase()}`
 }
 
-function buildAlertMessage(opportunities: Opportunity[]): string {
+function buildAlertMessage(opportunities: Opportunity[], customMessage?: string): string {
   const buyOps = opportunities.filter((o) => o.signal === "buy")
   const sellOps = opportunities.filter((o) => o.signal === "sell")
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
 
   let msg = `<b>Craft World Economy - Alerta</b>\n${now}\n\n`
+
+  if (customMessage) {
+    msg += `${customMessage}\n\n`
+  }
+
   if (buyOps.length > 0) {
     msg += `<b>OPORTUNIDADES DE COMPRA (${buyOps.length})</b>\n`
     msg += buyOps.map(formatOpportunity).join("\n") + "\n\n"
@@ -142,18 +149,46 @@ function buildAlertMessage(opportunities: Opportunity[]): string {
   return msg
 }
 
-// Run the full monitor cycle
+// ── Build price alert message for a specific symbol ──
+function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessage?: string): string {
+  const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
+  const changeIcon = price.price_change_24h >= 0 ? "+" : ""
+
+  let msg = `<b>Craft World Economy - Preco ${symbol}</b>\n${now}\n\n`
+
+  if (customMessage) {
+    msg += `${customMessage}\n\n`
+  }
+
+  msg += `<b>Preco:</b> $${price.price_usd.toFixed(8)}\n`
+  msg += `<b>Variacao 24h:</b> ${changeIcon}${price.price_change_24h.toFixed(2)}%\n`
+  msg += `<b>Volume 24h:</b> $${price.volume_usd_24h.toFixed(2)}\n`
+
+  return msg
+}
+
+// ── Run the full monitor cycle ──
 export async function runMonitorCycle(): Promise<{
   success: boolean
   message: string
   alerts: string[]
   opportunities: Opportunity[]
+  priceAlertSent?: boolean
 }> {
   const config = await getConfig()
   const pools = config.pools || {}
   const alertsConfig = config.alertsConfig || {}
   const thresholds = config.thresholds || { buy: 15, sell: 15 }
   const network = config.network || "ronin"
+  const telegramCfg = config.telegram
+
+  if (!telegramCfg?.enabled) {
+    return { success: true, message: "Telegram desactivado", alerts: [], opportunities: [] }
+  }
+
+  if (!telegramCfg.botToken || !telegramCfg.chatId) {
+    return { success: false, message: "Bot Token ou Chat ID nao configurados", alerts: [], opportunities: [] }
+  }
 
   const prices = await fetchPrices(pools, network)
   const priceCount = Object.keys(prices).length
@@ -186,18 +221,43 @@ export async function runMonitorCycle(): Promise<{
 
   opportunities.sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation))
 
-  // Send Telegram if enabled
-  if (config.telegram?.enabled && opportunities.length > 0) {
-    const msg = buildAlertMessage(opportunities)
-    const result = await sendTelegramMessage(msg, config.telegram.botToken, config.telegram.chatId)
+  let telegramSent = false
+  let priceAlertSent = false
+
+  // 1. Enviar alertas de oportunidades (compra/venda) se houver
+  if (opportunities.length > 0) {
+    const msg = buildAlertMessage(opportunities, telegramCfg.customAlertMessage)
+    const result = await sendTelegramMessage(msg, telegramCfg.botToken, telegramCfg.chatId)
+    telegramSent = result.success
     if (!result.success) {
-      return { success: false, message: `${priceCount} precos, ${opportunities.length} alertas, mas falhou enviar Telegram: ${result.message}`, alerts: alertMessages, opportunities }
+      return {
+        success: false,
+        message: `${priceCount} precos, ${opportunities.length} alertas, mas falhou enviar Telegram: ${result.message}`,
+        alerts: alertMessages,
+        opportunities,
+        priceAlertSent: false,
+      }
     }
   }
 
-  const summary = opportunities.length > 0
-    ? `${priceCount} precos obtidos, ${opportunities.length} alertas detetados${config.telegram?.enabled ? " e enviados via Telegram" : ""}`
-    : `${priceCount} precos obtidos, nenhum alerta neste momento`
+  // 2. Enviar alerta de preco do simbolo configurado (ex: DYNO COIN) - sempre que o monitor roda
+  const priceSymbol = telegramCfg.priceAlertSymbol
+  if (telegramCfg.priceAlertEnabled && priceSymbol && prices[priceSymbol]) {
+    const priceMsg = buildPriceAlertMessage(priceSymbol, prices[priceSymbol], telegramCfg.customAlertMessage)
+    const priceResult = await sendTelegramMessage(priceMsg, telegramCfg.botToken, telegramCfg.chatId)
+    priceAlertSent = priceResult.success
+  }
 
-  return { success: true, message: summary, alerts: alertMessages, opportunities }
+  const parts: string[] = []
+  parts.push(`${priceCount} precos obtidos`)
+  if (opportunities.length > 0) {
+    parts.push(`${opportunities.length} alertas${telegramSent ? " enviados" : ""}`)
+  } else {
+    parts.push("sem alertas")
+  }
+  if (priceAlertSent && priceSymbol) {
+    parts.push(`preco ${priceSymbol} enviado`)
+  }
+
+  return { success: true, message: parts.join(", "), alerts: alertMessages, opportunities, priceAlertSent }
 }

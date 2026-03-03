@@ -10,7 +10,7 @@ import useSWR from "swr"
 const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
 
 export default function ProducaoPage() {
-  const { prices, timestamp, count, isLoading, isValidating, refresh, productionCosts } = usePrices()
+  const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts } = usePrices()
   const { data: customization } = useSWR("/api/customization", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
@@ -39,7 +39,7 @@ export default function ProducaoPage() {
             <h2 className="text-lg font-bold text-foreground">Cadeia de Producao</h2>
           </div>
 
-          <ProductionChain prices={prices} productionCosts={productionCosts} />
+          <ProductionChain prices={prices} pools={pools} productionCosts={productionCosts} />
         </div>
       </div>
     </main>

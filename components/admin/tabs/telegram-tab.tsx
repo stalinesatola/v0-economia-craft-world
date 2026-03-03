@@ -45,6 +45,10 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
   const [chatId, setChatId] = useState(tg.chatId || "")
   const [enabled, setEnabled] = useState(tg.enabled ?? false)
   const [interval, setInterval] = useState(tg.intervalMinutes || 5)
+  const [priceAlertEnabled, setPriceAlertEnabled] = useState(tg.priceAlertEnabled ?? false)
+  const [priceAlertSymbol, setPriceAlertSymbol] = useState(tg.priceAlertSymbol || "DYNO")
+  const [priceAlertInterval, setPriceAlertInterval] = useState(tg.priceAlertIntervalMinutes || 5)
+  const [customAlertMessage, setCustomAlertMessage] = useState(tg.customAlertMessage || "")
   const [messageTemplate, setMessageTemplate] = useState(
     (tg as Record<string, unknown>).messageTemplate as string || DEFAULT_TEMPLATE
   )
@@ -56,6 +60,10 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
     setChatId(config.telegram?.chatId || "")
     setEnabled(config.telegram?.enabled ?? false)
     setInterval(config.telegram?.intervalMinutes || 5)
+    setPriceAlertEnabled(config.telegram?.priceAlertEnabled ?? false)
+    setPriceAlertSymbol(config.telegram?.priceAlertSymbol || "DYNO")
+    setPriceAlertInterval(config.telegram?.priceAlertIntervalMinutes || 5)
+    setCustomAlertMessage(config.telegram?.customAlertMessage || "")
     setMessageTemplate((config.telegram as Record<string, unknown>)?.messageTemplate as string || DEFAULT_TEMPLATE)
     setHasChanges(false)
   }, [config.telegram])
@@ -70,6 +78,10 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
       chatId,
       enabled,
       intervalMinutes: interval,
+      priceAlertEnabled,
+      priceAlertSymbol,
+      priceAlertIntervalMinutes: priceAlertInterval,
+      customAlertMessage,
       messageTemplate,
     }
     const success = await onUpdate("telegram", payload)
@@ -205,6 +217,72 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
               />
               <span className="text-xs text-muted-foreground">min</span>
             </div>
+          </div>
+
+          {/* Alerta de Preco Periodico */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Alerta de Preco Periodico</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Envia o preco de um recurso especifico a cada ciclo de verificacao (ex: DYNO COIN a cada 5 min)
+            </p>
+
+            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 px-4 py-3 mb-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium text-card-foreground">Alerta de Preco Ativo</span>
+                <span className="text-xs text-muted-foreground">
+                  Envia preco, variacao 24h e volume do recurso selecionado
+                </span>
+              </div>
+              <Switch
+                checked={priceAlertEnabled}
+                onCheckedChange={(v) => { setPriceAlertEnabled(v); setHasChanges(true) }}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">Simbolo do Recurso (da Pool)</Label>
+                <Input
+                  value={priceAlertSymbol}
+                  onChange={(e) => { setPriceAlertSymbol(e.target.value.toUpperCase()); setHasChanges(true) }}
+                  className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
+                  placeholder="DYNO"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Deve estar cadastrado nas Pools (ex: DYNO, STEEL, GLASS)
+                </p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">Intervalo do Alerta de Preco (minutos)</Label>
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={priceAlertInterval}
+                    onChange={(e) => { setPriceAlertInterval(parseInt(e.target.value) || 5); setHasChanges(true) }}
+                    className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono w-24"
+                  />
+                  <span className="text-xs text-muted-foreground">min</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mensagem Personalizada */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Mensagem Personalizada</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Texto adicional incluido no inicio de cada alerta enviado ao Telegram
+            </p>
+            <Textarea
+              value={customAlertMessage}
+              onChange={(e) => { setCustomAlertMessage(e.target.value); setHasChanges(true) }}
+              rows={3}
+              className="bg-secondary border-border text-card-foreground text-sm resize-none"
+              placeholder="Ex: Craft World Economy - Alertas automaticos do servidor..."
+            />
           </div>
         </CardContent>
       </Card>

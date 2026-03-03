@@ -29,6 +29,10 @@ export interface AppConfig {
     chatId: string
     enabled: boolean
     intervalMinutes: number
+    priceAlertEnabled?: boolean
+    priceAlertSymbol?: string
+    priceAlertIntervalMinutes?: number
+    customAlertMessage?: string
   }
   network: string
   users: UserEntry[]
