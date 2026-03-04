@@ -1,5 +1,6 @@
-import { getConfig, setConfigSection } from "./config-manager"
-import { calculateAllProductionCosts, RECIPES } from "./resource-images"
+import { getConfig, getConfigSection, setConfigSection } from "./config-manager"
+import { RECIPES as DEFAULT_RECIPES } from "./resource-images"
+import type { Recipe } from "./resource-images"
 
 const TELEGRAM_API = "https://api.telegram.org"
 const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
@@ -28,6 +29,34 @@ export interface AlertHistoryEntry {
   success: boolean
   message: string
   details?: string
+}
+
+// ── Load recipes from DB (same source as frontend) ──
+async function loadRecipes(): Promise<Recipe[]> {
+  try {
+    const dbRecipes = await getConfigSection("recipes")
+    if (dbRecipes && Array.isArray(dbRecipes) && dbRecipes.length > 0) {
+      return dbRecipes as Recipe[]
+    }
+  } catch { /* fallback */ }
+  return DEFAULT_RECIPES
+}
+
+// Calculate costs using DB recipes + real pool prices
+function calcCostsFromRecipes(
+  recipes: Recipe[],
+  prices: Record<string, PriceResult>
+): Record<string, number> {
+  const result: Record<string, number> = {}
+  for (const recipe of recipes) {
+    let totalCost = 0
+    for (const inp of recipe.inputs) {
+      const inputPrice = prices[inp.resource]?.price_usd ?? 0
+      totalCost += inputPrice * inp.quantity
+    }
+    result[recipe.output] = totalCost
+  }
+  return result
 }
 
 // ── Alert History ──
@@ -170,13 +199,47 @@ async function fetchPrices(pools: Record<string, string>, network: string): Prom
   return results
 }
 
-function formatOpportunity(opp: Opportunity): string {
-  const icon = opp.signal === "buy" ? "BUY" : "SELL"
-  const arrow = opp.signal === "buy" ? "v" : "^"
+// Build individual card message for a single opportunity with input details
+function buildCardMessage(
+  opp: Opportunity,
+  recipes: Recipe[],
+  prices: Record<string, PriceResult>,
+): string {
+  const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
+  const signalEmoji = opp.signal === "buy" ? "COMPRAR" : "VENDER"
+  const signalIcon = opp.signal === "buy" ? "🟢" : "🔴"
   const deviation = opp.deviation > 0 ? `+${opp.deviation.toFixed(1)}%` : `${opp.deviation.toFixed(1)}%`
-  return `${arrow} <b>${icon} ${opp.symbol}</b> | Mercado: $${opp.marketPrice.toFixed(8)} | Custo: $${opp.costPrice.toFixed(8)} | Desvio: ${deviation} | ${opp.priority.toUpperCase()}`
+  const priceChange = prices[opp.symbol]?.price_change_24h ?? 0
+  const changeIcon = priceChange >= 0 ? "+" : ""
+  const volume = prices[opp.symbol]?.volume_usd_24h ?? 0
+
+  let msg = `${signalIcon} <b>${signalEmoji} ${opp.symbol}</b>\n`
+  msg += `<i>${now}</i>\n\n`
+
+  // Price info
+  msg += `<b>Preco Mercado:</b> $${opp.marketPrice.toFixed(8)}\n`
+  msg += `<b>Custo Producao:</b> $${opp.costPrice.toFixed(8)}\n`
+  msg += `<b>Desvio:</b> ${deviation}\n`
+  msg += `<b>Variacao 24h:</b> ${changeIcon}${priceChange.toFixed(2)}%\n`
+  if (volume > 0) msg += `<b>Volume 24h:</b> $${volume.toFixed(2)}\n`
+  msg += `<b>Prioridade:</b> ${opp.priority.toUpperCase()}\n`
+
+  // Input details (recipe)
+  const recipe = recipes.find(r => r.output === opp.symbol)
+  if (recipe && recipe.inputs.length > 0) {
+    msg += `\n<b>--- Inputs ---</b>\n`
+    for (const inp of recipe.inputs) {
+      const inputPrice = prices[inp.resource]?.price_usd ?? 0
+      const subtotal = inputPrice * inp.quantity
+      msg += `  ${inp.quantity}x ${inp.resource}: $${inputPrice.toFixed(8)} = $${subtotal.toFixed(8)}\n`
+    }
+  }
+
+  msg += `\n<i>Craft World - Economy</i>`
+  return msg
 }
 
+// Legacy bulk message (kept for /alertas command)
 function buildAlertMessage(opportunities: Opportunity[], customMessage?: string): string {
   const buyOps = opportunities.filter((o) => o.signal === "buy")
   const sellOps = opportunities.filter((o) => o.signal === "sell")
@@ -187,11 +250,18 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string)
 
   if (buyOps.length > 0) {
     msg += `<b>OPORTUNIDADES DE COMPRA (${buyOps.length})</b>\n`
-    msg += buyOps.map(formatOpportunity).join("\n") + "\n\n"
+    for (const opp of buyOps) {
+      const dev = opp.deviation > 0 ? `+${opp.deviation.toFixed(1)}%` : `${opp.deviation.toFixed(1)}%`
+      msg += `🟢 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
+    }
+    msg += "\n"
   }
   if (sellOps.length > 0) {
     msg += `<b>SINAIS DE VENDA (${sellOps.length})</b>\n`
-    msg += sellOps.map(formatOpportunity).join("\n") + "\n"
+    for (const opp of sellOps) {
+      const dev = `+${opp.deviation.toFixed(1)}%`
+      msg += `🔴 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
+    }
   }
   msg += `\nTotal: ${opportunities.length} alertas`
   return msg
@@ -266,7 +336,8 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       if (Object.keys(prices).length === 0) {
         return "Nao foi possivel obter precos. Verifique se ha pools cadastradas."
       }
-      const costs = calculateAllProductionCosts(prices)
+      const recipes = await loadRecipes()
+      const costs = calcCostsFromRecipes(recipes, prices)
       return buildAllPricesMessage(prices, costs)
     }
 
@@ -287,7 +358,8 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       if (Object.keys(prices).length === 0) {
         return "Nao foi possivel obter precos."
       }
-      const costs = calculateAllProductionCosts(prices)
+      const recipes = await loadRecipes()
+      const costs = calcCostsFromRecipes(recipes, prices)
       const alertsConfig = config.alertsConfig || {}
       const thresholds = config.thresholds || { buy: 15, sell: 15 }
       const opportunities: Opportunity[] = []
@@ -297,8 +369,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
         const alertCfg = alertsConfig[symbol]
         if (!alertCfg?.enabled) continue
 
-        // For base resources (no recipe), use pool price directly - no deviation check
-        const hasRecipe = RECIPES.some(r => r.output === symbol)
+        const hasRecipe = recipes.some(r => r.output === symbol)
         if (!hasRecipe) continue
         if (costValue === 0) continue
 
@@ -402,7 +473,11 @@ export async function runMonitorCycle(): Promise<{
     return { success: false, message: "Nao foi possivel obter precos", alerts: [], opportunities: [] }
   }
 
-  const calculatedCosts = calculateAllProductionCosts(prices)
+  // Load recipes from DB (same source as frontend/API)
+  const recipes = await loadRecipes()
+  console.log("[v0] Loaded", recipes.length, "recipes (source:", recipes === DEFAULT_RECIPES ? "hardcoded" : "DB", ")")
+
+  const calculatedCosts = calcCostsFromRecipes(recipes, prices)
   console.log("[v0] Calculated costs:", JSON.stringify(calculatedCosts))
 
   const opportunities: Opportunity[] = []
@@ -413,20 +488,13 @@ export async function runMonitorCycle(): Promise<{
     const alertCfg = alertsConfig[symbol]
 
     if (!alertCfg?.enabled) {
-      console.log(`[v0] ${symbol}: alertas desactivados ou nao configurados - skipping`)
       continue
     }
 
     // Only check deviation for resources that have a recipe (non-zero cost)
-    const hasRecipe = RECIPES.some(r => r.output === symbol)
-    if (!hasRecipe) {
-      console.log(`[v0] ${symbol}: recurso base sem receita - skipping desvio check`)
-      continue
-    }
-    if (costValue === 0) {
-      console.log(`[v0] ${symbol}: custo = 0 - skipping`)
-      continue
-    }
+    const hasRecipe = recipes.some(r => r.output === symbol)
+    if (!hasRecipe) continue
+    if (costValue === 0) continue
 
     const deviation = ((price.price_usd - costValue) / costValue) * 100
     console.log(`[v0] ${symbol}: preco=$${price.price_usd.toFixed(8)}, custo=$${costValue.toFixed(8)}, desvio=${deviation.toFixed(1)}%, thresholds: buy=-${thresholds.buy}%, sell=+${thresholds.sell}%`)
@@ -445,62 +513,67 @@ export async function runMonitorCycle(): Promise<{
   let telegramSent = false
   let priceAlertSent = false
 
-  // Build combined message: opportunities + price alert in ONE message
+  // === SEND INDIVIDUAL CARDS ===
   const priceSymbol = telegramCfg.priceAlertSymbol
   const priceAlertEnabled = telegramCfg.priceAlertEnabled && priceSymbol && prices[priceSymbol]
   const hasOpportunities = opportunities.length > 0
 
-  if (hasOpportunities || priceAlertEnabled) {
-    // Build a single combined message to avoid rate limiting
-    let combinedMsg = ""
+  if (hasOpportunities) {
+    console.log("[v0] Sending", opportunities.length, "individual card alerts...")
+    let sentCount = 0
+    let failCount = 0
 
-    // Part 1: Opportunities
-    if (hasOpportunities) {
-      console.log("[v0] Building opportunity alert for", opportunities.length, "opportunities...")
-      combinedMsg += buildAlertMessage(opportunities, telegramCfg.customAlertMessage)
+    for (const opp of opportunities) {
+      const cardMsg = buildCardMessage(opp, recipes, prices)
+      const result = await sendTelegramMessage(cardMsg, telegramCfg.botToken, telegramCfg.chatId)
+
+      if (result.success) {
+        sentCount++
+      } else {
+        failCount++
+        console.error(`[v0] Failed to send card for ${opp.symbol}:`, result.message)
+      }
+
+      // Delay 300ms between messages to respect Telegram rate limits (30 msg/sec)
+      if (opportunities.indexOf(opp) < opportunities.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300))
+      }
     }
 
-    // Part 2: Price alert (appended to same message or sent alone)
-    if (priceAlertEnabled && prices[priceSymbol]) {
-      console.log(`[v0] Building price alert for ${priceSymbol}...`)
-      if (combinedMsg) combinedMsg += "\n\n---\n\n"
-      combinedMsg += buildPriceAlertMessage(priceSymbol, prices[priceSymbol], hasOpportunities ? undefined : telegramCfg.customAlertMessage)
-    }
+    telegramSent = sentCount > 0
+    console.log(`[v0] Cards sent: ${sentCount} success, ${failCount} failed`)
 
-    // Send the combined message
-    console.log("[v0] Sending combined alert message...")
-    const result = await sendTelegramMessage(combinedMsg, telegramCfg.botToken, telegramCfg.chatId)
-    telegramSent = result.success
-    priceAlertSent = result.success && !!priceAlertEnabled
-    console.log("[v0] Combined alert result:", result.success, result.message)
+    await saveAlertHistory({
+      timestamp: new Date().toISOString(),
+      type: "opportunity",
+      success: sentCount > 0,
+      message: `${sentCount}/${opportunities.length} cards enviados individualmente: ${opportunities.map(o => `${o.signal.toUpperCase()} ${o.symbol}`).join(", ")}`,
+      details: opportunities.map(o => `${o.signal} ${o.symbol} ${o.deviation.toFixed(1)}%`).join(", "),
+    })
+  }
 
-    // Save history entries
-    if (hasOpportunities) {
-      await saveAlertHistory({
-        timestamp: new Date().toISOString(),
-        type: "opportunity",
-        success: result.success,
-        message: result.success
-          ? `${opportunities.length} oportunidades enviadas: ${opportunities.map(o => `${o.signal.toUpperCase()} ${o.symbol}`).join(", ")}`
-          : `Falha ao enviar: ${result.message}`,
-        details: opportunities.map(o => `${o.signal} ${o.symbol} ${o.deviation.toFixed(1)}%`).join(", "),
-      })
-    }
+  // Price alert as separate card
+  if (priceAlertEnabled && prices[priceSymbol]) {
+    console.log(`[v0] Sending price alert card for ${priceSymbol}...`)
+    // Add delay after opportunity cards
+    if (hasOpportunities) await new Promise(resolve => setTimeout(resolve, 300))
 
-    if (priceAlertEnabled && prices[priceSymbol]) {
-      await saveAlertHistory({
-        timestamp: new Date().toISOString(),
-        type: "price",
-        success: result.success,
-        message: result.success
-          ? `Preco ${priceSymbol}: $${prices[priceSymbol].price_usd.toFixed(8)} (${prices[priceSymbol].price_change_24h >= 0 ? "+" : ""}${prices[priceSymbol].price_change_24h.toFixed(2)}%)`
-          : `Falha ao enviar preco ${priceSymbol}: ${result.message}`,
-      })
-    }
-  } else {
+    const priceMsg = buildPriceAlertMessage(priceSymbol, prices[priceSymbol], telegramCfg.customAlertMessage)
+    const priceResult = await sendTelegramMessage(priceMsg, telegramCfg.botToken, telegramCfg.chatId)
+    priceAlertSent = priceResult.success
+    console.log("[v0] Price alert result:", priceResult.success, priceResult.message)
+
+    await saveAlertHistory({
+      timestamp: new Date().toISOString(),
+      type: "price",
+      success: priceResult.success,
+      message: priceResult.success
+        ? `Preco ${priceSymbol}: $${prices[priceSymbol].price_usd.toFixed(8)} (${prices[priceSymbol].price_change_24h >= 0 ? "+" : ""}${prices[priceSymbol].price_change_24h.toFixed(2)}%)`
+        : `Falha ao enviar preco ${priceSymbol}: ${priceResult.message}`,
+    })
+  } else if (!hasOpportunities) {
     console.log("[v0] No opportunities and no price alert configured/available")
 
-    // Log why price alert was not sent
     if (telegramCfg.priceAlertEnabled && priceSymbol && !prices[priceSymbol]) {
       console.log(`[v0] Price for ${priceSymbol} not found. Available: ${Object.keys(prices).join(", ")}`)
       await saveAlertHistory({
