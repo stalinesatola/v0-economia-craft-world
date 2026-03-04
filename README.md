@@ -1,5 +1,3 @@
-#  Craft World Economy
-
 <p align="center">
   <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEixGz3zwNdZ4IcLNeHbbH7YmTY9HThGYKFK9bppgQKOK4hjXMM0L11CYsIxtZgTHtk-SVWwylD2V9YUbswX2Lo1DqHvnlXRANtbt6QsWLwJlc9eZszsNpNxqZW4s2Ju0HIT29joyCdPcgNsSsBPvEf3pJN6yIrCBaqSlzQSar-B3OsfFotVNPJVBnyf3x8/s320/log_cwe.png?format=webp&resize=400x300&vertical=center" width="300"/>
 </p>
