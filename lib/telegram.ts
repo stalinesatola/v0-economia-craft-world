@@ -445,57 +445,64 @@ export async function runMonitorCycle(): Promise<{
   let telegramSent = false
   let priceAlertSent = false
 
-  // 1. Send opportunity alerts if any
-  if (opportunities.length > 0) {
-    console.log("[v0] Sending", opportunities.length, "opportunity alerts...")
-    const msg = buildAlertMessage(opportunities, telegramCfg.customAlertMessage)
-    const result = await sendTelegramMessage(msg, telegramCfg.botToken, telegramCfg.chatId)
-    telegramSent = result.success
-    console.log("[v0] Opportunity alert result:", result.success, result.message)
-
-    await saveAlertHistory({
-      timestamp: new Date().toISOString(),
-      type: "opportunity",
-      success: result.success,
-      message: result.success
-        ? `${opportunities.length} oportunidades enviadas: ${opportunities.map(o => `${o.signal.toUpperCase()} ${o.symbol}`).join(", ")}`
-        : `Falha ao enviar: ${result.message}`,
-      details: opportunities.map(o => `${o.signal} ${o.symbol} ${o.deviation.toFixed(1)}%`).join(", "),
-    })
-
-    if (!result.success) {
-      return {
-        success: false,
-        message: `${priceCount} precos, ${opportunities.length} alertas, mas falhou enviar: ${result.message}`,
-        alerts: alertMessages,
-        opportunities,
-        priceAlertSent: false,
-      }
-    }
-  } else {
-    console.log("[v0] No opportunities detected")
-  }
-
-  // 2. Send price alert for configured symbol (always when enabled, even if no opportunities)
+  // Build combined message: opportunities + price alert in ONE message
   const priceSymbol = telegramCfg.priceAlertSymbol
-  if (telegramCfg.priceAlertEnabled && priceSymbol) {
-    console.log(`[v0] Price alert enabled for ${priceSymbol}, checking if price available...`)
-    if (prices[priceSymbol]) {
-      const priceMsg = buildPriceAlertMessage(priceSymbol, prices[priceSymbol], telegramCfg.customAlertMessage)
-      const priceResult = await sendTelegramMessage(priceMsg, telegramCfg.botToken, telegramCfg.chatId)
-      priceAlertSent = priceResult.success
-      console.log("[v0] Price alert result:", priceResult.success, priceResult.message)
+  const priceAlertEnabled = telegramCfg.priceAlertEnabled && priceSymbol && prices[priceSymbol]
+  const hasOpportunities = opportunities.length > 0
 
+  if (hasOpportunities || priceAlertEnabled) {
+    // Build a single combined message to avoid rate limiting
+    let combinedMsg = ""
+
+    // Part 1: Opportunities
+    if (hasOpportunities) {
+      console.log("[v0] Building opportunity alert for", opportunities.length, "opportunities...")
+      combinedMsg += buildAlertMessage(opportunities, telegramCfg.customAlertMessage)
+    }
+
+    // Part 2: Price alert (appended to same message or sent alone)
+    if (priceAlertEnabled && prices[priceSymbol]) {
+      console.log(`[v0] Building price alert for ${priceSymbol}...`)
+      if (combinedMsg) combinedMsg += "\n\n---\n\n"
+      combinedMsg += buildPriceAlertMessage(priceSymbol, prices[priceSymbol], hasOpportunities ? undefined : telegramCfg.customAlertMessage)
+    }
+
+    // Send the combined message
+    console.log("[v0] Sending combined alert message...")
+    const result = await sendTelegramMessage(combinedMsg, telegramCfg.botToken, telegramCfg.chatId)
+    telegramSent = result.success
+    priceAlertSent = result.success && !!priceAlertEnabled
+    console.log("[v0] Combined alert result:", result.success, result.message)
+
+    // Save history entries
+    if (hasOpportunities) {
+      await saveAlertHistory({
+        timestamp: new Date().toISOString(),
+        type: "opportunity",
+        success: result.success,
+        message: result.success
+          ? `${opportunities.length} oportunidades enviadas: ${opportunities.map(o => `${o.signal.toUpperCase()} ${o.symbol}`).join(", ")}`
+          : `Falha ao enviar: ${result.message}`,
+        details: opportunities.map(o => `${o.signal} ${o.symbol} ${o.deviation.toFixed(1)}%`).join(", "),
+      })
+    }
+
+    if (priceAlertEnabled && prices[priceSymbol]) {
       await saveAlertHistory({
         timestamp: new Date().toISOString(),
         type: "price",
-        success: priceResult.success,
-        message: priceResult.success
+        success: result.success,
+        message: result.success
           ? `Preco ${priceSymbol}: $${prices[priceSymbol].price_usd.toFixed(8)} (${prices[priceSymbol].price_change_24h >= 0 ? "+" : ""}${prices[priceSymbol].price_change_24h.toFixed(2)}%)`
-          : `Falha ao enviar preco ${priceSymbol}: ${priceResult.message}`,
+          : `Falha ao enviar preco ${priceSymbol}: ${result.message}`,
       })
-    } else {
-      console.log(`[v0] Price for ${priceSymbol} not found in fetched prices. Available: ${Object.keys(prices).join(", ")}`)
+    }
+  } else {
+    console.log("[v0] No opportunities and no price alert configured/available")
+
+    // Log why price alert was not sent
+    if (telegramCfg.priceAlertEnabled && priceSymbol && !prices[priceSymbol]) {
+      console.log(`[v0] Price for ${priceSymbol} not found. Available: ${Object.keys(prices).join(", ")}`)
       await saveAlertHistory({
         timestamp: new Date().toISOString(),
         type: "error",
