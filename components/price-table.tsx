@@ -18,6 +18,7 @@ import { formatPrice } from "@/lib/craft-data"
 import { AssetChart } from "@/components/asset-chart"
 import { useI18n } from "@/lib/i18n"
 import { getResourceColor } from "@/lib/resource-images"
+import { ShareButton } from "@/components/share-card"
 import useSWR from "swr"
 
 const configFetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null)
@@ -264,6 +265,24 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                         {cfg.label}
                       </Badge>
                     )}
+                    <ShareButton
+                      data={{
+                        symbol: res.symbol,
+                        marketPrice: res.marketPrice,
+                        cost: res.cost,
+                        deviation: res.deviation,
+                        signal: res.signal,
+                        change24h: res.change24h,
+                        volume: res.volume,
+                        imageUrl: res.imageUrl,
+                        inputs: recipeMap[res.symbol]?.map(inp => ({
+                          resource: inp.resource,
+                          quantity: inp.quantity,
+                          unitPrice: prices[inp.resource]?.price_usd ?? 0,
+                          subtotal: (prices[inp.resource]?.price_usd ?? 0) * inp.quantity,
+                        })),
+                      }}
+                    />
                   </div>
                 </div>
 
