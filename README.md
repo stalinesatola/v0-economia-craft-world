@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="left">🎮 Craft World Economy</h1>
-<p align="left">Dashboard de monitoramento de preços e oportunidades de trading com alertas pelo Telegram para o jogo Craft World na rede Ronin Network.</p>
+<p align="left">Dashboard de monitoramento de preços e oportunidades de trading com alertas pelo Telegram para o jogo Craft World na rede Ronin.</p>
 
 ---
 
@@ -228,12 +228,6 @@ RONIN_NETWORK=
 3. Commit suas alterações
 4. Push para a branch
 5. Abra um Pull Request
-
----
-
-# 📄 Licença
-
-Este projeto pode ser distribuído sob licença MIT
 
 ---
 
