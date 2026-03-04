@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Manual trigger from admin panel
+// POST - Manual trigger from admin panel or external cron services
 export async function POST() {
   console.log("[v0] Manual monitor trigger at", new Date().toISOString())
 
@@ -46,4 +46,25 @@ export async function POST() {
       { status: 500 }
     )
   }
+}
+
+// PUT - Alias for external cron services that use PUT
+export async function PUT() {
+  return POST()
+}
+
+// HEAD/OPTIONS - Health check for cron services that probe before calling
+export async function HEAD() {
+  return new NextResponse(null, { status: 200 })
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      "Allow": "GET, POST, PUT, HEAD, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, HEAD, OPTIONS",
+      "Access-Control-Allow-Origin": "*",
+    },
+  })
 }
