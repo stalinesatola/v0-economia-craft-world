@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
-import { getConfig } from "@/lib/config-manager"
+import { getConfig, getConfigSection } from "@/lib/config-manager"
 import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "@/lib/craft-data"
-import { calculateAllProductionCosts } from "@/lib/resource-images"
+import { RECIPES as DEFAULT_RECIPES } from "@/lib/resource-images"
+import type { Recipe } from "@/lib/resource-images"
 
 export const dynamic = "force-dynamic"
 
@@ -111,8 +112,27 @@ export async function GET() {
     }
   }
 
-  // Calcular custos de producao automaticamente a partir dos precos das pools
-  const calculatedCosts = calculateAllProductionCosts(symbolPrices)
+  // Carregar receitas do DB (mesmas que o frontend usa) para calculo consistente
+  let recipes: Recipe[] = DEFAULT_RECIPES
+  try {
+    const dbRecipes = await getConfigSection("recipes")
+    if (dbRecipes && Array.isArray(dbRecipes) && dbRecipes.length > 0) {
+      recipes = dbRecipes as Recipe[]
+    }
+  } catch {
+    // fallback para hardcoded
+  }
+
+  // Calcular custos de producao: soma(preco_pool_input * quantidade) para cada input
+  const calculatedCosts: Record<string, number> = {}
+  for (const recipe of recipes) {
+    let totalCost = 0
+    for (const inp of recipe.inputs) {
+      const inputPrice = symbolPrices[inp.resource]?.price_usd ?? 0
+      totalCost += inputPrice * inp.quantity
+    }
+    calculatedCosts[recipe.output] = totalCost
+  }
 
   return NextResponse.json({
     prices: symbolPrices,
