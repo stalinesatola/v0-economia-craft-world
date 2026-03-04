@@ -98,6 +98,10 @@ const translations = {
     "chart.close": "Fechar",
     "chart.current": "Preco Atual",
     "chart.prodCost": "Custo Producao",
+    // Share
+    "share.title": "Partilhar",
+    "share.shareX": "Partilhar no X",
+    "share.download": "Descarregar Imagem",
     // Footer
     "footer.disclaimer": "Verifique sempre no jogo antes de tomar decisoes!",
     // Login
@@ -282,6 +286,10 @@ const translations = {
     "chart.current": "Current Price",
     "chart.prodCost": "Production Cost",
     // Footer
+    // Share
+    "share.title": "Share",
+    "share.shareX": "Share on X",
+    "share.download": "Download Image",
     "footer.disclaimer": "Always verify in-game before making decisions!",
     // Login
     "login.welcome": "Welcome",

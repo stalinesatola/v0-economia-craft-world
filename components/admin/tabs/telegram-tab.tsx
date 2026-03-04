@@ -86,6 +86,8 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
   const [checkResult, setCheckResult] = useState<{ success: boolean; message: string; alerts?: string[] } | null>(null)
   const [testing, setTesting] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [triggering, setTriggering] = useState(false)
+  const [triggerResult, setTriggerResult] = useState<{ success: boolean; message: string } | null>(null)
   const [showTemplateHelp, setShowTemplateHelp] = useState(false)
   const [webhookStatus, setWebhookStatus] = useState<{ loading: boolean; result: string | null }>({ loading: false, result: null })
 
@@ -130,6 +132,24 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
     const h: Record<string, string> = { "Content-Type": "application/json" }
     if (authToken) h["Authorization"] = `Bearer ${authToken}`
     return h
+  }
+
+  const handleTriggerNow = async () => {
+    setTriggering(true)
+    setTriggerResult(null)
+    try {
+      const res = await fetch("/api/cron/monitor", { method: "POST" })
+      const data = await res.json()
+      setTriggerResult({
+        success: data.success ?? res.ok,
+        message: data.message || (res.ok ? "Monitor executado com sucesso" : "Falha ao executar")
+      })
+      refreshHistory()
+    } catch {
+      setTriggerResult({ success: false, message: "Erro de rede ao disparar monitor" })
+    } finally {
+      setTriggering(false)
+    }
   }
 
   const handleTest = async () => {
@@ -398,10 +418,20 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
               <Play className={`h-3.5 w-3.5 ${checking ? "animate-pulse" : ""}`} />
               Simular Monitor
             </Button>
+            <Button size="sm" onClick={handleTriggerNow} disabled={triggering || !isConfigured} className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
+              <AlertTriangle className={`h-3.5 w-3.5 ${triggering ? "animate-pulse" : ""}`} />
+              {triggering ? "A enviar..." : "Disparar Alerta Agora"}
+            </Button>
           </div>
           {testResult && (
             <div className={`rounded-lg border px-3 py-2 text-xs ${testResult.success ? "border-primary/30 bg-primary/5 text-primary" : "border-destructive/30 bg-destructive/5 text-destructive"}`}>
               {testResult.message}
+            </div>
+          )}
+          {triggerResult && (
+            <div className={`rounded-lg border px-3 py-2 text-xs ${triggerResult.success ? "border-primary/30 bg-primary/5 text-primary" : "border-destructive/30 bg-destructive/5 text-destructive"}`}>
+              <p className="font-semibold">{triggerResult.success ? "Monitor executado" : "Falha no monitor"}</p>
+              <p>{triggerResult.message}</p>
             </div>
           )}
           {checkResult && (
