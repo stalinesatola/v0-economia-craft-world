@@ -5,6 +5,7 @@ import { Share2, X, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatPrice } from "@/lib/craft-data"
 import { useI18n } from "@/lib/i18n"
+import { RESOURCE_COLORS } from "@/lib/resource-images"
 
 interface ShareCardProps {
   symbol: string
@@ -23,7 +24,7 @@ interface ShareCardProps {
 function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const W = 600
-    const hasCoin = data.coinPrice && data.coinPrice > 0
+    const hasCoin = data.coinPrice && data.coinPrice > 0 && data.symbol !== "COIN"
     const coinExtraH = hasCoin ? 20 : 0
     const H = data.inputs && data.inputs.length > 0 ? 440 + coinExtraH + data.inputs.length * 28 : 380 + coinExtraH
     const canvas = document.createElement("canvas")
@@ -73,23 +74,45 @@ function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> 
         ctx.fillText(badgeText, bx + 8, 37)
       }
 
-      // Resource image (circular) + Symbol
-      const symbolX = img ? 24 + 44 + 10 : 24
+      // Resource icon (always drawn) + Symbol
+      const iconCx = 24 + 22
+      const iconCy = 72
+      const iconR = 22
+      const symbolX = 24 + 44 + 10
+
       if (img) {
+        // Draw image in circular clip
         ctx.save()
         ctx.beginPath()
-        ctx.arc(24 + 22, 72, 22, 0, Math.PI * 2)
+        ctx.arc(iconCx, iconCy, iconR, 0, Math.PI * 2)
         ctx.closePath()
         ctx.clip()
         ctx.drawImage(img, 24, 50, 44, 44)
         ctx.restore()
-        // Ring around image
-        ctx.strokeStyle = "#2a2d3e"
-        ctx.lineWidth = 2
+      } else {
+        // Draw colored circle with initials as fallback
+        const color = RESOURCE_COLORS[data.symbol] ?? "#666666"
+        ctx.save()
         ctx.beginPath()
-        ctx.arc(24 + 22, 72, 22, 0, Math.PI * 2)
-        ctx.stroke()
+        ctx.arc(iconCx, iconCy, iconR, 0, Math.PI * 2)
+        ctx.fillStyle = color
+        ctx.fill()
+        ctx.restore()
+        // Initials
+        ctx.font = "bold 16px 'JetBrains Mono', monospace"
+        ctx.fillStyle = "#ffffff"
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.fillText(data.symbol.slice(0, 2), iconCx, iconCy)
+        ctx.textAlign = "left"
+        ctx.textBaseline = "alphabetic"
       }
+      // Ring around icon
+      ctx.strokeStyle = "#2a2d3e"
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(iconCx, iconCy, iconR, 0, Math.PI * 2)
+      ctx.stroke()
 
       ctx.font = "bold 28px 'JetBrains Mono', monospace"
       ctx.fillStyle = "#f0f0f5"
@@ -102,7 +125,7 @@ function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> 
 
       // COIN value below USD price
       let coinOffsetY = 0
-      if (hasCoin && data.coinPrice) {
+      if (hasCoin && data.coinPrice && data.symbol !== "COIN") {
         const coinValue = data.marketPrice / data.coinPrice
         ctx.font = "bold 14px 'JetBrains Mono', monospace"
         ctx.fillStyle = "#FFD700"
@@ -340,7 +363,7 @@ function buildShareText(data: ShareCardProps, locale: string): string {
     ? (locale === "pt" ? "VENDER" : "SELL")
     : ""
 
-  const coinLine = data.coinPrice && data.coinPrice > 0
+  const coinLine = data.coinPrice && data.coinPrice > 0 && data.symbol !== "COIN"
     ? `(${(data.marketPrice / data.coinPrice).toFixed(2)} COIN)`
     : ""
 

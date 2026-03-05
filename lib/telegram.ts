@@ -1,6 +1,7 @@
 import { getConfig, getConfigSection, setConfigSection } from "./config-manager"
 import { RECIPES as DEFAULT_RECIPES } from "./resource-images"
 import type { Recipe } from "./resource-images"
+import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "./craft-data"
 
 const TELEGRAM_API = "https://api.telegram.org"
 const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
@@ -316,8 +317,8 @@ export async function handleBotCommand(command: string, chatId: string, botToken
 
   try {
     const config = await getConfig()
-    const pools = config.pools || {}
-    const network = config.network || "ronin"
+    const pools = (config.pools && Object.keys(config.pools).length > 0) ? config.pools : DEFAULT_POOLS
+    const network = config.network || DEFAULT_NETWORK
 
     if (cmd === "/start" || cmd === "/help") {
       return `<b>Craft World Economy Bot</b>\n\n` +
@@ -430,10 +431,10 @@ export async function runMonitorCycle(): Promise<{
 }> {
   console.log("[v0] Monitor cycle starting...")
   const config = await getConfig()
-  const pools = config.pools || {}
+  const pools = (config.pools && Object.keys(config.pools).length > 0) ? config.pools : DEFAULT_POOLS
   const alertsConfig = config.alertsConfig || {}
   const thresholds = config.thresholds || { buy: 15, sell: 15 }
-  const network = config.network || "ronin"
+  const network = config.network || DEFAULT_NETWORK
   const telegramCfg = config.telegram
 
   console.log("[v0] Telegram config:", JSON.stringify({
