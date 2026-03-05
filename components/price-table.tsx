@@ -30,9 +30,10 @@ interface PriceTableProps {
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
+  dynoCoinPriceUsd?: number
 }
 
-export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts }: PriceTableProps) {
+export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts, dynoCoinPriceUsd = 0 }: PriceTableProps) {
   const { t } = useI18n()
 
   const [selectedAsset, setSelectedAsset] = useState<{
@@ -275,6 +276,7 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                         change24h: res.change24h,
                         volume: res.volume,
                         imageUrl: res.imageUrl,
+                        coinPrice: dynoCoinPriceUsd,
                         inputs: recipeMap[res.symbol]?.map(inp => ({
                           resource: inp.resource,
                           quantity: inp.quantity,
@@ -291,6 +293,12 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                   <p className="font-mono text-lg font-bold text-card-foreground leading-none">
                     {formatPrice(res.marketPrice)}
                   </p>
+                  {/* DYNO COIN value */}
+                  {dynoCoinPriceUsd > 0 && res.symbol !== "DYNO COIN" && (
+                    <p className="font-mono text-[11px] font-semibold text-amber-400 leading-tight mt-0.5">
+                      {(res.marketPrice / dynoCoinPriceUsd).toFixed(2)} DYNO
+                    </p>
+                  )}
                   <div className="flex items-center gap-1.5 mt-1">
                     {res.change24h !== 0 && (
                       <span className={`flex items-center gap-0.5 text-[11px] font-medium ${res.change24h > 0 ? "text-primary" : "text-destructive"}`}>

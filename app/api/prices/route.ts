@@ -36,19 +36,37 @@ async function fetchWithTimeout(url: string, timeout: number): Promise<Response>
 async function fetchBatch(addresses: string[], network: string): Promise<Record<string, PriceResult>> {
   const results: Record<string, PriceResult> = {}
   const joined = addresses.join(",")
-  const url = `${GECKO_BASE_URL}/networks/${network}/pools/multi/${joined}`
+  const url = `${GECKO_BASE_URL}/networks/${network}/pools/multi/${joined}?include=base_token`
 
   try {
     const res = await fetchWithTimeout(url, FETCH_TIMEOUT)
     if (!res.ok) return results
     const data = await res.json()
+
+    // Build a map of included tokens by id for image lookup
+    const includedTokens: Record<string, { image_url?: string; name?: string; symbol?: string }> = {}
+    if (data.included && Array.isArray(data.included)) {
+      for (const inc of data.included) {
+        if (inc.type === "token" && inc.id) {
+          includedTokens[inc.id] = {
+            image_url: inc.attributes?.image_url || "",
+            name: inc.attributes?.name || "",
+            symbol: inc.attributes?.symbol || "",
+          }
+        }
+      }
+    }
+
     for (const item of data.data ?? []) {
       const poolAddr = item.attributes?.address?.toLowerCase()
       if (!poolAddr) continue
-      // Extrair imagem e nome do token base da pool
-      const baseTokenData = item.relationships?.base_token?.data
-      const tokenName = item.attributes?.name?.split(" / ")?.[0] || ""
-      const tokenImageUrl = baseTokenData?.attributes?.image_url || ""
+
+      // Get base token image from included data
+      const baseTokenRef = item.relationships?.base_token?.data
+      const baseTokenId = baseTokenRef?.id || ""
+      const includedToken = includedTokens[baseTokenId]
+      const tokenImageUrl = includedToken?.image_url || ""
+      const tokenName = item.attributes?.name?.split(" / ")?.[0] || includedToken?.name || ""
 
       results[poolAddr] = {
         price_usd: parseFloat(item.attributes?.base_token_price_usd || "0"),
@@ -73,7 +91,7 @@ export async function GET() {
 
   try {
     const config = await getConfig()
-    pools = config.pools ?? pools
+    pools = (config.pools && Object.keys(config.pools).length > 0) ? config.pools : pools
     network = config.network ?? network
     thresholds = config.thresholds ?? thresholds
     alertsConfig = config.alertsConfig ?? alertsConfig
@@ -112,6 +130,19 @@ export async function GET() {
     }
   }
 
+  // Find DYNO COIN price by pool address (the symbol may vary: "COIN", "DYNO COIN", etc.)
+  const DYNO_COIN_POOL_ADDRESS = "0x8d896c96ffcafbf12d86dd4510236de7bcfa7dcf"
+  let dynoCoinPriceUsd = allPrices[DYNO_COIN_POOL_ADDRESS]?.price_usd ?? 0
+  if (dynoCoinPriceUsd === 0) {
+    // Fallback: search by pool address in symbolPrices
+    for (const [symbol, addr] of poolEntries) {
+      if (addr.toLowerCase() === DYNO_COIN_POOL_ADDRESS && symbolPrices[symbol]) {
+        dynoCoinPriceUsd = symbolPrices[symbol].price_usd
+        break
+      }
+    }
+  }
+
   // Carregar receitas do DB (mesmas que o frontend usa) para calculo consistente
   let recipes: Recipe[] = DEFAULT_RECIPES
   try {
@@ -143,5 +174,6 @@ export async function GET() {
     thresholds,
     alertsConfig,
     banners,
+    dynoCoinPriceUsd,
   })
 }

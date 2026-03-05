@@ -18,6 +18,7 @@ interface OpportunitiesPanelProps {
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
+  dynoCoinPriceUsd?: number
 }
 
 interface Opportunity {
@@ -30,7 +31,7 @@ interface Opportunity {
   volume: number
 }
 
-export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds }: OpportunitiesPanelProps) {
+export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, dynoCoinPriceUsd = 0 }: OpportunitiesPanelProps) {
   const { t } = useI18n()
   const opportunities = useMemo(() => {
     const resources = getAllResources()
@@ -142,6 +143,11 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                             {t("opps.cost")}: {formatPrice(opp.cost)}
                           </span>
                         </div>
+                        {dynoCoinPriceUsd > 0 && opp.symbol !== "DYNO COIN" && (
+                          <span className="font-mono text-[10px] font-semibold text-amber-400">
+                            {(opp.marketPrice / dynoCoinPriceUsd).toFixed(2)} DYNO
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="font-mono text-sm font-bold text-primary">
@@ -183,6 +189,11 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                             {t("opps.cost")}: {formatPrice(opp.cost)}
                           </span>
                         </div>
+                        {dynoCoinPriceUsd > 0 && opp.symbol !== "DYNO COIN" && (
+                          <span className="font-mono text-[10px] font-semibold text-amber-400">
+                            {(opp.marketPrice / dynoCoinPriceUsd).toFixed(2)} DYNO
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="font-mono text-sm font-bold text-destructive">

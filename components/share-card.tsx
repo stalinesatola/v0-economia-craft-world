@@ -5,6 +5,7 @@ import { Share2, X, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatPrice } from "@/lib/craft-data"
 import { useI18n } from "@/lib/i18n"
+import { RESOURCE_COLORS } from "@/lib/resource-images"
 
 interface ShareCardProps {
   symbol: string
@@ -15,6 +16,7 @@ interface ShareCardProps {
   change24h: number
   volume: number
   imageUrl?: string
+  coinPrice?: number
   inputs?: { resource: string; quantity: number; unitPrice: number; subtotal: number }[]
 }
 
@@ -22,153 +24,218 @@ interface ShareCardProps {
 function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const W = 600
-    const H = data.inputs && data.inputs.length > 0 ? 440 + data.inputs.length * 28 : 380
+    const hasCoin = data.coinPrice && data.coinPrice > 0 && data.symbol !== "DYNO COIN"
+    const coinExtraH = hasCoin ? 20 : 0
+    const H = data.inputs && data.inputs.length > 0 ? 440 + coinExtraH + data.inputs.length * 28 : 380 + coinExtraH
     const canvas = document.createElement("canvas")
     canvas.width = W
     canvas.height = H
     const ctx = canvas.getContext("2d")
     if (!ctx) return reject(new Error("Canvas not supported"))
 
-    // Background gradient
-    const bg = ctx.createLinearGradient(0, 0, 0, H)
-    bg.addColorStop(0, "#0f1019")
-    bg.addColorStop(1, "#161825")
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, W, H)
+    // Helper to draw the rest of the card (called after optional image load)
+    const drawCard = (img?: HTMLImageElement) => {
+      // Background gradient
+      const bg = ctx.createLinearGradient(0, 0, 0, H)
+      bg.addColorStop(0, "#0f1019")
+      bg.addColorStop(1, "#161825")
+      ctx.fillStyle = bg
+      ctx.fillRect(0, 0, W, H)
 
-    // Border
-    ctx.strokeStyle = data.signal === "buy" ? "#e8a63a" : data.signal === "sell" ? "#e05252" : "#2a2d3e"
-    ctx.lineWidth = 2
-    ctx.strokeRect(1, 1, W - 2, H - 2)
+      // Border
+      ctx.strokeStyle = data.signal === "buy" ? "#e8a63a" : data.signal === "sell" ? "#e05252" : "#2a2d3e"
+      ctx.lineWidth = 2
+      ctx.strokeRect(1, 1, W - 2, H - 2)
 
-    // Top accent bar
-    ctx.fillStyle = data.signal === "buy" ? "#e8a63a" : data.signal === "sell" ? "#e05252" : "#3b82f6"
-    ctx.fillRect(0, 0, W, 4)
+      // Top accent bar
+      ctx.fillStyle = data.signal === "buy" ? "#e8a63a" : data.signal === "sell" ? "#e05252" : "#3b82f6"
+      ctx.fillRect(0, 0, W, 4)
 
-    // Header
-    ctx.font = "bold 13px 'JetBrains Mono', monospace"
-    ctx.fillStyle = "#8b8fa3"
-    ctx.textAlign = "left"
-    ctx.fillText("CRAFT WORLD - ECONOMY", 24, 36)
+      // Header
+      ctx.font = "bold 13px 'JetBrains Mono', monospace"
+      ctx.fillStyle = "#8b8fa3"
+      ctx.textAlign = "left"
+      ctx.fillText("CRAFT WORLD - ECONOMY", 24, 36)
 
-    // Signal badge
-    if (data.signal !== "neutral") {
-      const badgeText = data.signal === "buy"
-        ? (locale === "pt" ? "COMPRAR" : "BUY")
-        : (locale === "pt" ? "VENDER" : "SELL")
-      const badgeColor = data.signal === "buy" ? "#e8a63a" : "#e05252"
-      ctx.font = "bold 12px 'JetBrains Mono', monospace"
-      const tw = ctx.measureText(badgeText).width
-      const bx = W - 24 - tw - 16
-      ctx.fillStyle = badgeColor + "30"
-      ctx.beginPath()
-      ctx.roundRect(bx, 20, tw + 16, 24, 4)
-      ctx.fill()
-      ctx.fillStyle = badgeColor
-      ctx.fillText(badgeText, bx + 8, 37)
-    }
+      // Signal badge
+      if (data.signal !== "neutral") {
+        const badgeText = data.signal === "buy"
+          ? (locale === "pt" ? "COMPRAR" : "BUY")
+          : (locale === "pt" ? "VENDER" : "SELL")
+        const badgeColor = data.signal === "buy" ? "#e8a63a" : "#e05252"
+        ctx.font = "bold 12px 'JetBrains Mono', monospace"
+        const tw = ctx.measureText(badgeText).width
+        const bx = W - 24 - tw - 16
+        ctx.fillStyle = badgeColor + "30"
+        ctx.beginPath()
+        ctx.roundRect(bx, 20, tw + 16, 24, 4)
+        ctx.fill()
+        ctx.fillStyle = badgeColor
+        ctx.fillText(badgeText, bx + 8, 37)
+      }
 
-    // Symbol
-    ctx.font = "bold 28px 'JetBrains Mono', monospace"
-    ctx.fillStyle = "#f0f0f5"
-    ctx.fillText(data.symbol, 24, 80)
+      // Resource icon (always drawn) + Symbol
+      const iconCx = 24 + 22
+      const iconCy = 72
+      const iconR = 22
+      const symbolX = 24 + 44 + 10
 
-    // Price
-    ctx.font = "bold 36px 'JetBrains Mono', monospace"
-    ctx.fillStyle = "#ffffff"
-    ctx.fillText(formatPrice(data.marketPrice), 24, 128)
-
-    // Change 24h
-    const changeText = `${data.change24h >= 0 ? "+" : ""}${data.change24h.toFixed(1)}% (24h)`
-    ctx.font = "bold 14px 'JetBrains Mono', monospace"
-    ctx.fillStyle = data.change24h >= 0 ? "#e8a63a" : "#e05252"
-    ctx.fillText(changeText, 24, 155)
-
-    // Separator
-    ctx.strokeStyle = "#2a2d3e"
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(24, 170)
-    ctx.lineTo(W - 24, 170)
-    ctx.stroke()
-
-    // Cost + Deviation + Volume
-    let y = 195
-    ctx.font = "13px 'JetBrains Mono', monospace"
-    ctx.fillStyle = "#8b8fa3"
-
-    const costLabel = locale === "pt" ? "Custo de Producao" : "Production Cost"
-    ctx.fillText(costLabel, 24, y)
-    ctx.fillStyle = "#f0f0f5"
-    ctx.textAlign = "right"
-    ctx.fillText(data.cost > 0 ? formatPrice(data.cost) : "--", W - 24, y)
-    ctx.textAlign = "left"
-
-    y += 26
-    ctx.fillStyle = "#8b8fa3"
-    const devLabel = locale === "pt" ? "Desvio" : "Deviation"
-    ctx.fillText(devLabel, 24, y)
-    ctx.fillStyle = data.signal === "buy" ? "#e8a63a" : data.signal === "sell" ? "#e05252" : "#8b8fa3"
-    ctx.textAlign = "right"
-    ctx.fillText(data.cost > 0 ? `${data.deviation > 0 ? "+" : ""}${data.deviation.toFixed(1)}%` : "--", W - 24, y)
-    ctx.textAlign = "left"
-
-    y += 26
-    ctx.fillStyle = "#8b8fa3"
-    ctx.fillText("Volume 24h", 24, y)
-    ctx.fillStyle = "#f0f0f5"
-    ctx.textAlign = "right"
-    ctx.fillText(formatPrice(data.volume), W - 24, y)
-    ctx.textAlign = "left"
-
-    // Inputs
-    if (data.inputs && data.inputs.length > 0) {
-      y += 20
+      if (img) {
+        // Draw image in circular clip
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(iconCx, iconCy, iconR, 0, Math.PI * 2)
+        ctx.closePath()
+        ctx.clip()
+        ctx.drawImage(img, 24, 50, 44, 44)
+        ctx.restore()
+      } else {
+        // Draw colored circle with initials as fallback
+        const color = RESOURCE_COLORS[data.symbol] ?? "#666666"
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(iconCx, iconCy, iconR, 0, Math.PI * 2)
+        ctx.fillStyle = color
+        ctx.fill()
+        ctx.restore()
+        // Initials
+        ctx.font = "bold 16px 'JetBrains Mono', monospace"
+        ctx.fillStyle = "#ffffff"
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.fillText(data.symbol.slice(0, 2), iconCx, iconCy)
+        ctx.textAlign = "left"
+        ctx.textBaseline = "alphabetic"
+      }
+      // Ring around icon
       ctx.strokeStyle = "#2a2d3e"
+      ctx.lineWidth = 2
       ctx.beginPath()
-      ctx.moveTo(24, y)
-      ctx.lineTo(W - 24, y)
+      ctx.arc(iconCx, iconCy, iconR, 0, Math.PI * 2)
       ctx.stroke()
 
-      y += 22
-      ctx.font = "bold 11px 'JetBrains Mono', monospace"
-      ctx.fillStyle = "#8b8fa3"
-      ctx.fillText("INPUTS", 24, y)
+      ctx.font = "bold 28px 'JetBrains Mono', monospace"
+      ctx.fillStyle = "#f0f0f5"
+      ctx.fillText(data.symbol, symbolX, 80)
 
-      ctx.font = "12px 'JetBrains Mono', monospace"
-      for (const inp of data.inputs) {
-        y += 24
-        ctx.fillStyle = "#8b8fa3"
-        ctx.fillText(`${inp.quantity}x ${inp.resource}`, 36, y)
-        ctx.fillStyle = "#5a5e73"
-        const unitText = `($${inp.unitPrice.toFixed(6)} ${locale === "pt" ? "un." : "ea."})`
-        ctx.fillText(unitText, 36 + ctx.measureText(`${inp.quantity}x ${inp.resource}  `).width, y)
-        ctx.fillStyle = "#f0f0f5"
-        ctx.textAlign = "right"
-        ctx.fillText(inp.subtotal > 0 ? formatPrice(inp.subtotal) : "--", W - 24, y)
-        ctx.textAlign = "left"
+      // Price
+      ctx.font = "bold 36px 'JetBrains Mono', monospace"
+      ctx.fillStyle = "#ffffff"
+      ctx.fillText(formatPrice(data.marketPrice), 24, 128)
+
+      // COIN value below USD price
+      let coinOffsetY = 0
+      if (hasCoin && data.coinPrice && data.symbol !== "DYNO COIN") {
+        const coinValue = data.marketPrice / data.coinPrice
+        ctx.font = "bold 14px 'JetBrains Mono', monospace"
+        ctx.fillStyle = "#FFD700"
+        ctx.fillText(`${coinValue.toFixed(2)} DYNO`, 24, 148)
+        coinOffsetY = 20
       }
+
+      // Change 24h
+      const changeText = `${data.change24h >= 0 ? "+" : ""}${data.change24h.toFixed(1)}% (24h)`
+      ctx.font = "bold 14px 'JetBrains Mono', monospace"
+      ctx.fillStyle = data.change24h >= 0 ? "#e8a63a" : "#e05252"
+      ctx.fillText(changeText, 24, 155 + coinOffsetY)
+
+      // Separator
+      ctx.strokeStyle = "#2a2d3e"
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(24, 170 + coinOffsetY)
+      ctx.lineTo(W - 24, 170 + coinOffsetY)
+      ctx.stroke()
+
+      // Cost + Deviation + Volume
+      let y = 195 + coinOffsetY
+      ctx.font = "13px 'JetBrains Mono', monospace"
+      ctx.fillStyle = "#8b8fa3"
+
+      const costLabel = locale === "pt" ? "Custo de Producao" : "Production Cost"
+      ctx.fillText(costLabel, 24, y)
+      ctx.fillStyle = "#f0f0f5"
+      ctx.textAlign = "right"
+      ctx.fillText(data.cost > 0 ? formatPrice(data.cost) : "--", W - 24, y)
+      ctx.textAlign = "left"
+
+      y += 26
+      ctx.fillStyle = "#8b8fa3"
+      const devLabel = locale === "pt" ? "Desvio" : "Deviation"
+      ctx.fillText(devLabel, 24, y)
+      ctx.fillStyle = data.signal === "buy" ? "#e8a63a" : data.signal === "sell" ? "#e05252" : "#8b8fa3"
+      ctx.textAlign = "right"
+      ctx.fillText(data.cost > 0 ? `${data.deviation > 0 ? "+" : ""}${data.deviation.toFixed(1)}%` : "--", W - 24, y)
+      ctx.textAlign = "left"
+
+      y += 26
+      ctx.fillStyle = "#8b8fa3"
+      ctx.fillText("Volume 24h", 24, y)
+      ctx.fillStyle = "#f0f0f5"
+      ctx.textAlign = "right"
+      ctx.fillText(formatPrice(data.volume), W - 24, y)
+      ctx.textAlign = "left"
+
+      // Inputs
+      if (data.inputs && data.inputs.length > 0) {
+        y += 20
+        ctx.strokeStyle = "#2a2d3e"
+        ctx.beginPath()
+        ctx.moveTo(24, y)
+        ctx.lineTo(W - 24, y)
+        ctx.stroke()
+
+        y += 22
+        ctx.font = "bold 11px 'JetBrains Mono', monospace"
+        ctx.fillStyle = "#8b8fa3"
+        ctx.fillText("INPUTS", 24, y)
+
+        ctx.font = "12px 'JetBrains Mono', monospace"
+        for (const inp of data.inputs) {
+          y += 24
+          ctx.fillStyle = "#8b8fa3"
+          ctx.fillText(`${inp.quantity}x ${inp.resource}`, 36, y)
+          ctx.fillStyle = "#5a5e73"
+          const unitText = `($${inp.unitPrice.toFixed(6)} ${locale === "pt" ? "un." : "ea."})`
+          ctx.fillText(unitText, 36 + ctx.measureText(`${inp.quantity}x ${inp.resource}  `).width, y)
+          ctx.fillStyle = "#f0f0f5"
+          ctx.textAlign = "right"
+          ctx.fillText(inp.subtotal > 0 ? formatPrice(inp.subtotal) : "--", W - 24, y)
+          ctx.textAlign = "left"
+        }
+      }
+
+      // Footer
+      ctx.fillStyle = "#2a2d3e"
+      ctx.fillRect(0, H - 36, W, 36)
+      ctx.font = "bold 11px 'JetBrains Mono', monospace"
+      ctx.fillStyle = "#e8a63a"
+      ctx.textAlign = "center"
+      ctx.fillText("Craft World - Economy", W / 2, H - 13)
+
+      // Timestamp
+      ctx.font = "10px 'JetBrains Mono', monospace"
+      ctx.fillStyle = "#5a5e73"
+      ctx.textAlign = "right"
+      const now = new Date().toLocaleString(locale === "pt" ? "pt-PT" : "en-US", { timeZone: "Europe/Lisbon" })
+      ctx.fillText(now, W - 24, H - 13)
+
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob)
+        else reject(new Error("Failed to generate image"))
+      }, "image/png")
     }
 
-    // Footer
-    ctx.fillStyle = "#2a2d3e"
-    ctx.fillRect(0, H - 36, W, 36)
-    ctx.font = "bold 11px 'JetBrains Mono', monospace"
-    ctx.fillStyle = "#e8a63a"
-    ctx.textAlign = "center"
-    ctx.fillText("Craft World - Economy", W / 2, H - 13)
-
-    // Timestamp
-    ctx.font = "10px 'JetBrains Mono', monospace"
-    ctx.fillStyle = "#5a5e73"
-    ctx.textAlign = "right"
-    const now = new Date().toLocaleString(locale === "pt" ? "pt-PT" : "en-US", { timeZone: "Europe/Lisbon" })
-    ctx.fillText(now, W - 24, H - 13)
-
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob)
-      else reject(new Error("Failed to generate image"))
-    }, "image/png")
+    // Load resource image if available, then draw
+    if (data.imageUrl) {
+      const img = new Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => drawCard(img)
+      img.onerror = () => drawCard() // Fallback without image
+      img.src = data.imageUrl
+    } else {
+      drawCard()
+    }
   })
 }
 
@@ -296,8 +363,13 @@ function buildShareText(data: ShareCardProps, locale: string): string {
     ? (locale === "pt" ? "VENDER" : "SELL")
     : ""
 
+  const coinLine = data.coinPrice && data.coinPrice > 0 && data.symbol !== "DYNO COIN"
+    ? `(${(data.marketPrice / data.coinPrice).toFixed(2)} DYNO)`
+    : ""
+
   const lines = [
     `${signal ? `${signal} ` : ""}${data.symbol} ${formatPrice(data.marketPrice)}`,
+    coinLine,
     `${data.change24h >= 0 ? "+" : ""}${data.change24h.toFixed(1)}% (24h)`,
     data.cost > 0 ? `${locale === "pt" ? "Custo" : "Cost"}: ${formatPrice(data.cost)} | ${locale === "pt" ? "Desvio" : "Dev"}: ${data.deviation > 0 ? "+" : ""}${data.deviation.toFixed(1)}%` : "",
     "",

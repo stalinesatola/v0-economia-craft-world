@@ -19,6 +19,7 @@ interface PricesResponse {
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
   banners?: Array<{ id: string; position: string; enabled: boolean; imageUrl: string; linkUrl: string; altText: string; adScript: string }>
+  dynoCoinPriceUsd?: number
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -43,6 +44,7 @@ export function usePrices() {
     thresholds: data?.thresholds,
     alertsConfig: data?.alertsConfig,
     banners: data?.banners ?? [],
+    dynoCoinPriceUsd: data?.dynoCoinPriceUsd ?? 0,
     isLoading,
     isValidating,
     error,
