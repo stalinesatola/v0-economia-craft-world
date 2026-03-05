@@ -212,12 +212,16 @@ function buildCardMessage(
   const priceChange = prices[opp.symbol]?.price_change_24h ?? 0
   const changeIcon = priceChange >= 0 ? "+" : ""
   const volume = prices[opp.symbol]?.volume_usd_24h ?? 0
+  const coinPrice = prices["COIN"]?.price_usd ?? 0
 
   let msg = `${signalIcon} <b>${signalEmoji} ${opp.symbol}</b>\n`
   msg += `<i>${now}</i>\n\n`
 
   // Price info
   msg += `<b>Preco Mercado:</b> $${opp.marketPrice.toFixed(8)}\n`
+  if (coinPrice > 0 && opp.symbol !== "COIN") {
+    msg += `<b>Valor COIN:</b> ${(opp.marketPrice / coinPrice).toFixed(2)} COIN\n`
+  }
   msg += `<b>Custo Producao:</b> $${opp.costPrice.toFixed(8)}\n`
   msg += `<b>Desvio:</b> ${deviation}\n`
   msg += `<b>Variacao 24h:</b> ${changeIcon}${priceChange.toFixed(2)}%\n`
@@ -240,7 +244,7 @@ function buildCardMessage(
 }
 
 // Legacy bulk message (kept for /alertas command)
-function buildAlertMessage(opportunities: Opportunity[], customMessage?: string): string {
+function buildAlertMessage(opportunities: Opportunity[], customMessage?: string, coinPrice?: number): string {
   const buyOps = opportunities.filter((o) => o.signal === "buy")
   const sellOps = opportunities.filter((o) => o.signal === "sell")
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
@@ -252,7 +256,8 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string)
     msg += `<b>OPORTUNIDADES DE COMPRA (${buyOps.length})</b>\n`
     for (const opp of buyOps) {
       const dev = opp.deviation > 0 ? `+${opp.deviation.toFixed(1)}%` : `${opp.deviation.toFixed(1)}%`
-      msg += `🟢 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
+      const coinStr = coinPrice && coinPrice > 0 && opp.symbol !== "COIN" ? ` | ${(opp.marketPrice / coinPrice).toFixed(2)} COIN` : ""
+      msg += `🟢 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
     }
     msg += "\n"
   }
@@ -260,14 +265,15 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string)
     msg += `<b>SINAIS DE VENDA (${sellOps.length})</b>\n`
     for (const opp of sellOps) {
       const dev = `+${opp.deviation.toFixed(1)}%`
-      msg += `🔴 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
+      const coinStr = coinPrice && coinPrice > 0 && opp.symbol !== "COIN" ? ` | ${(opp.marketPrice / coinPrice).toFixed(2)} COIN` : ""
+      msg += `🔴 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
     }
   }
   msg += `\nTotal: ${opportunities.length} alertas`
   return msg
 }
 
-function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessage?: string): string {
+function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessage?: string, coinPrice?: number): string {
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
   const changeIcon = price.price_change_24h >= 0 ? "+" : ""
 
@@ -275,6 +281,9 @@ function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessag
   if (customMessage) msg += `${customMessage}\n\n`
 
   msg += `<b>Preco:</b> $${price.price_usd.toFixed(8)}\n`
+  if (coinPrice && coinPrice > 0 && symbol !== "COIN") {
+    msg += `<b>Valor COIN:</b> ${(price.price_usd / coinPrice).toFixed(2)} COIN\n`
+  }
   msg += `<b>Variacao 24h:</b> ${changeIcon}${price.price_change_24h.toFixed(2)}%\n`
   msg += `<b>Volume 24h:</b> $${price.volume_usd_24h.toFixed(2)}\n`
 
@@ -284,6 +293,7 @@ function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessag
 // Build a summary of all prices
 function buildAllPricesMessage(prices: Record<string, PriceResult>, costs: Record<string, number>): string {
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
+  const coinPrice = prices["COIN"]?.price_usd ?? 0
   let msg = `<b>Craft World Economy - Precos</b>\n${now}\n\n`
 
   const sorted = Object.entries(prices).sort((a, b) => a[0].localeCompare(b[0]))
@@ -292,7 +302,8 @@ function buildAllPricesMessage(prices: Record<string, PriceResult>, costs: Recor
     const changeIcon = p.price_change_24h >= 0 ? "+" : ""
     const deviation = cost > 0 ? ((p.price_usd - cost) / cost * 100) : 0
     const devStr = cost > 0 ? ` | Desvio: ${deviation > 0 ? "+" : ""}${deviation.toFixed(1)}%` : ""
-    msg += `<b>${symbol}</b>: $${p.price_usd.toFixed(8)} (${changeIcon}${p.price_change_24h.toFixed(1)}%)${devStr}\n`
+    const coinStr = coinPrice > 0 && symbol !== "COIN" ? ` | ${(p.price_usd / coinPrice).toFixed(2)} COIN` : ""
+    msg += `<b>${symbol}</b>: $${p.price_usd.toFixed(8)}${coinStr} (${changeIcon}${p.price_change_24h.toFixed(1)}%)${devStr}\n`
   }
 
   msg += `\nTotal: ${sorted.length} recursos`
@@ -350,7 +361,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       if (!prices[symbol]) {
         return `Nao foi possivel obter preco para <b>${symbol}</b>.`
       }
-      return buildPriceAlertMessage(symbol, prices[symbol])
+      return buildPriceAlertMessage(symbol, prices[symbol], undefined, prices["COIN"]?.price_usd ?? 0)
     }
 
     if (cmd === "/alertas") {
@@ -384,7 +395,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       if (opportunities.length === 0) {
         return "Sem oportunidades de compra/venda neste momento."
       }
-      return buildAlertMessage(opportunities)
+      return buildAlertMessage(opportunities, undefined, prices["COIN"]?.price_usd ?? 0)
     }
 
     if (cmd === "/historico") {
@@ -558,7 +569,7 @@ export async function runMonitorCycle(): Promise<{
     // Add delay after opportunity cards
     if (hasOpportunities) await new Promise(resolve => setTimeout(resolve, 300))
 
-    const priceMsg = buildPriceAlertMessage(priceSymbol, prices[priceSymbol], telegramCfg.customAlertMessage)
+    const priceMsg = buildPriceAlertMessage(priceSymbol, prices[priceSymbol], telegramCfg.customAlertMessage, prices["COIN"]?.price_usd ?? 0)
     const priceResult = await sendTelegramMessage(priceMsg, telegramCfg.botToken, telegramCfg.chatId)
     priceAlertSent = priceResult.success
     console.log("[v0] Price alert result:", priceResult.success, priceResult.message)

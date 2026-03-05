@@ -275,6 +275,7 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                         change24h: res.change24h,
                         volume: res.volume,
                         imageUrl: res.imageUrl,
+                        coinPrice: prices["COIN"]?.price_usd ?? 0,
                         inputs: recipeMap[res.symbol]?.map(inp => ({
                           resource: inp.resource,
                           quantity: inp.quantity,
@@ -291,6 +292,12 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                   <p className="font-mono text-lg font-bold text-card-foreground leading-none">
                     {formatPrice(res.marketPrice)}
                   </p>
+                  {/* COIN value */}
+                  {prices["COIN"]?.price_usd > 0 && res.symbol !== "COIN" && (
+                    <p className="font-mono text-[11px] font-semibold text-amber-400 leading-tight mt-0.5">
+                      {(res.marketPrice / prices["COIN"].price_usd).toFixed(2)} COIN
+                    </p>
+                  )}
                   <div className="flex items-center gap-1.5 mt-1">
                     {res.change24h !== 0 && (
                       <span className={`flex items-center gap-0.5 text-[11px] font-medium ${res.change24h > 0 ? "text-primary" : "text-destructive"}`}>

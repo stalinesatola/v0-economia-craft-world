@@ -125,7 +125,9 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                   </span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {buyOpps.map((opp) => (
+                  {buyOpps.map((opp) => {
+                    const coinPrice = prices["COIN"]?.price_usd ?? 0
+                    return (
                     <div
                       key={opp.symbol}
                       className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5"
@@ -142,6 +144,11 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                             {t("opps.cost")}: {formatPrice(opp.cost)}
                           </span>
                         </div>
+                        {coinPrice > 0 && opp.symbol !== "COIN" && (
+                          <span className="font-mono text-[10px] font-semibold text-amber-400">
+                            {(opp.marketPrice / coinPrice).toFixed(2)} COIN
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="font-mono text-sm font-bold text-primary">
@@ -152,7 +159,8 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                         </span>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -166,7 +174,9 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                   </span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {sellOpps.map((opp) => (
+                  {sellOpps.map((opp) => {
+                    const coinPrice = prices["COIN"]?.price_usd ?? 0
+                    return (
                     <div
                       key={opp.symbol}
                       className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5"
@@ -183,6 +193,11 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                             {t("opps.cost")}: {formatPrice(opp.cost)}
                           </span>
                         </div>
+                        {coinPrice > 0 && opp.symbol !== "COIN" && (
+                          <span className="font-mono text-[10px] font-semibold text-amber-400">
+                            {(opp.marketPrice / coinPrice).toFixed(2)} COIN
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
                         <span className="font-mono text-sm font-bold text-destructive">
@@ -193,7 +208,8 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                         </span>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
