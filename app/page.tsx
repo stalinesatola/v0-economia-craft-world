@@ -14,7 +14,7 @@ import useSWR from "swr"
 const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
 
 export default function Home() {
-  const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners } = usePrices()
+  const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners, dynoCoinPriceUsd } = usePrices()
   const { t } = useI18n()
 
   // Check maintenance mode
@@ -93,7 +93,7 @@ export default function Home() {
           )}
 
           {showOpportunities && (
-            <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+            <OpportunitiesPanel prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} dynoCoinPriceUsd={dynoCoinPriceUsd} />
           )}
 
           {/* Sidebar Banner (shown as full width) */}
@@ -109,7 +109,7 @@ export default function Home() {
           )}
 
           {/* Resource Cards */}
-          <PriceTable prices={prices} pools={pools} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+          <PriceTable prices={prices} pools={pools} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} dynoCoinPriceUsd={dynoCoinPriceUsd} />
 
           <footer className="border-t border-border pt-4 pb-6">
             <div className="flex flex-col items-center gap-1 text-center">

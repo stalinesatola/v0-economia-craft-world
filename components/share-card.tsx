@@ -24,7 +24,7 @@ interface ShareCardProps {
 function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const W = 600
-    const hasCoin = data.coinPrice && data.coinPrice > 0 && data.symbol !== "COIN"
+    const hasCoin = data.coinPrice && data.coinPrice > 0 && data.symbol !== "DYNO COIN"
     const coinExtraH = hasCoin ? 20 : 0
     const H = data.inputs && data.inputs.length > 0 ? 440 + coinExtraH + data.inputs.length * 28 : 380 + coinExtraH
     const canvas = document.createElement("canvas")
@@ -125,7 +125,7 @@ function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> 
 
       // COIN value below USD price
       let coinOffsetY = 0
-      if (hasCoin && data.coinPrice && data.symbol !== "COIN") {
+      if (hasCoin && data.coinPrice && data.symbol !== "DYNO COIN") {
         const coinValue = data.marketPrice / data.coinPrice
         ctx.font = "bold 14px 'JetBrains Mono', monospace"
         ctx.fillStyle = "#FFD700"
@@ -363,7 +363,7 @@ function buildShareText(data: ShareCardProps, locale: string): string {
     ? (locale === "pt" ? "VENDER" : "SELL")
     : ""
 
-  const coinLine = data.coinPrice && data.coinPrice > 0 && data.symbol !== "COIN"
+  const coinLine = data.coinPrice && data.coinPrice > 0 && data.symbol !== "DYNO COIN"
     ? `(${(data.marketPrice / data.coinPrice).toFixed(2)} DYNO)`
     : ""
 

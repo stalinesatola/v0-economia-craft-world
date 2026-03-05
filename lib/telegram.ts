@@ -6,6 +6,17 @@ import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "./craft-data
 const TELEGRAM_API = "https://api.telegram.org"
 const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
 const API_HEADERS = { Accept: "application/json;version=20230203" }
+const DYNO_COIN_POOL_ADDRESS = "0x8d896c96ffcafbf12d86dd4510236de7bcfa7dcf"
+
+// Find DYNO COIN price from prices map (symbol can be "COIN", "DYNO COIN", etc.)
+function getDynoCoinPrice(prices: Record<string, PriceResult>, pools: Record<string, string>): number {
+  for (const [symbol, addr] of Object.entries(pools)) {
+    if (addr.toLowerCase() === DYNO_COIN_POOL_ADDRESS && prices[symbol]) {
+      return prices[symbol].price_usd
+    }
+  }
+  return 0
+}
 
 interface PriceResult {
   price_usd: number
@@ -205,6 +216,7 @@ function buildCardMessage(
   opp: Opportunity,
   recipes: Recipe[],
   prices: Record<string, PriceResult>,
+  pools: Record<string, string>,
 ): string {
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
   const signalEmoji = opp.signal === "buy" ? "COMPRAR" : "VENDER"
@@ -213,14 +225,14 @@ function buildCardMessage(
   const priceChange = prices[opp.symbol]?.price_change_24h ?? 0
   const changeIcon = priceChange >= 0 ? "+" : ""
   const volume = prices[opp.symbol]?.volume_usd_24h ?? 0
-  const coinPrice = prices["COIN"]?.price_usd ?? 0
+  const coinPrice = getDynoCoinPrice(prices, pools)
 
   let msg = `${signalIcon} <b>${signalEmoji} ${opp.symbol}</b>\n`
   msg += `<i>${now}</i>\n\n`
 
   // Price info
   msg += `<b>Preco Mercado:</b> $${opp.marketPrice.toFixed(8)}\n`
-  if (coinPrice > 0 && opp.symbol !== "COIN") {
+  if (coinPrice > 0 && opp.symbol !== "DYNO COIN") {
     msg += `<b>Valor DYNO:</b> ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO\n`
   }
   msg += `<b>Custo Producao:</b> $${opp.costPrice.toFixed(8)}\n`
@@ -245,7 +257,7 @@ function buildCardMessage(
 }
 
 // Legacy bulk message (kept for /alertas command)
-function buildAlertMessage(opportunities: Opportunity[], customMessage?: string, coinPrice?: number): string {
+function buildAlertMessage(opportunities: Opportunity[], customMessage?: string, dynoCoinPrice?: number): string {
   const buyOps = opportunities.filter((o) => o.signal === "buy")
   const sellOps = opportunities.filter((o) => o.signal === "sell")
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
@@ -257,7 +269,7 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string,
     msg += `<b>OPORTUNIDADES DE COMPRA (${buyOps.length})</b>\n`
     for (const opp of buyOps) {
       const dev = opp.deviation > 0 ? `+${opp.deviation.toFixed(1)}%` : `${opp.deviation.toFixed(1)}%`
-      const coinStr = coinPrice && coinPrice > 0 && opp.symbol !== "COIN" ? ` | ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO` : ""
+      const coinStr = dynoCoinPrice && dynoCoinPrice > 0 && opp.symbol !== "DYNO COIN" ? ` | ${(opp.marketPrice / dynoCoinPrice).toFixed(2)} DYNO` : ""
       msg += `🟢 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
     }
     msg += "\n"
@@ -266,7 +278,7 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string,
     msg += `<b>SINAIS DE VENDA (${sellOps.length})</b>\n`
     for (const opp of sellOps) {
       const dev = `+${opp.deviation.toFixed(1)}%`
-      const coinStr = coinPrice && coinPrice > 0 && opp.symbol !== "COIN" ? ` | ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO` : ""
+      const coinStr = dynoCoinPrice && dynoCoinPrice > 0 && opp.symbol !== "DYNO COIN" ? ` | ${(opp.marketPrice / dynoCoinPrice).toFixed(2)} DYNO` : ""
       msg += `🔴 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
     }
   }
@@ -274,7 +286,7 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string,
   return msg
 }
 
-function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessage?: string, coinPrice?: number): string {
+function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessage?: string, dynoCoinPrice?: number): string {
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
   const changeIcon = price.price_change_24h >= 0 ? "+" : ""
 
@@ -282,8 +294,8 @@ function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessag
   if (customMessage) msg += `${customMessage}\n\n`
 
   msg += `<b>Preco:</b> $${price.price_usd.toFixed(8)}\n`
-  if (coinPrice && coinPrice > 0 && symbol !== "COIN") {
-    msg += `<b>Valor DYNO:</b> ${(price.price_usd / coinPrice).toFixed(2)} DYNO\n`
+  if (dynoCoinPrice && dynoCoinPrice > 0 && symbol !== "DYNO COIN") {
+    msg += `<b>Valor DYNO:</b> ${(price.price_usd / dynoCoinPrice).toFixed(2)} DYNO\n`
   }
   msg += `<b>Variacao 24h:</b> ${changeIcon}${price.price_change_24h.toFixed(2)}%\n`
   msg += `<b>Volume 24h:</b> $${price.volume_usd_24h.toFixed(2)}\n`
@@ -292,9 +304,9 @@ function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessag
 }
 
 // Build a summary of all prices
-function buildAllPricesMessage(prices: Record<string, PriceResult>, costs: Record<string, number>): string {
+function buildAllPricesMessage(prices: Record<string, PriceResult>, costs: Record<string, number>, pools: Record<string, string>): string {
   const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
-  const coinPrice = prices["COIN"]?.price_usd ?? 0
+  const coinPrice = getDynoCoinPrice(prices, pools)
   let msg = `<b>Craft World Economy - Precos</b>\n${now}\n\n`
 
   const sorted = Object.entries(prices).sort((a, b) => a[0].localeCompare(b[0]))
@@ -303,7 +315,7 @@ function buildAllPricesMessage(prices: Record<string, PriceResult>, costs: Recor
     const changeIcon = p.price_change_24h >= 0 ? "+" : ""
     const deviation = cost > 0 ? ((p.price_usd - cost) / cost * 100) : 0
     const devStr = cost > 0 ? ` | Desvio: ${deviation > 0 ? "+" : ""}${deviation.toFixed(1)}%` : ""
-    const coinStr = coinPrice > 0 && symbol !== "COIN" ? ` | ${(p.price_usd / coinPrice).toFixed(2)} COIN` : ""
+    const coinStr = coinPrice > 0 && symbol !== "DYNO COIN" ? ` | ${(p.price_usd / coinPrice).toFixed(2)} DYNO` : ""
     msg += `<b>${symbol}</b>: $${p.price_usd.toFixed(8)}${coinStr} (${changeIcon}${p.price_change_24h.toFixed(1)}%)${devStr}\n`
   }
 
@@ -318,10 +330,6 @@ export async function handleBotCommand(command: string, chatId: string, botToken
   try {
     const config = await getConfig()
     const pools = (config.pools && Object.keys(config.pools).length > 0) ? config.pools : DEFAULT_POOLS
-    // Always ensure COIN pool is present for value conversion
-    if (!pools["COIN"] && DEFAULT_POOLS["COIN"]) {
-      pools["COIN"] = DEFAULT_POOLS["COIN"]
-    }
     const network = config.network || DEFAULT_NETWORK
 
     if (cmd === "/start" || cmd === "/help") {
@@ -354,7 +362,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       }
       const recipes = await loadRecipes()
       const costs = calcCostsFromRecipes(recipes, prices)
-      return buildAllPricesMessage(prices, costs)
+      return buildAllPricesMessage(prices, costs, pools)
     }
 
     if (cmd.startsWith("/preco ")) {
@@ -366,7 +374,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       if (!prices[symbol]) {
         return `Nao foi possivel obter preco para <b>${symbol}</b>.`
       }
-      return buildPriceAlertMessage(symbol, prices[symbol], undefined, prices["COIN"]?.price_usd ?? 0)
+      return buildPriceAlertMessage(symbol, prices[symbol], undefined, getDynoCoinPrice(prices, pools))
     }
 
     if (cmd === "/alertas") {
@@ -400,7 +408,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       if (opportunities.length === 0) {
         return "Sem oportunidades de compra/venda neste momento."
       }
-      return buildAlertMessage(opportunities, undefined, prices["COIN"]?.price_usd ?? 0)
+      return buildAlertMessage(opportunities, undefined, getDynoCoinPrice(prices, pools))
     }
 
     if (cmd === "/historico") {
@@ -436,10 +444,6 @@ export async function runMonitorCycle(): Promise<{
   console.log("[v0] Monitor cycle starting...")
   const config = await getConfig()
   const pools = (config.pools && Object.keys(config.pools).length > 0) ? config.pools : DEFAULT_POOLS
-  // Always ensure COIN pool is present for value conversion
-  if (!pools["COIN"] && DEFAULT_POOLS["COIN"]) {
-    pools["COIN"] = DEFAULT_POOLS["COIN"]
-  }
   const alertsConfig = config.alertsConfig || {}
   const thresholds = config.thresholds || { buy: 15, sell: 15 }
   const network = config.network || DEFAULT_NETWORK
@@ -544,7 +548,7 @@ export async function runMonitorCycle(): Promise<{
     let failCount = 0
 
     for (const opp of opportunities) {
-      const cardMsg = buildCardMessage(opp, recipes, prices)
+      const cardMsg = buildCardMessage(opp, recipes, prices, pools)
       const result = await sendTelegramMessage(cardMsg, telegramCfg.botToken, telegramCfg.chatId)
 
       if (result.success) {
@@ -578,7 +582,7 @@ export async function runMonitorCycle(): Promise<{
     // Add delay after opportunity cards
     if (hasOpportunities) await new Promise(resolve => setTimeout(resolve, 300))
 
-    const priceMsg = buildPriceAlertMessage(priceSymbol, prices[priceSymbol], telegramCfg.customAlertMessage, prices["COIN"]?.price_usd ?? 0)
+    const priceMsg = buildPriceAlertMessage(priceSymbol, prices[priceSymbol], telegramCfg.customAlertMessage, getDynoCoinPrice(prices, pools))
     const priceResult = await sendTelegramMessage(priceMsg, telegramCfg.botToken, telegramCfg.chatId)
     priceAlertSent = priceResult.success
     console.log("[v0] Price alert result:", priceResult.success, priceResult.message)

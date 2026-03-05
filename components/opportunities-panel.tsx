@@ -18,6 +18,7 @@ interface OpportunitiesPanelProps {
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
+  dynoCoinPriceUsd?: number
 }
 
 interface Opportunity {
@@ -30,7 +31,7 @@ interface Opportunity {
   volume: number
 }
 
-export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds }: OpportunitiesPanelProps) {
+export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, dynoCoinPriceUsd = 0 }: OpportunitiesPanelProps) {
   const { t } = useI18n()
   const opportunities = useMemo(() => {
     const resources = getAllResources()
@@ -125,9 +126,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                   </span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {buyOpps.map((opp) => {
-                    const coinPrice = prices["COIN"]?.price_usd ?? 0
-                    return (
+                  {buyOpps.map((opp) => (
                     <div
                       key={opp.symbol}
                       className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5"
@@ -144,9 +143,9 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                             {t("opps.cost")}: {formatPrice(opp.cost)}
                           </span>
                         </div>
-                        {coinPrice > 0 && opp.symbol !== "COIN" && (
+                        {dynoCoinPriceUsd > 0 && opp.symbol !== "DYNO COIN" && (
                           <span className="font-mono text-[10px] font-semibold text-amber-400">
-                            {(opp.marketPrice / coinPrice).toFixed(2)} DYNO
+                            {(opp.marketPrice / dynoCoinPriceUsd).toFixed(2)} DYNO
                           </span>
                         )}
                       </div>
@@ -159,8 +158,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                         </span>
                       </div>
                     </div>
-                    )
-                  })}
+                  ))}
                 </div>
               </div>
             )}
@@ -174,9 +172,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                   </span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {sellOpps.map((opp) => {
-                    const coinPrice = prices["COIN"]?.price_usd ?? 0
-                    return (
+                  {sellOpps.map((opp) => (
                     <div
                       key={opp.symbol}
                       className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5"
@@ -193,9 +189,9 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                             {t("opps.cost")}: {formatPrice(opp.cost)}
                           </span>
                         </div>
-                        {coinPrice > 0 && opp.symbol !== "COIN" && (
+                        {dynoCoinPriceUsd > 0 && opp.symbol !== "DYNO COIN" && (
                           <span className="font-mono text-[10px] font-semibold text-amber-400">
-                            {(opp.marketPrice / coinPrice).toFixed(2)} DYNO
+                            {(opp.marketPrice / dynoCoinPriceUsd).toFixed(2)} DYNO
                           </span>
                         )}
                       </div>
@@ -208,8 +204,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                         </span>
                       </div>
                     </div>
-                    )
-                  })}
+                  ))}
                 </div>
               </div>
             )}

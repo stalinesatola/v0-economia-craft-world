@@ -100,11 +100,6 @@ export async function GET() {
     // Use defaults
   }
 
-  // Always ensure COIN pool is present (needed for COIN value conversion)
-  if (!pools["COIN"] && DEFAULT_POOLS["COIN"]) {
-    pools["COIN"] = DEFAULT_POOLS["COIN"]
-  }
-
   const poolEntries = Object.entries(pools)
   const addresses = poolEntries.map(([, addr]) => addr).filter((a) => a.startsWith("0x"))
 
@@ -132,6 +127,19 @@ export async function GET() {
         priceData.image_url = adminImageUrl
       }
       symbolPrices[symbol] = priceData
+    }
+  }
+
+  // Find DYNO COIN price by pool address (the symbol may vary: "COIN", "DYNO COIN", etc.)
+  const DYNO_COIN_POOL_ADDRESS = "0x8d896c96ffcafbf12d86dd4510236de7bcfa7dcf"
+  let dynoCoinPriceUsd = allPrices[DYNO_COIN_POOL_ADDRESS]?.price_usd ?? 0
+  if (dynoCoinPriceUsd === 0) {
+    // Fallback: search by pool address in symbolPrices
+    for (const [symbol, addr] of poolEntries) {
+      if (addr.toLowerCase() === DYNO_COIN_POOL_ADDRESS && symbolPrices[symbol]) {
+        dynoCoinPriceUsd = symbolPrices[symbol].price_usd
+        break
+      }
     }
   }
 
@@ -166,5 +174,6 @@ export async function GET() {
     thresholds,
     alertsConfig,
     banners,
+    dynoCoinPriceUsd,
   })
 }

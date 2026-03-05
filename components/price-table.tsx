@@ -30,9 +30,10 @@ interface PriceTableProps {
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
   alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
+  dynoCoinPriceUsd?: number
 }
 
-export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts }: PriceTableProps) {
+export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts, dynoCoinPriceUsd = 0 }: PriceTableProps) {
   const { t } = useI18n()
 
   const [selectedAsset, setSelectedAsset] = useState<{
@@ -275,7 +276,7 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                         change24h: res.change24h,
                         volume: res.volume,
                         imageUrl: res.imageUrl,
-                        coinPrice: prices["COIN"]?.price_usd ?? 0,
+                        coinPrice: dynoCoinPriceUsd,
                         inputs: recipeMap[res.symbol]?.map(inp => ({
                           resource: inp.resource,
                           quantity: inp.quantity,
@@ -293,9 +294,9 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                     {formatPrice(res.marketPrice)}
                   </p>
                   {/* DYNO COIN value */}
-                  {prices["COIN"]?.price_usd > 0 && res.symbol !== "COIN" && (
+                  {dynoCoinPriceUsd > 0 && res.symbol !== "DYNO COIN" && (
                     <p className="font-mono text-[11px] font-semibold text-amber-400 leading-tight mt-0.5">
-                      {(res.marketPrice / prices["COIN"].price_usd).toFixed(2)} DYNO
+                      {(res.marketPrice / dynoCoinPriceUsd).toFixed(2)} DYNO
                     </p>
                   )}
                   <div className="flex items-center gap-1.5 mt-1">
