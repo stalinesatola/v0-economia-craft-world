@@ -221,7 +221,7 @@ function buildCardMessage(
   // Price info
   msg += `<b>Preco Mercado:</b> $${opp.marketPrice.toFixed(8)}\n`
   if (coinPrice > 0 && opp.symbol !== "COIN") {
-    msg += `<b>Valor COIN:</b> ${(opp.marketPrice / coinPrice).toFixed(2)} COIN\n`
+    msg += `<b>Valor DYNO:</b> ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO\n`
   }
   msg += `<b>Custo Producao:</b> $${opp.costPrice.toFixed(8)}\n`
   msg += `<b>Desvio:</b> ${deviation}\n`
@@ -257,7 +257,7 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string,
     msg += `<b>OPORTUNIDADES DE COMPRA (${buyOps.length})</b>\n`
     for (const opp of buyOps) {
       const dev = opp.deviation > 0 ? `+${opp.deviation.toFixed(1)}%` : `${opp.deviation.toFixed(1)}%`
-      const coinStr = coinPrice && coinPrice > 0 && opp.symbol !== "COIN" ? ` | ${(opp.marketPrice / coinPrice).toFixed(2)} COIN` : ""
+      const coinStr = coinPrice && coinPrice > 0 && opp.symbol !== "COIN" ? ` | ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO` : ""
       msg += `🟢 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
     }
     msg += "\n"
@@ -266,7 +266,7 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string,
     msg += `<b>SINAIS DE VENDA (${sellOps.length})</b>\n`
     for (const opp of sellOps) {
       const dev = `+${opp.deviation.toFixed(1)}%`
-      const coinStr = coinPrice && coinPrice > 0 && opp.symbol !== "COIN" ? ` | ${(opp.marketPrice / coinPrice).toFixed(2)} COIN` : ""
+      const coinStr = coinPrice && coinPrice > 0 && opp.symbol !== "COIN" ? ` | ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO` : ""
       msg += `🔴 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
     }
   }
@@ -283,7 +283,7 @@ function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessag
 
   msg += `<b>Preco:</b> $${price.price_usd.toFixed(8)}\n`
   if (coinPrice && coinPrice > 0 && symbol !== "COIN") {
-    msg += `<b>Valor COIN:</b> ${(price.price_usd / coinPrice).toFixed(2)} COIN\n`
+    msg += `<b>Valor DYNO:</b> ${(price.price_usd / coinPrice).toFixed(2)} DYNO\n`
   }
   msg += `<b>Variacao 24h:</b> ${changeIcon}${price.price_change_24h.toFixed(2)}%\n`
   msg += `<b>Volume 24h:</b> $${price.volume_usd_24h.toFixed(2)}\n`

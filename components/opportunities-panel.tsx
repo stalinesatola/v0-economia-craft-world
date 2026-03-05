@@ -146,7 +146,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                         </div>
                         {coinPrice > 0 && opp.symbol !== "COIN" && (
                           <span className="font-mono text-[10px] font-semibold text-amber-400">
-                            {(opp.marketPrice / coinPrice).toFixed(2)} COIN
+                            {(opp.marketPrice / coinPrice).toFixed(2)} DYNO
                           </span>
                         )}
                       </div>
@@ -195,7 +195,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                         </div>
                         {coinPrice > 0 && opp.symbol !== "COIN" && (
                           <span className="font-mono text-[10px] font-semibold text-amber-400">
-                            {(opp.marketPrice / coinPrice).toFixed(2)} COIN
+                            {(opp.marketPrice / coinPrice).toFixed(2)} DYNO
                           </span>
                         )}
                       </div>

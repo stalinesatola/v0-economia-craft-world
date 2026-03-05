@@ -129,7 +129,7 @@ function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> 
         const coinValue = data.marketPrice / data.coinPrice
         ctx.font = "bold 14px 'JetBrains Mono', monospace"
         ctx.fillStyle = "#FFD700"
-        ctx.fillText(`${coinValue.toFixed(2)} COIN`, 24, 148)
+        ctx.fillText(`${coinValue.toFixed(2)} DYNO`, 24, 148)
         coinOffsetY = 20
       }
 
@@ -364,7 +364,7 @@ function buildShareText(data: ShareCardProps, locale: string): string {
     : ""
 
   const coinLine = data.coinPrice && data.coinPrice > 0 && data.symbol !== "COIN"
-    ? `(${(data.marketPrice / data.coinPrice).toFixed(2)} COIN)`
+    ? `(${(data.marketPrice / data.coinPrice).toFixed(2)} DYNO)`
     : ""
 
   const lines = [

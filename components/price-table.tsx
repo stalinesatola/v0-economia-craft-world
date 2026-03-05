@@ -64,15 +64,6 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
     return map
   }, [recipes])
 
-  // Debug COIN price
-  console.log("[v0] PriceTable COIN check:", {
-    coinEntry: prices["COIN"],
-    coinPriceUsd: prices["COIN"]?.price_usd,
-    coinGt0: prices["COIN"]?.price_usd > 0,
-    allSymbols: Object.keys(prices),
-    sampleImageUrls: Object.entries(prices).slice(0, 3).map(([s, p]) => `${s}:${p.image_url ?? "none"}`)
-  })
-
   // Build resource list purely from prices (dynamic, from admin-registered pools)
   const resources = useMemo(() => {
     return Object.entries(prices).map(([symbol, priceData]) => {
@@ -301,10 +292,10 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
                   <p className="font-mono text-lg font-bold text-card-foreground leading-none">
                     {formatPrice(res.marketPrice)}
                   </p>
-                  {/* COIN value */}
+                  {/* DYNO COIN value */}
                   {prices["COIN"]?.price_usd > 0 && res.symbol !== "COIN" && (
                     <p className="font-mono text-[11px] font-semibold text-amber-400 leading-tight mt-0.5">
-                      {(res.marketPrice / prices["COIN"].price_usd).toFixed(2)} COIN
+                      {(res.marketPrice / prices["COIN"].price_usd).toFixed(2)} DYNO
                     </p>
                   )}
                   <div className="flex items-center gap-1.5 mt-1">
