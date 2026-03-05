@@ -64,6 +64,15 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
     return map
   }, [recipes])
 
+  // Debug COIN price
+  console.log("[v0] PriceTable COIN check:", {
+    coinEntry: prices["COIN"],
+    coinPriceUsd: prices["COIN"]?.price_usd,
+    coinGt0: prices["COIN"]?.price_usd > 0,
+    allSymbols: Object.keys(prices),
+    sampleImageUrls: Object.entries(prices).slice(0, 3).map(([s, p]) => `${s}:${p.image_url ?? "none"}`)
+  })
+
   // Build resource list purely from prices (dynamic, from admin-registered pools)
   const resources = useMemo(() => {
     return Object.entries(prices).map(([symbol, priceData]) => {

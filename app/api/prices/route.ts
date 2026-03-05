@@ -100,6 +100,11 @@ export async function GET() {
     // Use defaults
   }
 
+  // Always ensure COIN pool is present (needed for COIN value conversion)
+  if (!pools["COIN"] && DEFAULT_POOLS["COIN"]) {
+    pools["COIN"] = DEFAULT_POOLS["COIN"]
+  }
+
   const poolEntries = Object.entries(pools)
   const addresses = poolEntries.map(([, addr]) => addr).filter((a) => a.startsWith("0x"))
 

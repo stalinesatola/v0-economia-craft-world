@@ -318,6 +318,10 @@ export async function handleBotCommand(command: string, chatId: string, botToken
   try {
     const config = await getConfig()
     const pools = (config.pools && Object.keys(config.pools).length > 0) ? config.pools : DEFAULT_POOLS
+    // Always ensure COIN pool is present for value conversion
+    if (!pools["COIN"] && DEFAULT_POOLS["COIN"]) {
+      pools["COIN"] = DEFAULT_POOLS["COIN"]
+    }
     const network = config.network || DEFAULT_NETWORK
 
     if (cmd === "/start" || cmd === "/help") {
@@ -432,6 +436,10 @@ export async function runMonitorCycle(): Promise<{
   console.log("[v0] Monitor cycle starting...")
   const config = await getConfig()
   const pools = (config.pools && Object.keys(config.pools).length > 0) ? config.pools : DEFAULT_POOLS
+  // Always ensure COIN pool is present for value conversion
+  if (!pools["COIN"] && DEFAULT_POOLS["COIN"]) {
+    pools["COIN"] = DEFAULT_POOLS["COIN"]
+  }
   const alertsConfig = config.alertsConfig || {}
   const thresholds = config.thresholds || { buy: 15, sell: 15 }
   const network = config.network || DEFAULT_NETWORK
