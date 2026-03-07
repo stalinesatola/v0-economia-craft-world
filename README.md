@@ -229,6 +229,17 @@ RONIN_NETWORK=
 4. Push para a branch
 5. Abra um Pull Request
 
+   
+---
+
+# ☕ Donate
+
+# Ronin Wallet
+0x9ed51bd88215a1f9d0d631f84f220f7d2b153db1
+
+# Ton Wallet
+UQAFtuVudZ9O73-4Dab_aE_2B2F__GTZeTuDzxdtEGIKXs8A
+
 ---
 
 # 👨‍💻 Autor
