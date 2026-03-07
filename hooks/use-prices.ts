@@ -17,7 +17,7 @@ interface PricesResponse {
   count: number
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
-  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
+  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string; imageUrl?: string }>
   banners?: Array<{ id: string; position: string; enabled: boolean; imageUrl: string; linkUrl: string; altText: string; adScript: string }>
   dynoCoinPriceUsd?: number
 }

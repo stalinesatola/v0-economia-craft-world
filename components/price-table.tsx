@@ -29,7 +29,7 @@ interface PriceTableProps {
   isLoading?: boolean
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
-  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
+  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string; imageUrl?: string }>
   dynoCoinPriceUsd?: number
 }
 
@@ -87,7 +87,7 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
         volume: priceData.volume_usd_24h,
         change24h: priceData.price_change_24h,
         signal,
-        imageUrl: priceData.image_url,
+        imageUrl: alertCfg?.imageUrl || priceData.image_url,
         tokenName: priceData.token_name,
         category: alertCfg?.category ?? "factory",
         priority: alertCfg?.priority ?? "low",

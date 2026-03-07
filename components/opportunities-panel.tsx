@@ -17,7 +17,7 @@ interface OpportunitiesPanelProps {
   isLoading?: boolean
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
-  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
+  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string; imageUrl?: string }>
   dynoCoinPriceUsd?: number
 }
 

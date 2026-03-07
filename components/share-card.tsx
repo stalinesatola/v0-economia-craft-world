@@ -244,12 +244,14 @@ function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> 
     }
 
     // Load resource image if available, then draw
-    if (data.imageUrl) {
+    // Use direct asset URL to avoid CORS issues with proxy URLs
+    const directUrl = getDirectImageUrl(data.imageUrl)
+    if (directUrl) {
       const img = new Image()
       img.crossOrigin = "anonymous"
       img.onload = () => drawCard(img)
       img.onerror = () => drawCard() // Fallback without image
-      img.src = data.imageUrl
+      img.src = directUrl
     } else {
       drawCard()
     }
