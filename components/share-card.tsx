@@ -246,13 +246,25 @@ function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> 
     // Load resource image if available, then draw
     // Use direct asset URL to avoid CORS issues with proxy URLs
     const directUrl = getDirectImageUrl(data.imageUrl)
+    console.log("[v0] generateCardImage - loading image", { 
+      originalUrl: data.imageUrl, 
+      directUrl,
+      hasDirectUrl: !!directUrl 
+    })
     if (directUrl) {
       const img = new Image()
       img.crossOrigin = "anonymous"
-      img.onload = () => drawCard(img)
-      img.onerror = () => drawCard() // Fallback without image
+      img.onload = () => {
+        console.log("[v0] generateCardImage - image loaded successfully")
+        drawCard(img)
+      }
+      img.onerror = () => {
+        console.log("[v0] generateCardImage - image load failed, using fallback")
+        drawCard()
+      }
       img.src = directUrl
     } else {
+      console.log("[v0] generateCardImage - no image URL, using fallback")
       drawCard()
     }
   })
@@ -266,6 +278,12 @@ export function ShareButton({ data }: { data: ShareCardProps }) {
   const handleShare = useCallback(async (platform: "x" | "telegram" | "download") => {
     setGenerating(true)
     try {
+      const directUrl = getDirectImageUrl(data.imageUrl)
+      console.log("[v0] ShareButton - generating card", { 
+        symbol: data.symbol, 
+        imageUrl: data.imageUrl, 
+        directUrl,
+      })
       const blob = await generateCardImage(data, locale)
 
       if (platform === "download") {

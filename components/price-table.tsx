@@ -79,6 +79,9 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
       if (deviation < -buyTh) signal = "buy"
       else if (deviation > sellTh) signal = "sell"
 
+      const finalImageUrl = alertCfg?.imageUrl || priceData.image_url
+      console.log("[v0] Resource", symbol, "- alertCfg:", !!alertCfg, "alertImageUrl:", alertCfg?.imageUrl, "priceImageUrl:", priceData.image_url, "final:", finalImageUrl)
+
       return {
         symbol,
         marketPrice,
@@ -87,7 +90,7 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
         volume: priceData.volume_usd_24h,
         change24h: priceData.price_change_24h,
         signal,
-        imageUrl: alertCfg?.imageUrl || priceData.image_url,
+        imageUrl: finalImageUrl,
         tokenName: priceData.token_name,
         category: alertCfg?.category ?? "factory",
         priority: alertCfg?.priority ?? "low",
