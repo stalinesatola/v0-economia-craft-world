@@ -80,7 +80,6 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
       else if (deviation > sellTh) signal = "sell"
 
       const finalImageUrl = alertCfg?.imageUrl || priceData.image_url
-      console.log("[v0] Resource", symbol, "- alertCfg:", !!alertCfg, "alertImageUrl:", alertCfg?.imageUrl, "priceImageUrl:", priceData.image_url, "final:", finalImageUrl)
 
       return {
         symbol,
