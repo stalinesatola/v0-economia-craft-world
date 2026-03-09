@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { X, TrendingUp, TrendingDown, BarChart3, Loader2 } from "lucide-react"
+import { X, TrendingUp, TrendingDown, BarChart3, Loader2, CandlestickChart } from "lucide-react"
 import {
   AreaChart,
   Area,
@@ -15,6 +15,8 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  ComposedChart,
+  ReferenceLine,
 } from "recharts"
 import { formatPrice } from "@/lib/craft-data"
 import { useI18n } from "@/lib/i18n"
@@ -39,11 +41,66 @@ interface AssetChartProps {
 }
 
 const TIMEFRAMES = [
+  { label: "1M", timeframe: "minute", aggregate: "1", limit: "60" },
+  { label: "5M", timeframe: "minute", aggregate: "5", limit: "60" },
+  { label: "15M", timeframe: "minute", aggregate: "15", limit: "48" },
+  { label: "30M", timeframe: "minute", aggregate: "30", limit: "48" },
   { label: "1H", timeframe: "minute", aggregate: "15", limit: "4" },
   { label: "24H", timeframe: "hour", aggregate: "1", limit: "24" },
   { label: "7D", timeframe: "day", aggregate: "1", limit: "7" },
   { label: "30D", timeframe: "day", aggregate: "1", limit: "30" },
 ] as const
+
+// Custom Candlestick shape for recharts
+function CandlestickShape(props: {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  payload?: { open: number; close: number; high: number; low: number }
+  yAxis?: { scale: (v: number) => number }
+}) {
+  const { x = 0, width = 0, payload, yAxis } = props
+  if (!payload || !yAxis?.scale) return null
+
+  const { open, close, high, low } = payload
+  const isUp = close >= open
+  const color = isUp ? "oklch(0.75 0.18 145)" : "oklch(0.62 0.22 25)"
+
+  const yOpen = yAxis.scale(open)
+  const yClose = yAxis.scale(close)
+  const yHigh = yAxis.scale(high)
+  const yLow = yAxis.scale(low)
+
+  const bodyTop = Math.min(yOpen, yClose)
+  const bodyHeight = Math.abs(yClose - yOpen) || 1
+  const candleWidth = Math.max(width * 0.6, 4)
+  const candleX = x + (width - candleWidth) / 2
+
+  return (
+    <g>
+      {/* Wick */}
+      <line
+        x1={x + width / 2}
+        y1={yHigh}
+        x2={x + width / 2}
+        y2={yLow}
+        stroke={color}
+        strokeWidth={1}
+      />
+      {/* Body */}
+      <rect
+        x={candleX}
+        y={bodyTop}
+        width={candleWidth}
+        height={bodyHeight}
+        fill={isUp ? color : color}
+        stroke={color}
+        strokeWidth={1}
+      />
+    </g>
+  )
+}
 
 export function AssetChart({
   symbol,
@@ -57,8 +114,9 @@ export function AssetChart({
   const { t, locale } = useI18n()
   const [candles, setCandles] = useState<Candle[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTimeframe, setActiveTimeframe] = useState(2) // default 7D
+  const [activeTimeframe, setActiveTimeframe] = useState(5) // default 24H
   const [showVolume, setShowVolume] = useState(false)
+  const [chartType, setChartType] = useState<"area" | "candle">("area")
 
   const fetchOHLCV = useCallback(async (tfIndex: number) => {
     setLoading(true)
@@ -96,12 +154,14 @@ export function AssetChart({
     date: new Date(c.timestamp).toLocaleDateString(locale === "pt" ? "pt-PT" : "en-US", {
       day: "2-digit",
       month: "2-digit",
-      ...(activeTimeframe <= 1 ? { hour: "2-digit", minute: "2-digit" } : {}),
+      ...(activeTimeframe <= 4 ? { hour: "2-digit", minute: "2-digit" } : {}),
     }),
     price: c.close,
     volume: c.volume,
+    open: c.open,
     high: c.high,
     low: c.low,
+    close: c.close,
   }))
 
   const minPrice = chartData.length > 0 ? Math.min(...chartData.map((d) => d.low)) * 0.98 : 0
@@ -152,13 +212,13 @@ export function AssetChart({
           )}
 
           {/* Timeframe buttons */}
-          <div className="flex items-center gap-1.5 pt-2">
+          <div className="flex flex-wrap items-center gap-1 pt-2">
             {TIMEFRAMES.map((tf, i) => (
               <Button
                 key={tf.label}
                 variant={activeTimeframe === i ? "default" : "secondary"}
                 size="sm"
-                className="h-7 text-xs px-3"
+                className="h-6 text-[10px] px-2"
                 onClick={() => handleTimeframe(i)}
               >
                 {tf.label}
@@ -166,13 +226,21 @@ export function AssetChart({
             ))}
             <div className="mx-1 h-5 w-px bg-border" />
             <Button
+              variant={chartType === "candle" ? "default" : "secondary"}
+              size="sm"
+              className="h-6 text-[10px] px-2 gap-1"
+              onClick={() => setChartType(chartType === "area" ? "candle" : "area")}
+              title={chartType === "area" ? "Velas" : "Area"}
+            >
+              <CandlestickChart className="h-3 w-3" />
+            </Button>
+            <Button
               variant={showVolume ? "default" : "secondary"}
               size="sm"
-              className="h-7 text-xs px-2.5 gap-1"
+              className="h-6 text-[10px] px-2 gap-1"
               onClick={() => setShowVolume(!showVolume)}
             >
               <BarChart3 className="h-3 w-3" />
-              Vol
             </Button>
           </div>
         </CardHeader>
@@ -190,47 +258,97 @@ export function AssetChart({
               {/* Price chart */}
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0.015 270)" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      domain={[minPrice, maxPrice]}
-                      tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v: number) => formatPrice(v)}
-                      width={72}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "oklch(0.16 0.012 270)",
-                        border: "1px solid oklch(0.25 0.015 270)",
-                        borderRadius: "8px",
-                        fontSize: "11px",
-                        color: "oklch(0.95 0.005 90)",
-                      }}
-                      formatter={(value: string | number) => [formatPrice(Number(value)), t("chart.price")]}
-                      labelFormatter={(label: string) => `${locale === "pt" ? "Data" : "Date"}: ${label}`}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="price"
-                      stroke={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"}
-                      strokeWidth={2}
-                      fill={`url(#gradient-${symbol})`}
-                    />
-                  </AreaChart>
+                  {chartType === "area" ? (
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0.015 270)" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        domain={[minPrice, maxPrice]}
+                        tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) => formatPrice(v)}
+                        width={72}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "oklch(0.16 0.012 270)",
+                          border: "1px solid oklch(0.25 0.015 270)",
+                          borderRadius: "8px",
+                          fontSize: "11px",
+                          color: "oklch(0.95 0.005 90)",
+                        }}
+                        formatter={(value: string | number) => [formatPrice(Number(value)), t("chart.price")]}
+                        labelFormatter={(label: string) => `${locale === "pt" ? "Data" : "Date"}: ${label}`}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="price"
+                        stroke={isPositive ? "oklch(0.75 0.18 55)" : "oklch(0.62 0.22 25)"}
+                        strokeWidth={2}
+                        fill={`url(#gradient-${symbol})`}
+                      />
+                    </AreaChart>
+                  ) : (
+                    <ComposedChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0.015 270)" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        yAxisId="price"
+                        domain={[minPrice, maxPrice]}
+                        tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) => formatPrice(v)}
+                        width={72}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "oklch(0.16 0.012 270)",
+                          border: "1px solid oklch(0.25 0.015 270)",
+                          borderRadius: "8px",
+                          fontSize: "11px",
+                          color: "oklch(0.95 0.005 90)",
+                        }}
+                        formatter={(value: string | number, name: string) => {
+                          const labels: Record<string, string> = { open: "Abertura", high: "Alta", low: "Baixa", close: "Fecho" }
+                          return [formatPrice(Number(value)), labels[name] || name]
+                        }}
+                        labelFormatter={(label: string) => `${locale === "pt" ? "Data" : "Date"}: ${label}`}
+                      />
+                      {cost > 0 && cost >= minPrice && cost <= maxPrice && (
+                        <ReferenceLine
+                          yAxisId="price"
+                          y={cost}
+                          stroke="oklch(0.70 0.14 190)"
+                          strokeDasharray="5 5"
+                          strokeWidth={1}
+                        />
+                      )}
+                      <Bar
+                        yAxisId="price"
+                        dataKey="high"
+                        shape={(props: Record<string, unknown>) => <CandlestickShape {...props} yAxis={{ scale: (v: number) => props.y as number + ((props.payload as { high: number }).high - v) / ((props.payload as { high: number }).high - (props.payload as { low: number }).low) * (props.height as number) }} />}
+                        isAnimationActive={false}
+                      />
+                    </ComposedChart>
+                  )}
                 </ResponsiveContainer>
               </div>
 
