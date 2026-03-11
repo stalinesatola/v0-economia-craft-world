@@ -35,6 +35,9 @@ interface PriceTableProps {
 
 export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts, dynoCoinPriceUsd = 0 }: PriceTableProps) {
   const { t } = useI18n()
+  
+  // Debug: log pools received
+  console.log("[v0] PriceTable received poolMap:", poolMap ? Object.keys(poolMap).length : 0, "pools")
 
   const [selectedAsset, setSelectedAsset] = useState<{
     symbol: string
