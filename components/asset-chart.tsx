@@ -102,23 +102,21 @@ export function AssetChart({
   const chartRef = useRef<HTMLDivElement>(null)
 
   const fetchOHLCV = useCallback(async (tfIndex: number) => {
+    if (!poolAddress) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const tf = TIMEFRAMES[tfIndex]
-    const url = `/api/ohlcv/${poolAddress}?timeframe=${tf.timeframe}&aggregate=${tf.aggregate}&limit=${tf.limit}`
-    console.log("[v0] Fetching OHLCV:", url)
     try {
-      const res = await fetch(url)
-      console.log("[v0] OHLCV response status:", res.status)
+      const res = await fetch(`/api/ohlcv/${poolAddress}?timeframe=${tf.timeframe}&aggregate=${tf.aggregate}&limit=${tf.limit}`)
       if (res.ok) {
         const data = await res.json()
-        console.log("[v0] OHLCV candles received:", data.candles?.length ?? 0)
         setCandles(data.candles ?? [])
       } else {
-        console.log("[v0] OHLCV fetch failed:", res.status, res.statusText)
         setCandles([])
       }
-    } catch (err) {
-      console.log("[v0] OHLCV fetch error:", err)
+    } catch {
       setCandles([])
     } finally {
       setLoading(false)
@@ -126,14 +124,8 @@ export function AssetChart({
   }, [poolAddress])
 
   useEffect(() => {
-    console.log("[v0] AssetChart mounted, symbol:", symbol, "poolAddress:", poolAddress)
-    if (!poolAddress) {
-      console.log("[v0] No pool address provided!")
-      setLoading(false)
-      return
-    }
     fetchOHLCV(activeTimeframe)
-  }, [activeTimeframe, fetchOHLCV, poolAddress, symbol])
+  }, [activeTimeframe, fetchOHLCV])
 
   const handleTimeframe = (index: number) => {
     setActiveTimeframe(index)
