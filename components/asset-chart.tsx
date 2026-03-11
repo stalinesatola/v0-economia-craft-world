@@ -15,8 +15,6 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  ComposedChart,
-  ReferenceLine,
 } from "recharts"
 import { formatPrice } from "@/lib/craft-data"
 import { useI18n } from "@/lib/i18n"
@@ -51,54 +49,69 @@ const TIMEFRAMES = [
   { label: "30D", timeframe: "day", aggregate: "1", limit: "30" },
 ] as const
 
-// Custom Candlestick shape for recharts
-function CandlestickShape(props: {
-  x?: number
-  y?: number
-  width?: number
-  height?: number
-  payload?: { open: number; close: number; high: number; low: number }
-  yAxis?: { scale: (v: number) => number }
-}) {
-  const { x = 0, width = 0, payload, yAxis } = props
-  if (!payload || !yAxis?.scale) return null
-
-  const { open, close, high, low } = payload
-  const isUp = close >= open
-  const color = isUp ? "oklch(0.75 0.18 145)" : "oklch(0.62 0.22 25)"
-
-  const yOpen = yAxis.scale(open)
-  const yClose = yAxis.scale(close)
-  const yHigh = yAxis.scale(high)
-  const yLow = yAxis.scale(low)
-
-  const bodyTop = Math.min(yOpen, yClose)
-  const bodyHeight = Math.abs(yClose - yOpen) || 1
-  const candleWidth = Math.max(width * 0.6, 4)
-  const candleX = x + (width - candleWidth) / 2
-
+// Candlestick SVG renderer
+function CandlestickChart({ data, minPrice, maxPrice }: { data: any[]; minPrice: number; maxPrice: number }) {
+  if (!data || data.length === 0) return null
+  
   return (
-    <g>
-      {/* Wick */}
-      <line
-        x1={x + width / 2}
-        y1={yHigh}
-        x2={x + width / 2}
-        y2={yLow}
-        stroke={color}
-        strokeWidth={1}
-      />
-      {/* Body */}
-      <rect
-        x={candleX}
-        y={bodyTop}
-        width={candleWidth}
-        height={bodyHeight}
-        fill={isUp ? color : color}
-        stroke={color}
-        strokeWidth={1}
-      />
-    </g>
+    <div className="relative w-full h-full">
+      <svg width="100%" height="100%" viewBox={`0 0 ${data.length * 20} 200`} preserveAspectRatio="none" className="w-full h-full">
+        <defs>
+          <linearGradient id="grid-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="oklch(0.25 0.015 270)" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="oklch(0.25 0.015 270)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        
+        {/* Grid lines */}
+        {[0, 50, 100, 150, 200].map((y) => (
+          <line key={`grid-${y}`} x1="0" y1={y} x2="100%" y2={y} stroke="oklch(0.25 0.015 270)" strokeWidth="0.5" opacity="0.3" vectorEffect="non-scaling-stroke" />
+        ))}
+        
+        {/* Candlesticks */}
+        {data.map((candle, i) => {
+          const priceRange = maxPrice - minPrice
+          const yScale = (price: number) => 200 - ((price - minPrice) / priceRange) * 200
+          
+          const isUp = candle.close >= candle.open
+          const color = isUp ? "oklch(0.75 0.18 145)" : "oklch(0.62 0.22 25)"
+          
+          const x = i * 20 + 10
+          const yOpen = yScale(candle.open)
+          const yClose = yScale(candle.close)
+          const yHigh = yScale(candle.high)
+          const yLow = yScale(candle.low)
+          
+          const bodyTop = Math.min(yOpen, yClose)
+          const bodyHeight = Math.abs(yClose - yOpen) || 1
+          
+          return (
+            <g key={i}>
+              {/* Wick */}
+              <line x1={x} y1={yHigh} x2={x} y2={yLow} stroke={color} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+              {/* Body */}
+              <rect
+                x={x - 4}
+                y={bodyTop}
+                width={8}
+                height={Math.max(bodyHeight, 1)}
+                fill={isUp ? color : "transparent"}
+                stroke={color}
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
+            </g>
+          )
+        })}
+      </svg>
+      
+      {/* Y-axis labels */}
+      <div className="absolute right-0 top-0 h-full w-16 flex flex-col justify-between text-[10px] text-muted-foreground pr-1 pointer-events-none">
+        <span className="text-right">{formatPrice(maxPrice)}</span>
+        <span className="text-right">{formatPrice((minPrice + maxPrice) / 2)}</span>
+        <span className="text-right">{formatPrice(minPrice)}</span>
+      </div>
+    </div>
   )
 }
 
@@ -257,8 +270,8 @@ export function AssetChart({
             <div className="flex flex-col gap-3">
               {/* Price chart */}
               <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  {chartType === "area" ? (
+                {chartType === "area" ? (
+                  <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient id={`gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
@@ -300,56 +313,10 @@ export function AssetChart({
                         fill={`url(#gradient-${symbol})`}
                       />
                     </AreaChart>
-                  ) : (
-                    <ComposedChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0.015 270)" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        yAxisId="price"
-                        domain={[minPrice, maxPrice]}
-                        tick={{ fontSize: 10, fill: "oklch(0.60 0.02 260)" }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v: number) => formatPrice(v)}
-                        width={72}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "oklch(0.16 0.012 270)",
-                          border: "1px solid oklch(0.25 0.015 270)",
-                          borderRadius: "8px",
-                          fontSize: "11px",
-                          color: "oklch(0.95 0.005 90)",
-                        }}
-                        formatter={(value: string | number, name: string) => {
-                          const labels: Record<string, string> = { open: "Abertura", high: "Alta", low: "Baixa", close: "Fecho" }
-                          return [formatPrice(Number(value)), labels[name] || name]
-                        }}
-                        labelFormatter={(label: string) => `${locale === "pt" ? "Data" : "Date"}: ${label}`}
-                      />
-                      {cost > 0 && cost >= minPrice && cost <= maxPrice && (
-                        <ReferenceLine
-                          yAxisId="price"
-                          y={cost}
-                          stroke="oklch(0.70 0.14 190)"
-                          strokeDasharray="5 5"
-                          strokeWidth={1}
-                        />
-                      )}
-                      <Bar
-                        yAxisId="price"
-                        dataKey="high"
-                        shape={(props: Record<string, unknown>) => <CandlestickShape {...props} yAxis={{ scale: (v: number) => props.y as number + ((props.payload as { high: number }).high - v) / ((props.payload as { high: number }).high - (props.payload as { low: number }).low) * (props.height as number) }} />}
-                        isAnimationActive={false}
-                      />
-                    </ComposedChart>
-                  )}
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
+                ) : (
+                  <CandlestickChart data={chartData} minPrice={minPrice} maxPrice={maxPrice} />
+                )}
               </div>
 
               {/* Volume chart */}
