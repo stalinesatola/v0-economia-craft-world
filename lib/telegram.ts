@@ -114,7 +114,7 @@ export async function sendTelegramMessage(text: string, botToken?: string, chatI
   }
 
   if (!token || !chat) {
-    return { success: false, message: "Bot Token ou Chat ID nao configurados." }
+    return { success: false, message: "Bot Token or Chat ID not configured." }
   }
 
   try {
@@ -137,9 +137,9 @@ export async function sendTelegramMessage(text: string, botToken?: string, chatI
       return { success: false, message: errMsg }
     }
 
-    return { success: true, message: "Mensagem enviada com sucesso" }
+    return { success: true, message: "Message sent successfully" }
   } catch (error) {
-    const errMsg = `Erro de rede: ${error instanceof Error ? error.message : "Unknown"}`
+    const errMsg = `Network error: ${error instanceof Error ? error.message : "Unknown"}`
     console.error("[v0] Telegram network error:", errMsg)
     return { success: false, message: errMsg }
   }
@@ -147,15 +147,15 @@ export async function sendTelegramMessage(text: string, botToken?: string, chatI
 
 // ── Send test message ──
 export async function sendTestMessage(): Promise<{ success: boolean; message: string }> {
-  const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
-  const text = `<b>Craft World Economy - Teste</b>\n\nMensagem de teste enviada com sucesso.\nData: ${now}`
+  const now = new Date().toLocaleString("en-US", { timeZone: "UTC" })
+  const text = `<b>Craft World Economy - Test</b>\n\nTest message sent successfully.\nDate: ${now} UTC`
   const result = await sendTelegramMessage(text)
 
   await saveAlertHistory({
     timestamp: new Date().toISOString(),
     type: "test",
     success: result.success,
-    message: result.success ? "Mensagem de teste enviada" : result.message,
+    message: result.success ? "Test message sent" : result.message,
   })
 
   return result
@@ -218,8 +218,8 @@ function buildCardMessage(
   prices: Record<string, PriceResult>,
   pools: Record<string, string>,
 ): string {
-  const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
-  const signalEmoji = opp.signal === "buy" ? "COMPRAR" : "VENDER"
+  const now = new Date().toLocaleString("en-US", { timeZone: "UTC" })
+  const signalEmoji = opp.signal === "buy" ? "BUY" : "SELL"
   const signalIcon = opp.signal === "buy" ? "🟢" : "🔴"
   const deviation = opp.deviation > 0 ? `+${opp.deviation.toFixed(1)}%` : `${opp.deviation.toFixed(1)}%`
   const priceChange = prices[opp.symbol]?.price_change_24h ?? 0
@@ -228,18 +228,18 @@ function buildCardMessage(
   const coinPrice = getDynoCoinPrice(prices, pools)
 
   let msg = `${signalIcon} <b>${signalEmoji} ${opp.symbol}</b>\n`
-  msg += `<i>${now}</i>\n\n`
+  msg += `<i>${now} UTC</i>\n\n`
 
   // Price info
-  msg += `<b>Preco Mercado:</b> $${opp.marketPrice.toFixed(8)}\n`
+  msg += `<b>Market Price:</b> $${opp.marketPrice.toFixed(8)}\n`
   if (coinPrice > 0 && opp.symbol !== "DYNO COIN") {
-    msg += `<b>Valor DYNO:</b> ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO\n`
+    msg += `<b>DYNO Value:</b> ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO\n`
   }
-  msg += `<b>Custo Producao:</b> $${opp.costPrice.toFixed(8)}\n`
-  msg += `<b>Desvio:</b> ${deviation}\n`
-  msg += `<b>Variacao 24h:</b> ${changeIcon}${priceChange.toFixed(2)}%\n`
-  if (volume > 0) msg += `<b>Volume 24h:</b> $${volume.toFixed(2)}\n`
-  msg += `<b>Prioridade:</b> ${opp.priority.toUpperCase()}\n`
+  msg += `<b>Production Cost:</b> $${opp.costPrice.toFixed(8)}\n`
+  msg += `<b>Deviation:</b> ${deviation}\n`
+  msg += `<b>24h Change:</b> ${changeIcon}${priceChange.toFixed(2)}%\n`
+  if (volume > 0) msg += `<b>24h Volume:</b> $${volume.toFixed(2)}\n`
+  msg += `<b>Priority:</b> ${opp.priority.toUpperCase()}\n`
 
   // Input details (recipe)
   const recipe = recipes.find(r => r.output === opp.symbol)
@@ -256,70 +256,70 @@ function buildCardMessage(
   return msg
 }
 
-// Legacy bulk message (kept for /alertas command)
+// Legacy bulk message (kept for /alerts command)
 function buildAlertMessage(opportunities: Opportunity[], customMessage?: string, dynoCoinPrice?: number): string {
   const buyOps = opportunities.filter((o) => o.signal === "buy")
   const sellOps = opportunities.filter((o) => o.signal === "sell")
-  const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
+  const now = new Date().toLocaleString("en-US", { timeZone: "UTC" })
 
-  let msg = `<b>Craft World Economy - Alerta</b>\n${now}\n\n`
+  let msg = `<b>Craft World Economy - Alert</b>\n${now} UTC\n\n`
   if (customMessage) msg += `${customMessage}\n\n`
 
   if (buyOps.length > 0) {
-    msg += `<b>OPORTUNIDADES DE COMPRA (${buyOps.length})</b>\n`
+    msg += `<b>BUY OPPORTUNITIES (${buyOps.length})</b>\n`
     for (const opp of buyOps) {
       const dev = opp.deviation > 0 ? `+${opp.deviation.toFixed(1)}%` : `${opp.deviation.toFixed(1)}%`
       const coinStr = dynoCoinPrice && dynoCoinPrice > 0 && opp.symbol !== "DYNO COIN" ? ` | ${(opp.marketPrice / dynoCoinPrice).toFixed(2)} DYNO` : ""
-      msg += `🟢 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
+      msg += `🟢 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Cost: $${opp.costPrice.toFixed(8)} | ${dev}\n`
     }
     msg += "\n"
   }
   if (sellOps.length > 0) {
-    msg += `<b>SINAIS DE VENDA (${sellOps.length})</b>\n`
+    msg += `<b>SELL SIGNALS (${sellOps.length})</b>\n`
     for (const opp of sellOps) {
       const dev = `+${opp.deviation.toFixed(1)}%`
       const coinStr = dynoCoinPrice && dynoCoinPrice > 0 && opp.symbol !== "DYNO COIN" ? ` | ${(opp.marketPrice / dynoCoinPrice).toFixed(2)} DYNO` : ""
-      msg += `🔴 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Custo: $${opp.costPrice.toFixed(8)} | ${dev}\n`
+      msg += `🔴 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Cost: $${opp.costPrice.toFixed(8)} | ${dev}\n`
     }
   }
-  msg += `\nTotal: ${opportunities.length} alertas`
+  msg += `\nTotal: ${opportunities.length} alerts`
   return msg
 }
 
 function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessage?: string, dynoCoinPrice?: number): string {
-  const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
+  const now = new Date().toLocaleString("en-US", { timeZone: "UTC" })
   const changeIcon = price.price_change_24h >= 0 ? "+" : ""
 
-  let msg = `<b>Craft World Economy - Preco ${symbol}</b>\n${now}\n\n`
+  let msg = `<b>Craft World Economy - ${symbol} Price</b>\n${now} UTC\n\n`
   if (customMessage) msg += `${customMessage}\n\n`
 
-  msg += `<b>Preco:</b> $${price.price_usd.toFixed(8)}\n`
+  msg += `<b>Price:</b> $${price.price_usd.toFixed(8)}\n`
   if (dynoCoinPrice && dynoCoinPrice > 0 && symbol !== "DYNO COIN") {
-    msg += `<b>Valor DYNO:</b> ${(price.price_usd / dynoCoinPrice).toFixed(2)} DYNO\n`
+    msg += `<b>DYNO Value:</b> ${(price.price_usd / dynoCoinPrice).toFixed(2)} DYNO\n`
   }
-  msg += `<b>Variacao 24h:</b> ${changeIcon}${price.price_change_24h.toFixed(2)}%\n`
-  msg += `<b>Volume 24h:</b> $${price.volume_usd_24h.toFixed(2)}\n`
+  msg += `<b>24h Change:</b> ${changeIcon}${price.price_change_24h.toFixed(2)}%\n`
+  msg += `<b>24h Volume:</b> $${price.volume_usd_24h.toFixed(2)}\n`
 
   return msg
 }
 
 // Build a summary of all prices
 function buildAllPricesMessage(prices: Record<string, PriceResult>, costs: Record<string, number>, pools: Record<string, string>): string {
-  const now = new Date().toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
+  const now = new Date().toLocaleString("en-US", { timeZone: "UTC" })
   const coinPrice = getDynoCoinPrice(prices, pools)
-  let msg = `<b>Craft World Economy - Precos</b>\n${now}\n\n`
+  let msg = `<b>Craft World Economy - Prices</b>\n${now} UTC\n\n`
 
   const sorted = Object.entries(prices).sort((a, b) => a[0].localeCompare(b[0]))
   for (const [symbol, p] of sorted) {
     const cost = costs[symbol] ?? 0
     const changeIcon = p.price_change_24h >= 0 ? "+" : ""
     const deviation = cost > 0 ? ((p.price_usd - cost) / cost * 100) : 0
-    const devStr = cost > 0 ? ` | Desvio: ${deviation > 0 ? "+" : ""}${deviation.toFixed(1)}%` : ""
+    const devStr = cost > 0 ? ` | Dev: ${deviation > 0 ? "+" : ""}${deviation.toFixed(1)}%` : ""
     const coinStr = coinPrice > 0 && symbol !== "DYNO COIN" ? ` | ${(p.price_usd / coinPrice).toFixed(2)} DYNO` : ""
     msg += `<b>${symbol}</b>: $${p.price_usd.toFixed(8)}${coinStr} (${changeIcon}${p.price_change_24h.toFixed(1)}%)${devStr}\n`
   }
 
-  msg += `\nTotal: ${sorted.length} recursos`
+  msg += `\nTotal: ${sorted.length} resources`
   return msg
 }
 
@@ -334,53 +334,53 @@ export async function handleBotCommand(command: string, chatId: string, botToken
 
     if (cmd === "/start" || cmd === "/help") {
       return `<b>Craft World Economy Bot</b>\n\n` +
-        `<b>Comandos disponiveis:</b>\n` +
-        `/precos - Ver todos os precos actuais\n` +
-        `/preco [SIMBOLO] - Ver preco de um recurso (ex: /preco DYNO)\n` +
-        `/alertas - Ver oportunidades de compra/venda\n` +
-        `/status - Ver estado do bot\n` +
-        `/historico - Ultimos 5 alertas enviados\n` +
-        `/help - Mostrar esta ajuda`
+        `<b>Available Commands:</b>\n` +
+        `/prices - View all current prices\n` +
+        `/price [SYMBOL] - View price of a resource (e.g. /price DYNO)\n` +
+        `/alerts - View buy/sell opportunities\n` +
+        `/status - View bot status\n` +
+        `/history - Last 5 alerts sent\n` +
+        `/help - Show this help`
     }
 
     if (cmd === "/status") {
       const tg = config.telegram
       const poolCount = Object.keys(pools).length
-      const priceAlert = tg?.priceAlertEnabled ? `Ativo (${tg.priceAlertSymbol || "N/A"})` : "Desativado"
-      return `<b>Estado do Bot</b>\n\n` +
-        `<b>Bot:</b> ${tg?.enabled ? "Ativo" : "Desativado"}\n` +
-        `<b>Pools:</b> ${poolCount} cadastradas\n` +
-        `<b>Intervalo:</b> ${tg?.intervalMinutes || 5} min\n` +
-        `<b>Alerta Preco:</b> ${priceAlert}\n` +
-        `<b>Thresholds:</b> Compra -${config.thresholds?.buy || 15}% / Venda +${config.thresholds?.sell || 15}%`
+      const priceAlert = tg?.priceAlertEnabled ? `Active (${tg.priceAlertSymbol || "N/A"})` : "Disabled"
+      return `<b>Bot Status</b>\n\n` +
+        `<b>Bot:</b> ${tg?.enabled ? "Active" : "Disabled"}\n` +
+        `<b>Pools:</b> ${poolCount} registered\n` +
+        `<b>Interval:</b> ${tg?.intervalMinutes || 5} min\n` +
+        `<b>Price Alert:</b> ${priceAlert}\n` +
+        `<b>Thresholds:</b> Buy -${config.thresholds?.buy || 15}% / Sell +${config.thresholds?.sell || 15}%`
     }
 
-    if (cmd === "/precos") {
+    if (cmd === "/prices" || cmd === "/precos") {
       const prices = await fetchPrices(pools, network)
       if (Object.keys(prices).length === 0) {
-        return "Nao foi possivel obter precos. Verifique se ha pools cadastradas."
+        return "Could not fetch prices. Check if pools are registered."
       }
       const recipes = await loadRecipes()
       const costs = calcCostsFromRecipes(recipes, prices)
       return buildAllPricesMessage(prices, costs, pools)
     }
 
-    if (cmd.startsWith("/preco ")) {
-      const symbol = cmd.replace("/preco ", "").trim().toUpperCase()
+    if (cmd.startsWith("/price ") || cmd.startsWith("/preco ")) {
+      const symbol = cmd.replace("/price ", "").replace("/preco ", "").trim().toUpperCase()
       if (!pools[symbol]) {
-        return `Recurso <b>${symbol}</b> nao encontrado nas pools cadastradas.\n\nPools disponiveis: ${Object.keys(pools).join(", ") || "nenhuma"}`
+        return `Resource <b>${symbol}</b> not found in registered pools.\n\nAvailable pools: ${Object.keys(pools).join(", ") || "none"}`
       }
       const prices = await fetchPrices(pools, network)
       if (!prices[symbol]) {
-        return `Nao foi possivel obter preco para <b>${symbol}</b>.`
+        return `Could not fetch price for <b>${symbol}</b>.`
       }
       return buildPriceAlertMessage(symbol, prices[symbol], undefined, getDynoCoinPrice(prices, pools))
     }
 
-    if (cmd === "/alertas") {
+    if (cmd === "/alerts" || cmd === "/alertas") {
       const prices = await fetchPrices(pools, network)
       if (Object.keys(prices).length === 0) {
-        return "Nao foi possivel obter precos."
+        return "Could not fetch prices."
       }
       const recipes = await loadRecipes()
       const costs = calcCostsFromRecipes(recipes, prices)
@@ -406,27 +406,27 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       }
 
       if (opportunities.length === 0) {
-        return "Sem oportunidades de compra/venda neste momento."
+        return "No buy/sell opportunities at the moment."
       }
       return buildAlertMessage(opportunities, undefined, getDynoCoinPrice(prices, pools))
     }
 
-    if (cmd === "/historico") {
+    if (cmd === "/history" || cmd === "/historico") {
       const history = await getAlertHistory()
       if (history.length === 0) {
-        return "Sem historico de alertas."
+        return "No alert history."
       }
       const last5 = history.slice(0, 5)
-      let msg = `<b>Ultimos ${last5.length} Alertas</b>\n\n`
+      let msg = `<b>Last ${last5.length} Alerts</b>\n\n`
       for (const entry of last5) {
-        const icon = entry.success ? "OK" : "ERRO"
-        const date = new Date(entry.timestamp).toLocaleString("pt-PT", { timeZone: "Europe/Lisbon" })
-        msg += `[${icon}] <b>${entry.type.toUpperCase()}</b> - ${date}\n${entry.message}\n\n`
+        const icon = entry.success ? "OK" : "ERR"
+        const date = new Date(entry.timestamp).toLocaleString("en-US", { timeZone: "UTC" })
+        msg += `[${icon}] <b>${entry.type.toUpperCase()}</b> - ${date} UTC\n${entry.message}\n\n`
       }
       return msg
     }
 
-    return `Comando desconhecido: ${cmd}\n\nUse /help para ver os comandos disponiveis.`
+    return `Unknown command: ${cmd}\n\nUse /help to see available commands.`
   } catch (e) {
     console.error("[v0] Bot command error:", e)
     return `Erro ao processar comando: ${e instanceof Error ? e.message : "Unknown"}`
@@ -460,25 +460,25 @@ export async function runMonitorCycle(): Promise<{
   }))
 
   if (!telegramCfg?.enabled) {
-    console.log("[v0] Telegram desactivado - skipping")
+    console.log("[v0] Telegram disabled - skipping")
     await saveAlertHistory({
       timestamp: new Date().toISOString(),
       type: "error",
       success: false,
-      message: "Monitor executado mas Telegram desactivado",
+      message: "Monitor executed but Telegram disabled",
     })
-    return { success: true, message: "Telegram desactivado", alerts: [], opportunities: [] }
+    return { success: true, message: "Telegram disabled", alerts: [], opportunities: [] }
   }
 
   if (!telegramCfg.botToken || !telegramCfg.chatId) {
-    console.log("[v0] Bot Token ou Chat ID nao configurados")
+    console.log("[v0] Bot Token or Chat ID not configured")
     await saveAlertHistory({
       timestamp: new Date().toISOString(),
       type: "error",
       success: false,
-      message: "Bot Token ou Chat ID nao configurados",
+      message: "Bot Token or Chat ID not configured",
     })
-    return { success: false, message: "Bot Token ou Chat ID nao configurados", alerts: [], opportunities: [] }
+    return { success: false, message: "Bot Token or Chat ID not configured", alerts: [], opportunities: [] }
   }
 
   console.log("[v0] Fetching prices for", Object.keys(pools).length, "pools on network:", network)
@@ -491,10 +491,10 @@ export async function runMonitorCycle(): Promise<{
       timestamp: new Date().toISOString(),
       type: "error",
       success: false,
-      message: "Nao foi possivel obter precos da GeckoTerminal (0 precos retornados)",
+      message: "Could not fetch prices from GeckoTerminal (0 prices returned)",
       details: `Pools: ${Object.keys(pools).join(", ")}`,
     })
-    return { success: false, message: "Nao foi possivel obter precos", alerts: [], opportunities: [] }
+    return { success: false, message: "Could not fetch prices", alerts: [], opportunities: [] }
   }
 
   // Load recipes from DB (same source as frontend/API)
@@ -525,10 +525,10 @@ export async function runMonitorCycle(): Promise<{
 
     if (deviation < -thresholds.buy) {
       opportunities.push({ symbol, signal: "buy", marketPrice: price.price_usd, costPrice: costValue, deviation, priority: alertCfg.priority, category: alertCfg.category })
-      alertMessages.push(`COMPRAR ${symbol}: ${deviation.toFixed(1)}% abaixo do custo`)
+      alertMessages.push(`BUY ${symbol}: ${deviation.toFixed(1)}% below cost`)
     } else if (deviation > thresholds.sell) {
       opportunities.push({ symbol, signal: "sell", marketPrice: price.price_usd, costPrice: costValue, deviation, priority: alertCfg.priority, category: alertCfg.category })
-      alertMessages.push(`VENDER ${symbol}: +${deviation.toFixed(1)}% acima do custo`)
+      alertMessages.push(`SELL ${symbol}: +${deviation.toFixed(1)}% above cost`)
     }
   }
 
@@ -571,7 +571,7 @@ export async function runMonitorCycle(): Promise<{
       timestamp: new Date().toISOString(),
       type: "opportunity",
       success: sentCount > 0,
-      message: `${sentCount}/${opportunities.length} cards enviados individualmente: ${opportunities.map(o => `${o.signal.toUpperCase()} ${o.symbol}`).join(", ")}`,
+      message: `${sentCount}/${opportunities.length} cards sent: ${opportunities.map(o => `${o.signal.toUpperCase()} ${o.symbol}`).join(", ")}`,
       details: opportunities.map(o => `${o.signal} ${o.symbol} ${o.deviation.toFixed(1)}%`).join(", "),
     })
   }
@@ -592,8 +592,8 @@ export async function runMonitorCycle(): Promise<{
       type: "price",
       success: priceResult.success,
       message: priceResult.success
-        ? `Preco ${priceSymbol}: $${prices[priceSymbol].price_usd.toFixed(8)} (${prices[priceSymbol].price_change_24h >= 0 ? "+" : ""}${prices[priceSymbol].price_change_24h.toFixed(2)}%)`
-        : `Falha ao enviar preco ${priceSymbol}: ${priceResult.message}`,
+        ? `Price ${priceSymbol}: $${prices[priceSymbol].price_usd.toFixed(8)} (${prices[priceSymbol].price_change_24h >= 0 ? "+" : ""}${prices[priceSymbol].price_change_24h.toFixed(2)}%)`
+        : `Failed to send price ${priceSymbol}: ${priceResult.message}`,
     })
   } else if (!hasOpportunities) {
     console.log("[v0] No opportunities and no price alert configured/available")
@@ -604,20 +604,20 @@ export async function runMonitorCycle(): Promise<{
         timestamp: new Date().toISOString(),
         type: "error",
         success: false,
-        message: `Preco ${priceSymbol} nao encontrado nas pools. Disponiveis: ${Object.keys(prices).join(", ")}`,
+        message: `Price ${priceSymbol} not found in pools. Available: ${Object.keys(prices).join(", ")}`,
       })
     }
   }
 
   const parts: string[] = []
-  parts.push(`${priceCount} precos obtidos`)
+  parts.push(`${priceCount} prices fetched`)
   if (opportunities.length > 0) {
-    parts.push(`${opportunities.length} alertas${telegramSent ? " enviados" : ""}`)
+    parts.push(`${opportunities.length} alerts${telegramSent ? " sent" : ""}`)
   } else {
-    parts.push("sem alertas")
+    parts.push("no alerts")
   }
   if (priceAlertSent && priceSymbol) {
-    parts.push(`preco ${priceSymbol} enviado`)
+    parts.push(`${priceSymbol} price sent`)
   }
 
   console.log("[v0] Monitor cycle complete:", parts.join(", "))
