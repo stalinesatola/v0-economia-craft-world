@@ -7,6 +7,23 @@ import { formatPrice } from "@/lib/craft-data"
 import { useI18n } from "@/lib/i18n"
 import { RESOURCE_COLORS } from "@/lib/resource-images"
 
+// Extract direct asset URL from GeckoTerminal proxy URLs for CORS-safe canvas usage
+// e.g. "https://www.geckoterminal.com/_next/image?url=https%3A%2F%2Fassets.geckoterminal.com%2Fxyz&w=64&q=75"
+// becomes "https://assets.geckoterminal.com/xyz"
+function getDirectImageUrl(url?: string): string | undefined {
+  if (!url) return undefined
+  try {
+    if (url.includes("/_next/image")) {
+      const parsed = new URL(url)
+      const inner = parsed.searchParams.get("url")
+      if (inner) return inner
+    }
+    return url
+  } catch {
+    return url
+  }
+}
+
 interface ShareCardProps {
   symbol: string
   marketPrice: number
@@ -227,12 +244,14 @@ function generateCardImage(data: ShareCardProps, locale: string): Promise<Blob> 
     }
 
     // Load resource image if available, then draw
-    if (data.imageUrl) {
+    // Use direct asset URL to avoid CORS issues with proxy URLs
+    const directUrl = getDirectImageUrl(data.imageUrl)
+    if (directUrl) {
       const img = new Image()
       img.crossOrigin = "anonymous"
       img.onload = () => drawCard(img)
       img.onerror = () => drawCard() // Fallback without image
-      img.src = data.imageUrl
+      img.src = directUrl
     } else {
       drawCard()
     }

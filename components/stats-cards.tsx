@@ -15,7 +15,7 @@ interface StatsCardsProps {
   isLoading?: boolean
   productionCosts?: Record<string, number>
   thresholds?: { buy: number; sell: number }
-  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string }>
+  alertsConfig?: Record<string, { enabled: boolean; priority: string; category: string; imageUrl?: string }>
 }
 
 export function StatsCards({ prices, isLoading, productionCosts: dynCosts, thresholds: dynThresholds }: StatsCardsProps) {
