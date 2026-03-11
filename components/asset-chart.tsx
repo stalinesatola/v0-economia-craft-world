@@ -50,7 +50,7 @@ const TIMEFRAMES = [
 ] as const
 
 // Candlestick SVG renderer
-function CandlestickChart({ data, minPrice, maxPrice }: { data: any[]; minPrice: number; maxPrice: number }) {
+function CandlestickSVG({ data, minPrice, maxPrice }: { data: any[]; minPrice: number; maxPrice: number }) {
   if (!data || data.length === 0) return null
   
   return (
@@ -315,7 +315,7 @@ export function AssetChart({
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <CandlestickChart data={chartData} minPrice={minPrice} maxPrice={maxPrice} />
+                  <CandlestickSVG data={chartData} minPrice={minPrice} maxPrice={maxPrice} />
                 )}
               </div>
 
