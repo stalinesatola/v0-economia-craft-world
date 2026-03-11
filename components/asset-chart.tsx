@@ -101,31 +101,34 @@ export function AssetChart({
   const [currentLine, setCurrentLine] = useState<{ x1: number; y1: number } | null>(null)
   const chartRef = useRef<HTMLDivElement>(null)
 
-  const fetchOHLCV = useCallback(async (tfIndex: number) => {
+  useEffect(() => {
     if (!poolAddress) {
       setLoading(false)
       return
     }
-    setLoading(true)
-    const tf = TIMEFRAMES[tfIndex]
-    try {
-      const res = await fetch(`/api/ohlcv/${poolAddress}?timeframe=${tf.timeframe}&aggregate=${tf.aggregate}&limit=${tf.limit}`)
-      if (res.ok) {
-        const data = await res.json()
-        setCandles(data.candles ?? [])
-      } else {
-        setCandles([])
+    
+    let cancelled = false
+    const fetchData = async () => {
+      setLoading(true)
+      const tf = TIMEFRAMES[activeTimeframe]
+      try {
+        const res = await fetch(`/api/ohlcv/${poolAddress}?timeframe=${tf.timeframe}&aggregate=${tf.aggregate}&limit=${tf.limit}`)
+        if (!cancelled && res.ok) {
+          const data = await res.json()
+          setCandles(data.candles ?? [])
+        } else if (!cancelled) {
+          setCandles([])
+        }
+      } catch {
+        if (!cancelled) setCandles([])
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-    } catch {
-      setCandles([])
-    } finally {
-      setLoading(false)
     }
-  }, [poolAddress])
-
-  useEffect(() => {
-    fetchOHLCV(activeTimeframe)
-  }, [activeTimeframe, fetchOHLCV])
+    
+    fetchData()
+    return () => { cancelled = true }
+  }, [activeTimeframe, poolAddress])
 
   const handleTimeframe = (index: number) => {
     setActiveTimeframe(index)
