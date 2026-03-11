@@ -149,7 +149,7 @@ export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation,
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-3">
                 <CardTitle className="text-base font-semibold font-mono" style={{ color: TV_COLORS.textLight }}>
-                  {symbol}
+                  {symbol}/USDC
                 </CardTitle>
                 {signal === "buy" && <Badge className="text-[10px] px-1.5 py-0 bg-emerald-500/20 text-emerald-400">BUY</Badge>}
                 {signal === "sell" && <Badge className="text-[10px] px-1.5 py-0 bg-red-500/20 text-red-400">SELL</Badge>}

@@ -22,15 +22,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    console.log(`[v0] Telegram webhook received command: ${text} from chat: ${chatIdFromMessage}`)
-
     const config = await getConfig()
     const botToken = config.telegram?.botToken
+    const configuredChatId = config.telegram?.chatId
 
     if (!botToken) {
       console.error("[v0] Bot token not configured")
       return NextResponse.json({ ok: true })
     }
+
+    // Security: Only accept commands from the configured chat ID
+    // This prevents unauthorized users from controlling the bot
+    if (configuredChatId && chatIdFromMessage !== configuredChatId) {
+      console.warn(`[v0] Unauthorized webhook attempt from chat: ${chatIdFromMessage}`)
+      return NextResponse.json({ ok: true })
+    }
+
+    console.log(`[v0] Telegram webhook received command: ${text} from chat: ${chatIdFromMessage}`)
 
     // Process the command and send response
     const responseText = await handleBotCommand(text, chatIdFromMessage, botToken)

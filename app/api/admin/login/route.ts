@@ -7,8 +7,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { password, username } = body
 
-    if (!password || typeof password !== "string") {
-      return NextResponse.json({ error: "Password obrigatoria" }, { status: 400 })
+    if (!password || typeof password !== "string" || password.length < 1 || password.length > 256) {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+    }
+
+    // Sanitize username if provided
+    if (username && (typeof username !== "string" || username.length > 64 || !/^[a-zA-Z0-9_-]+$/.test(username))) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
     let authUser = ""
@@ -17,14 +22,15 @@ export async function POST(request: NextRequest) {
     if (username) {
       const result = await validateUserLogin(username, password)
       if (!result.valid) {
-        return NextResponse.json({ error: "Credenciais incorretas" }, { status: 401 })
+        // Generic error message to prevent username enumeration
+        return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
       }
       authUser = username
       authRole = result.role
     } else {
       const result = await validatePassword(password)
       if (!result.valid) {
-        return NextResponse.json({ error: "Password incorreta" }, { status: 401 })
+        return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
       }
       authUser = result.username
       authRole = result.role

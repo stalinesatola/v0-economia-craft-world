@@ -32,7 +32,17 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Manual trigger from admin panel or external cron services
-export async function POST() {
+export async function POST(request: NextRequest) {
+  // Require authentication for manual triggers
+  const cronSecret = process.env.CRON_SECRET
+  if (cronSecret) {
+    const authHeader = request.headers.get("authorization")
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      console.log("[v0] Manual trigger auth failed")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+  }
+
   console.log("[v0] Manual monitor trigger at", new Date().toISOString())
 
   try {
@@ -42,15 +52,15 @@ export async function POST() {
   } catch (error) {
     console.error("[v0] Manual trigger error:", error)
     return NextResponse.json(
-      { success: false, message: `Erro: ${error instanceof Error ? error.message : "Unknown"}`, alerts: [], opportunities: [] },
+      { success: false, message: `Error: ${error instanceof Error ? error.message : "Unknown"}`, alerts: [], opportunities: [] },
       { status: 500 }
     )
   }
 }
 
 // PUT - Alias for external cron services that use PUT
-export async function PUT() {
-  return POST()
+export async function PUT(request: NextRequest) {
+  return POST(request)
 }
 
 // HEAD/OPTIONS - Health check for cron services that probe before calling

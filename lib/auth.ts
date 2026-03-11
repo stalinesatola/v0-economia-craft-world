@@ -24,7 +24,11 @@ interface SessionPayload {
 }
 
 function getSecret(): string {
-  return process.env.ADMIN_PASSWORD || process.env.CRON_SECRET || "craft-world-economy"
+  const secret = process.env.ADMIN_PASSWORD || process.env.CRON_SECRET
+  if (!secret) {
+    throw new Error("ADMIN_PASSWORD or CRON_SECRET must be configured")
+  }
+  return secret
 }
 
 function generateToken(username: string, role: string): string {
