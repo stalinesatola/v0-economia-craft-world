@@ -4,18 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { X, TrendingUp, TrendingDown, BarChart3, Loader2, CandlestickChart } from "lucide-react"
-import {
-  ComposedChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Bar,
-  Cell,
-  ReferenceLine,
-} from "recharts"
+import { X, TrendingUp, TrendingDown, BarChart3, Loader2, Minus, Trash2 } from "lucide-react"
 import { formatPrice } from "@/lib/craft-data"
 import { useI18n } from "@/lib/i18n"
 
@@ -23,6 +12,7 @@ import { useI18n } from "@/lib/i18n"
 const TV_COLORS = {
   bg: "#131722",
   grid: "#1e222d",
+  gridLine: "#363a45",
   text: "#787b86",
   textLight: "#d1d4dc",
   bullish: "#26a69a",
@@ -32,6 +22,7 @@ const TV_COLORS = {
   line: "#2962ff",
   volume: "#5d606b",
   costLine: "#ff9800",
+  drawLine: "#ffeb3b",
 }
 
 interface Candle {
@@ -43,15 +34,13 @@ interface Candle {
   volume: number
 }
 
-interface ChartDataPoint {
-  date: string
-  timestamp: number
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
-  isUp: boolean
+interface DrawingLine {
+  id: string
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  color: string
 }
 
 interface AssetChartProps {
@@ -75,79 +64,17 @@ const TIMEFRAMES = [
   { label: "1M", timeframe: "day", aggregate: "1", limit: "30" },
 ] as const
 
-// Custom Candlestick shape for recharts
-function CandleShape(props: any) {
-  const { x, y, width, height, payload, yAxisMap } = props
-  if (!payload || !yAxisMap) return null
-
-  const yAxis = yAxisMap.price
-  if (!yAxis || typeof yAxis.scale !== "function") return null
-
-  const { open, high, low, close, isUp } = payload
-  const color = isUp ? TV_COLORS.bullish : TV_COLORS.bearish
-
-  const yOpen = yAxis.scale(open)
-  const yClose = yAxis.scale(close)
-  const yHigh = yAxis.scale(high)
-  const yLow = yAxis.scale(low)
-
-  const bodyTop = Math.min(yOpen, yClose)
-  const bodyHeight = Math.abs(yClose - yOpen) || 1
-  const candleWidth = Math.min(width * 0.8, 12)
-  const candleX = x + (width - candleWidth) / 2
-
+// Candlestick Icon SVG component
+function CandleIcon({ className }: { className?: string }) {
   return (
-    <g>
-      {/* Wick */}
-      <line
-        x1={x + width / 2}
-        y1={yHigh}
-        x2={x + width / 2}
-        y2={yLow}
-        stroke={color}
-        strokeWidth={1}
-      />
-      {/* Body */}
-      <rect
-        x={candleX}
-        y={bodyTop}
-        width={candleWidth}
-        height={Math.max(bodyHeight, 1)}
-        fill={isUp ? color : "transparent"}
-        stroke={color}
-        strokeWidth={1}
-      />
-    </g>
-  )
-}
-
-// Professional tooltip component
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload || !payload[0]) return null
-  const data = payload[0].payload as ChartDataPoint
-
-  return (
-    <div className="rounded border border-[#363a45] bg-[#1e222d] px-3 py-2 text-xs shadow-lg">
-      <div className="mb-1.5 text-[#787b86]">{label}</div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-        <span className="text-[#787b86]">O</span>
-        <span className="text-right font-mono text-[#d1d4dc]">{formatPrice(data.open)}</span>
-        <span className="text-[#787b86]">H</span>
-        <span className="text-right font-mono text-[#d1d4dc]">{formatPrice(data.high)}</span>
-        <span className="text-[#787b86]">L</span>
-        <span className="text-right font-mono text-[#d1d4dc]">{formatPrice(data.low)}</span>
-        <span className="text-[#787b86]">C</span>
-        <span className={`text-right font-mono ${data.isUp ? "text-[#26a69a]" : "text-[#ef5350]"}`}>
-          {formatPrice(data.close)}
-        </span>
-        {data.volume > 0 && (
-          <>
-            <span className="text-[#787b86]">Vol</span>
-            <span className="text-right font-mono text-[#d1d4dc]">${data.volume.toFixed(0)}</span>
-          </>
-        )}
-      </div>
-    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <rect x="9" y="6" width="2" height="12" rx="0.5" />
+      <line x1="10" y1="3" x2="10" y2="6" />
+      <line x1="10" y1="18" x2="10" y2="21" />
+      <rect x="15" y="8" width="2" height="8" rx="0.5" fill="currentColor" />
+      <line x1="16" y1="5" x2="16" y2="8" />
+      <line x1="16" y1="16" x2="16" y2="19" />
+    </svg>
   )
 }
 
@@ -163,9 +90,16 @@ export function AssetChart({
   const { t, locale } = useI18n()
   const [candles, setCandles] = useState<Candle[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTimeframe, setActiveTimeframe] = useState(5) // default 24H
+  const [activeTimeframe, setActiveTimeframe] = useState(5)
   const [showVolume, setShowVolume] = useState(false)
-  const [chartType, setChartType] = useState<"area" | "candle">("area")
+  const [chartType, setChartType] = useState<"line" | "candle">("line")
+  
+  // Drawing tools state
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [drawingMode, setDrawingMode] = useState(false)
+  const [lines, setLines] = useState<DrawingLine[]>([])
+  const [currentLine, setCurrentLine] = useState<{ x1: number; y1: number } | null>(null)
+  const chartRef = useRef<HTMLDivElement>(null)
 
   const fetchOHLCV = useCallback(async (tfIndex: number) => {
     setLoading(true)
@@ -199,24 +133,83 @@ export function AssetChart({
     : 0
   const isPositive = priceChange >= 0
 
-  const chartData: ChartDataPoint[] = candles.map((c) => ({
-    date: new Date(c.timestamp).toLocaleString(locale === "pt" ? "pt-PT" : "en-US", {
+  // Calculate price range
+  const allPrices = candles.flatMap(c => [c.high, c.low])
+  const minPrice = allPrices.length > 0 ? Math.min(...allPrices) * 0.998 : 0
+  const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) * 1.002 : 0
+  const priceRange = maxPrice - minPrice
+
+  // Chart dimensions
+  const chartWidth = 600
+  const chartHeight = showVolume ? 200 : 260
+  const volumeHeight = 60
+  const padding = { top: 10, right: 60, bottom: 20, left: 10 }
+  const innerWidth = chartWidth - padding.left - padding.right
+  const innerHeight = chartHeight - padding.top - padding.bottom
+
+  // Scale functions
+  const xScale = (index: number) => padding.left + (index / (candles.length - 1 || 1)) * innerWidth
+  const yScale = (price: number) => padding.top + ((maxPrice - price) / (priceRange || 1)) * innerHeight
+  const volumeScale = (vol: number) => {
+    const maxVol = Math.max(...candles.map(c => c.volume)) || 1
+    return volumeHeight - (vol / maxVol) * (volumeHeight - 10)
+  }
+
+  // Drawing handlers
+  const getMousePos = (e: React.MouseEvent) => {
+    if (!chartRef.current) return { x: 0, y: 0 }
+    const rect = chartRef.current.getBoundingClientRect()
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * chartWidth,
+      y: ((e.clientY - rect.top) / rect.height) * chartHeight,
+    }
+  }
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!drawingMode) return
+    const pos = getMousePos(e)
+    setCurrentLine({ x1: pos.x, y1: pos.y })
+    setIsDrawing(true)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDrawing || !currentLine) return
+  }
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!isDrawing || !currentLine) return
+    const pos = getMousePos(e)
+    const newLine: DrawingLine = {
+      id: Date.now().toString(),
+      x1: currentLine.x1,
+      y1: currentLine.y1,
+      x2: pos.x,
+      y2: pos.y,
+      color: TV_COLORS.drawLine,
+    }
+    setLines([...lines, newLine])
+    setCurrentLine(null)
+    setIsDrawing(false)
+  }
+
+  const clearLines = () => {
+    setLines([])
+  }
+
+  // Format date for display
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString(locale === "pt" ? "pt-PT" : "en-US", {
       month: "short",
       day: "2-digit",
       ...(activeTimeframe <= 4 ? { hour: "2-digit", minute: "2-digit" } : {}),
-    }),
-    timestamp: c.timestamp,
-    open: c.open,
-    high: c.high,
-    low: c.low,
-    close: c.close,
-    volume: c.volume,
-    isUp: c.close >= c.open,
-  }))
+    })
+  }
 
-  const minPrice = chartData.length > 0 ? Math.min(...chartData.map((d) => d.low)) * 0.995 : 0
-  const maxPrice = chartData.length > 0 ? Math.max(...chartData.map((d) => d.high)) * 1.005 : 0
-  const maxVolume = chartData.length > 0 ? Math.max(...chartData.map((d) => d.volume)) * 1.2 : 0
+  // Generate grid lines
+  const gridLines = {
+    horizontal: Array.from({ length: 5 }, (_, i) => minPrice + (priceRange * i) / 4),
+    vertical: candles.length > 0 ? candles.filter((_, i) => i % Math.ceil(candles.length / 6) === 0) : [],
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -267,7 +260,7 @@ export function AssetChart({
             </Button>
           </div>
 
-          {/* Timeframe buttons - TradingView style */}
+          {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-0.5 pt-3">
             {TIMEFRAMES.map((tf, i) => (
               <button
@@ -289,10 +282,10 @@ export function AssetChart({
                   ? "bg-[#2962ff] text-white" 
                   : "text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#2a2e39]"
               }`}
-              onClick={() => setChartType(chartType === "area" ? "candle" : "area")}
+              onClick={() => setChartType(chartType === "line" ? "candle" : "line")}
               title="Candlestick"
             >
-              <CandlestickChart className="h-3.5 w-3.5" />
+              <CandleIcon className="h-3.5 w-3.5" />
             </button>
             <button
               className={`h-6 px-2 rounded transition-colors ${
@@ -305,8 +298,30 @@ export function AssetChart({
             >
               <BarChart3 className="h-3.5 w-3.5" />
             </button>
+            <div className="mx-2 h-4 w-px bg-[#363a45]" />
+            <button
+              className={`h-6 px-2 rounded transition-colors flex items-center gap-1 ${
+                drawingMode 
+                  ? "bg-[#ffeb3b] text-black" 
+                  : "text-[#787b86] hover:text-[#d1d4dc] hover:bg-[#2a2e39]"
+              }`}
+              onClick={() => setDrawingMode(!drawingMode)}
+              title="Draw Line"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            {lines.length > 0 && (
+              <button
+                className="h-6 px-2 rounded transition-colors text-[#787b86] hover:text-[#ef5350] hover:bg-[#2a2e39]"
+                onClick={clearLines}
+                title="Clear Lines"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </CardHeader>
+        
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center h-72" style={{ backgroundColor: TV_COLORS.bg }}>
@@ -318,112 +333,177 @@ export function AssetChart({
             </div>
           ) : (
             <div className="flex flex-col" style={{ backgroundColor: TV_COLORS.bg }}>
-              {/* Main Price Chart */}
-              <div className={showVolume ? "h-52" : "h-72"}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 10, right: 60, bottom: 0, left: 0 }}>
-                    {/* Grid */}
-                    <defs>
-                      <linearGradient id={`area-gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={isPositive ? TV_COLORS.bullish : TV_COLORS.bearish} stopOpacity={0.15} />
-                        <stop offset="100%" stopColor={isPositive ? TV_COLORS.bullish : TV_COLORS.bearish} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    
-                    <XAxis
-                      dataKey="date"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 10, fill: TV_COLORS.text }}
-                      dy={5}
-                    />
-                    <YAxis
-                      yAxisId="price"
-                      orientation="right"
-                      domain={[minPrice, maxPrice]}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 10, fill: TV_COLORS.text }}
-                      tickFormatter={(v: number) => formatPrice(v)}
-                      width={55}
-                    />
-                    
-                    <Tooltip content={<CustomTooltip />} />
-                    
-                    {/* Cost reference line */}
-                    {cost > 0 && cost >= minPrice && cost <= maxPrice && (
-                      <ReferenceLine
-                        yAxisId="price"
-                        y={cost}
-                        stroke={TV_COLORS.costLine}
-                        strokeDasharray="4 2"
-                        strokeWidth={1}
-                        label={{
-                          value: `Cost: ${formatPrice(cost)}`,
-                          position: "left",
-                          fill: TV_COLORS.costLine,
-                          fontSize: 9,
-                        }}
+              {/* Main Chart SVG */}
+              <div 
+                ref={chartRef}
+                className={`relative ${drawingMode ? "cursor-crosshair" : ""}`}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+              >
+                <svg 
+                  viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
+                  className="w-full"
+                  style={{ height: showVolume ? "200px" : "260px" }}
+                >
+                  {/* Grid */}
+                  {gridLines.horizontal.map((price, i) => (
+                    <g key={`h-${i}`}>
+                      <line
+                        x1={padding.left}
+                        y1={yScale(price)}
+                        x2={chartWidth - padding.right}
+                        y2={yScale(price)}
+                        stroke={TV_COLORS.gridLine}
+                        strokeWidth="0.5"
+                        strokeDasharray="2,2"
                       />
-                    )}
+                      <text
+                        x={chartWidth - padding.right + 5}
+                        y={yScale(price) + 3}
+                        fill={TV_COLORS.text}
+                        fontSize="9"
+                        fontFamily="monospace"
+                      >
+                        {formatPrice(price)}
+                      </text>
+                    </g>
+                  ))}
 
-                    {/* Chart type: Line or Candles */}
-                    {chartType === "area" ? (
-                      <Line
-                        yAxisId="price"
-                        type="monotone"
-                        dataKey="close"
-                        stroke={isPositive ? TV_COLORS.bullish : TV_COLORS.bearish}
-                        strokeWidth={1.5}
-                        dot={false}
-                        activeDot={{ r: 3, fill: isPositive ? TV_COLORS.bullish : TV_COLORS.bearish }}
+                  {/* Cost reference line */}
+                  {cost > 0 && cost >= minPrice && cost <= maxPrice && (
+                    <g>
+                      <line
+                        x1={padding.left}
+                        y1={yScale(cost)}
+                        x2={chartWidth - padding.right}
+                        y2={yScale(cost)}
+                        stroke={TV_COLORS.costLine}
+                        strokeWidth="1"
+                        strokeDasharray="4,2"
                       />
-                    ) : (
-                      <Bar
-                        yAxisId="price"
-                        dataKey="high"
-                        shape={<CandleShape yAxisMap={{ price: { scale: (v: number) => v } }} />}
-                        isAnimationActive={false}
-                      />
-                    )}
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      <text
+                        x={padding.left + 5}
+                        y={yScale(cost) - 5}
+                        fill={TV_COLORS.costLine}
+                        fontSize="9"
+                      >
+                        Cost: {formatPrice(cost)}
+                      </text>
+                    </g>
+                  )}
+
+                  {/* Chart Data */}
+                  {chartType === "line" ? (
+                    // Line chart
+                    <path
+                      d={candles.map((c, i) => 
+                        `${i === 0 ? "M" : "L"} ${xScale(i)} ${yScale(c.close)}`
+                      ).join(" ")}
+                      fill="none"
+                      stroke={isPositive ? TV_COLORS.bullish : TV_COLORS.bearish}
+                      strokeWidth="1.5"
+                    />
+                  ) : (
+                    // Candlestick chart
+                    candles.map((c, i) => {
+                      const x = xScale(i)
+                      const isUp = c.close >= c.open
+                      const color = isUp ? TV_COLORS.bullish : TV_COLORS.bearish
+                      const candleWidth = Math.max(innerWidth / candles.length * 0.7, 2)
+                      
+                      return (
+                        <g key={i}>
+                          {/* Wick */}
+                          <line
+                            x1={x}
+                            y1={yScale(c.high)}
+                            x2={x}
+                            y2={yScale(c.low)}
+                            stroke={color}
+                            strokeWidth="1"
+                          />
+                          {/* Body */}
+                          <rect
+                            x={x - candleWidth / 2}
+                            y={yScale(Math.max(c.open, c.close))}
+                            width={candleWidth}
+                            height={Math.max(Math.abs(yScale(c.open) - yScale(c.close)), 1)}
+                            fill={isUp ? color : "transparent"}
+                            stroke={color}
+                            strokeWidth="1"
+                          />
+                        </g>
+                      )
+                    })
+                  )}
+
+                  {/* Drawing lines */}
+                  {lines.map((line) => (
+                    <line
+                      key={line.id}
+                      x1={line.x1}
+                      y1={line.y1}
+                      x2={line.x2}
+                      y2={line.y2}
+                      stroke={line.color}
+                      strokeWidth="2"
+                    />
+                  ))}
+
+                  {/* X-axis labels */}
+                  {candles.filter((_, i) => i % Math.ceil(candles.length / 6) === 0).map((c, i, arr) => {
+                    const idx = candles.indexOf(c)
+                    return (
+                      <text
+                        key={i}
+                        x={xScale(idx)}
+                        y={chartHeight - 5}
+                        fill={TV_COLORS.text}
+                        fontSize="9"
+                        textAnchor="middle"
+                      >
+                        {formatDate(c.timestamp)}
+                      </text>
+                    )
+                  })}
+                </svg>
+
+                {/* Crosshair tooltip would go here */}
               </div>
 
               {/* Volume Chart */}
               {showVolume && (
-                <div className="h-20 border-t border-[#363a45]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={chartData} margin={{ top: 5, right: 60, bottom: 5, left: 0 }}>
-                      <XAxis dataKey="date" hide />
-                      <YAxis
-                        yAxisId="volume"
-                        orientation="right"
-                        domain={[0, maxVolume]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 9, fill: TV_COLORS.text }}
-                        tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toFixed(0)}
-                        width={55}
-                      />
-                      <Bar yAxisId="volume" dataKey="volume" isAnimationActive={false}>
-                        {chartData.map((entry, index) => (
-                          <Cell
-                            key={`vol-${index}`}
-                            fill={entry.isUp ? TV_COLORS.bullish : TV_COLORS.bearish}
-                            fillOpacity={0.5}
-                          />
-                        ))}
-                      </Bar>
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                <div className="border-t border-[#363a45]">
+                  <svg viewBox={`0 0 ${chartWidth} ${volumeHeight}`} className="w-full" style={{ height: "60px" }}>
+                    {candles.map((c, i) => {
+                      const x = xScale(i)
+                      const barWidth = Math.max(innerWidth / candles.length * 0.7, 2)
+                      const isUp = c.close >= c.open
+                      
+                      return (
+                        <rect
+                          key={i}
+                          x={x - barWidth / 2}
+                          y={volumeScale(c.volume)}
+                          width={barWidth}
+                          height={volumeHeight - volumeScale(c.volume)}
+                          fill={isUp ? TV_COLORS.bullish : TV_COLORS.bearish}
+                          opacity={0.5}
+                        />
+                      )
+                    })}
+                  </svg>
                 </div>
               )}
 
-              {/* Bottom bar with info */}
+              {/* Bottom bar */}
               <div className="flex items-center justify-between px-3 py-2 border-t border-[#363a45] text-[10px]" style={{ color: TV_COLORS.text }}>
                 <span>GeckoTerminal Data</span>
-                <span>{TIMEFRAMES[activeTimeframe].label} Chart</span>
+                <div className="flex items-center gap-3">
+                  {drawingMode && <span className="text-[#ffeb3b]">Drawing Mode ON - Click and drag to draw</span>}
+                  <span>{TIMEFRAMES[activeTimeframe].label} Chart</span>
+                </div>
               </div>
             </div>
           )}
