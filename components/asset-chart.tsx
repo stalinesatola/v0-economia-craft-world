@@ -49,7 +49,7 @@ const TIMEFRAMES = [
   { label: "30D", timeframe: "day", aggregate: "1", limit: "30" },
 ] as const
 
-// Candlestick SVG renderer
+// Custom Candlestick SVG renderer component
 function CandlestickSVG({ data, minPrice, maxPrice }: { data: any[]; minPrice: number; maxPrice: number }) {
   if (!data || data.length === 0) return null
   
