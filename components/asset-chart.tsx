@@ -267,7 +267,7 @@ export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation,
     } catch (err) {
       console.error("[v0] Canvas rendering error:", err)
     }
-  }, [candles, showVolume, chartType, lines, cost])
+  }, [candles, showVolume, chartType, lines])
 
   const priceChange = candles.length > 1 ? candles[candles.length - 1].close - candles[0].open : 0
   const isPositive = priceChange >= 0
