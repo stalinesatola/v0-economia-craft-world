@@ -102,159 +102,172 @@ export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation,
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const dpr = window.devicePixelRatio || 1
-    const width = canvas.offsetWidth
-    const height = canvas.offsetHeight
+    try {
+      const dpr = window.devicePixelRatio || 1
+      const width = canvas.offsetWidth
+      const height = canvas.offsetHeight
 
-    canvas.width = width * dpr
-    canvas.height = height * dpr
-    ctx.scale(dpr, dpr)
+      canvas.width = width * dpr
+      canvas.height = height * dpr
+      ctx.scale(dpr, dpr)
 
-    // Background
-    ctx.fillStyle = TV_COLORS.bg
-    ctx.fillRect(0, 0, width, height)
+      // Background
+      ctx.fillStyle = TV_COLORS.bg
+      ctx.fillRect(0, 0, width, height)
 
-    // Calculate prices
-    const allPrices = candles.flatMap(c => [c.high, c.low])
-    const minPrice = Math.min(...allPrices) * 0.998
-    const maxPrice = Math.max(...allPrices) * 1.002
-    const priceRange = maxPrice - minPrice
+      // Calculate prices - safeguard against empty arrays
+      const allPrices = candles.flatMap(c => [c.high, c.low])
+      if (allPrices.length === 0) return
 
-    // Dimensions
-    const chartLeft = 50
-    const chartRight = width - 60
-    const chartTop = 20
-    const chartBottom = showVolume ? height - 100 : height - 40
-    const chartW = chartRight - chartLeft
-    const chartH = chartBottom - chartTop
+      const minPrice = Math.min(...allPrices) * 0.998
+      const maxPrice = Math.max(...allPrices) * 1.002
+      const priceRange = maxPrice - minPrice
 
-    // Helper functions
-    const yScale = (price: number) => chartBottom - ((price - minPrice) / priceRange) * chartH
-    const xScale = (index: number) => chartLeft + (index / (candles.length - 1)) * chartW
+      if (priceRange === 0) return
 
-    // Grid lines
-    ctx.strokeStyle = TV_COLORS.grid
-    ctx.lineWidth = 1
-    ctx.globalAlpha = 0.3
-    for (let i = 0; i <= 4; i++) {
-      const y = chartTop + (chartH / 4) * i
-      ctx.beginPath()
-      ctx.moveTo(chartLeft, y)
-      ctx.lineTo(chartRight, y)
-      ctx.stroke()
-    }
-    ctx.globalAlpha = 1
+      // Dimensions
+      const chartLeft = 50
+      const chartRight = width - 60
+      const chartTop = 20
+      const chartBottom = showVolume ? height - 100 : height - 40
+      const chartW = chartRight - chartLeft
+      const chartH = chartBottom - chartTop
 
-    // Cost line
-    if (cost > 0 && cost >= minPrice && cost <= maxPrice) {
-      ctx.strokeStyle = TV_COLORS.costLine
+      // Helper functions
+      const yScale = (price: number) => chartBottom - ((price - minPrice) / priceRange) * chartH
+      const xScale = (index: number) => {
+        if (candles.length === 1) return chartLeft + chartW / 2
+        return chartLeft + (index / (candles.length - 1)) * chartW
+      }
+
+      // Grid lines
+      ctx.strokeStyle = TV_COLORS.grid
       ctx.lineWidth = 1
-      ctx.setLineDash([4, 2])
-      const y = yScale(cost)
-      ctx.beginPath()
-      ctx.moveTo(chartLeft, y)
-      ctx.lineTo(chartRight, y)
-      ctx.stroke()
-      ctx.setLineDash([])
-      
-      ctx.fillStyle = TV_COLORS.costLine
-      ctx.font = "10px monospace"
-      ctx.fillText(`Cost: ${formatPrice(cost)}`, chartLeft + 5, y - 5)
-    }
-
-    // Candles or line
-    const candleWidth = Math.max(chartW / candles.length * 0.7, 2)
-    const priceChange = candles[candles.length - 1].close - candles[0].open
-    const isPositive = priceChange >= 0
-
-    if (chartType === "candle") {
-      candles.forEach((candle, i) => {
-        const x = xScale(i)
-        const isUp = candle.close >= candle.open
-        const color = isUp ? TV_COLORS.bullish : TV_COLORS.bearish
-
-        const yOpen = yScale(candle.open)
-        const yClose = yScale(candle.close)
-        const yHigh = yScale(candle.high)
-        const yLow = yScale(candle.low)
-
-        // Wick
-        ctx.strokeStyle = color
-        ctx.lineWidth = 1
+      ctx.globalAlpha = 0.3
+      for (let i = 0; i <= 4; i++) {
+        const y = chartTop + (chartH / 4) * i
         ctx.beginPath()
-        ctx.moveTo(x, yHigh)
-        ctx.lineTo(x, yLow)
+        ctx.moveTo(chartLeft, y)
+        ctx.lineTo(chartRight, y)
         ctx.stroke()
+      }
+      ctx.globalAlpha = 1
 
-        // Body
-        const bodyTop = Math.min(yOpen, yClose)
-        const bodyHeight = Math.abs(yClose - yOpen) || 1
+      // Cost line
+      if (cost > 0 && cost >= minPrice && cost <= maxPrice) {
+        ctx.strokeStyle = TV_COLORS.costLine
+        ctx.lineWidth = 1
+        ctx.setLineDash([4, 2])
+        const y = yScale(cost)
+        ctx.beginPath()
+        ctx.moveTo(chartLeft, y)
+        ctx.lineTo(chartRight, y)
+        ctx.stroke()
+        ctx.setLineDash([])
 
-        if (isUp) {
-          ctx.fillStyle = color
-        } else {
-          ctx.fillStyle = "transparent"
+        ctx.fillStyle = TV_COLORS.costLine
+        ctx.font = "10px monospace"
+        ctx.fillText(`Cost: ${formatPrice(cost)}`, chartLeft + 5, y - 5)
+      }
+
+      // Candles or line
+      const candleWidth = Math.max(chartW / candles.length * 0.7, 2)
+      const priceChange = candles[candles.length - 1].close - candles[0].open
+      const isPositive = priceChange >= 0
+
+      if (chartType === "candle") {
+        candles.forEach((candle, i) => {
+          const x = xScale(i)
+          const isUp = candle.close >= candle.open
+          const color = isUp ? TV_COLORS.bullish : TV_COLORS.bearish
+
+          const yOpen = yScale(candle.open)
+          const yClose = yScale(candle.close)
+          const yHigh = yScale(candle.high)
+          const yLow = yScale(candle.low)
+
+          // Wick
           ctx.strokeStyle = color
           ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(x, yHigh)
+          ctx.lineTo(x, yLow)
+          ctx.stroke()
+
+          // Body
+          const bodyTop = Math.min(yOpen, yClose)
+          const bodyHeight = Math.abs(yClose - yOpen) || 1
+
+          if (isUp) {
+            ctx.fillStyle = color
+            ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight)
+          } else {
+            ctx.fillStyle = "transparent"
+            ctx.strokeStyle = color
+            ctx.lineWidth = 1
+            ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight)
+          }
+        })
+      } else {
+        // Line chart
+        ctx.strokeStyle = isPositive ? TV_COLORS.bullish : TV_COLORS.bearish
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        candles.forEach((c, i) => {
+          const x = xScale(i)
+          const y = yScale(c.close)
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+        })
+        ctx.stroke()
+
+        // Fill under line
+        ctx.lineTo(chartRight, chartBottom)
+        ctx.lineTo(chartLeft, chartBottom)
+        ctx.closePath()
+        ctx.fillStyle = isPositive ? TV_COLORS.bullish + "20" : TV_COLORS.bearish + "20"
+        ctx.fill()
+      }
+
+      // Volume
+      if (showVolume) {
+        const volTop = chartBottom + 10
+        const volHeight = height - volTop - 30
+        const maxVol = Math.max(...candles.map(c => c.volume), 1)
+
+        if (maxVol > 0) {
+          candles.forEach((c, i) => {
+            const x = xScale(i)
+            const isUp = c.close >= c.open
+            const h = (c.volume / maxVol) * volHeight
+            ctx.fillStyle = isUp ? TV_COLORS.bullish + "60" : TV_COLORS.bearish + "60"
+            ctx.fillRect(x - candleWidth / 2, volTop + volHeight - h, candleWidth, h)
+          })
         }
-        ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight)
-        if (!isUp) ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight)
+      }
+
+      // User lines
+      lines.forEach(line => {
+        ctx.strokeStyle = "#ffeb3b"
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(line.x1, line.y1)
+        ctx.lineTo(line.x2, line.y2)
+        ctx.stroke()
       })
-    } else {
-      // Line chart
-      ctx.strokeStyle = isPositive ? TV_COLORS.bullish : TV_COLORS.bearish
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      candles.forEach((c, i) => {
-        const x = xScale(i)
-        const y = yScale(c.close)
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
-      })
-      ctx.stroke()
 
-      // Fill under line
-      ctx.lineTo(chartRight, chartBottom)
-      ctx.lineTo(chartLeft, chartBottom)
-      ctx.closePath()
-      ctx.fillStyle = isPositive ? TV_COLORS.bullish + "20" : TV_COLORS.bearish + "20"
-      ctx.fill()
+      // Y-axis labels
+      ctx.fillStyle = TV_COLORS.text
+      ctx.font = "10px monospace"
+      ctx.textAlign = "right"
+      for (let i = 0; i <= 4; i++) {
+        const price = minPrice + (priceRange / 4) * i
+        const y = chartBottom - (chartH / 4) * i
+        ctx.fillText(formatPrice(price), chartRight + 10, y + 3)
+      }
+    } catch (err) {
+      console.error("[v0] Canvas rendering error:", err)
     }
-
-    // Volume
-    if (showVolume) {
-      const volTop = chartBottom + 10
-      const volHeight = height - volTop - 30
-      const maxVol = Math.max(...candles.map(c => c.volume), 1)
-
-      candles.forEach((c, i) => {
-        const x = xScale(i)
-        const isUp = c.close >= c.open
-        const h = (c.volume / maxVol) * volHeight
-        ctx.fillStyle = isUp ? TV_COLORS.bullish + "60" : TV_COLORS.bearish + "60"
-        ctx.fillRect(x - candleWidth / 2, volTop + volHeight - h, candleWidth, h)
-      })
-    }
-
-    // User lines
-    lines.forEach(line => {
-      ctx.strokeStyle = "#ffeb3b"
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.moveTo(line.x1, line.y1)
-      ctx.lineTo(line.x2, line.y2)
-      ctx.stroke()
-    })
-
-    // Y-axis labels
-    ctx.fillStyle = TV_COLORS.text
-    ctx.font = "10px monospace"
-    ctx.textAlign = "right"
-    for (let i = 0; i <= 4; i++) {
-      const price = minPrice + (priceRange / 4) * i
-      const y = chartBottom - (chartH / 4) * i
-      ctx.fillText(formatPrice(price), chartRight + 10, y + 3)
-    }
-  }, [candles, showVolume, chartType, lines])
+  }, [candles, showVolume, chartType, lines, cost])
 
   const priceChange = candles.length > 1 ? candles[candles.length - 1].close - candles[0].open : 0
   const isPositive = priceChange >= 0
