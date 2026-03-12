@@ -2,13 +2,13 @@ import { NextResponse } from "next/server"
 import { getConfig, getConfigSection } from "@/lib/config-manager"
 import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "@/lib/craft-data"
 import { RECIPES as DEFAULT_RECIPES } from "@/lib/resource-images"
+import { API_CONFIG, PRICE_THRESHOLDS, VALIDATION_RULES } from "@/lib/constants"
 import type { Recipe } from "@/lib/resource-images"
 
 export const dynamic = "force-dynamic"
 
 const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
 const API_HEADERS = { Accept: "application/json;version=20230203" }
-const FETCH_TIMEOUT = 15000
 
 type PriceResult = {
   price_usd: number
@@ -34,14 +34,29 @@ async function fetchWithTimeout(url: string, timeout: number): Promise<Response>
 }
 
 async function fetchBatch(addresses: string[], network: string): Promise<Record<string, PriceResult>> {
+  // Validate network parameter
+  if (!VALIDATION_RULES.NETWORK_PATTERN.test(network)) {
+    console.warn("[v0] Invalid network parameter:", network)
+    return {}
+  }
+
   const results: Record<string, PriceResult> = {}
   const joined = addresses.join(",")
   const url = `${GECKO_BASE_URL}/networks/${network}/pools/multi/${joined}?include=base_token`
 
   try {
-    const res = await fetchWithTimeout(url, FETCH_TIMEOUT)
-    if (!res.ok) return results
+    const res = await fetchWithTimeout(url, API_CONFIG.OHLCV_FETCH_TIMEOUT)
+    if (!res.ok) {
+      console.warn("[v0] API returned non-ok status:", res.status)
+      return results
+    }
+
     const data = await res.json()
+
+    // Validate response structure
+    if (!data.data || !Array.isArray(data.data)) {
+      return results
+    }
 
     // Build a map of included tokens by id for image lookup
     const includedTokens: Record<string, { image_url?: string; name?: string; symbol?: string }> = {}
@@ -57,27 +72,38 @@ async function fetchBatch(addresses: string[], network: string): Promise<Record<
       }
     }
 
-    for (const item of data.data ?? []) {
-      const poolAddr = item.attributes?.address?.toLowerCase()
-      if (!poolAddr) continue
+    for (const item of data.data) {
+      try {
+        const poolAddr = item.attributes?.address?.toLowerCase()
+        if (!poolAddr || !VALIDATION_RULES.POOL_ADDRESS_PATTERN.test(poolAddr)) continue
 
-      // Get base token image from included data
-      const baseTokenRef = item.relationships?.base_token?.data
-      const baseTokenId = baseTokenRef?.id || ""
-      const includedToken = includedTokens[baseTokenId]
-      const tokenImageUrl = includedToken?.image_url || ""
-      const tokenName = item.attributes?.name?.split(" / ")?.[0] || includedToken?.name || ""
+        const baseTokenRef = item.relationships?.base_token?.data
+        const baseTokenId = baseTokenRef?.id || ""
+        const includedToken = includedTokens[baseTokenId]
+        const tokenImageUrl = includedToken?.image_url || ""
+        const tokenName = item.attributes?.name?.split(" / ")?.[0] || includedToken?.name || ""
 
-      results[poolAddr] = {
-        price_usd: parseFloat(item.attributes?.base_token_price_usd || "0"),
-        volume_usd_24h: parseFloat(item.attributes?.volume_usd?.h24 || "0"),
-        price_change_24h: parseFloat(item.attributes?.price_change_percentage?.h24 || "0"),
-        image_url: tokenImageUrl || undefined,
-        token_name: tokenName || undefined,
+        const priceUsd = parseFloat(item.attributes?.base_token_price_usd || "0")
+        const volumeUsd = parseFloat(item.attributes?.volume_usd?.h24 || "0")
+        const priceChange = parseFloat(item.attributes?.price_change_percentage?.h24 || "0")
+
+        // Skip if volume is too low
+        if (volumeUsd < PRICE_THRESHOLDS.MIN_VOLUME_USD) continue
+
+        results[poolAddr] = {
+          price_usd: priceUsd,
+          volume_usd_24h: volumeUsd,
+          price_change_24h: priceChange,
+          image_url: tokenImageUrl || undefined,
+          token_name: tokenName || undefined,
+        }
+      } catch (err) {
+        console.warn("[v0] Error processing pool item:", err)
+        continue
       }
     }
-  } catch {
-    // Timeout or network error
+  } catch (err) {
+    console.error("[v0] Batch fetch error:", err instanceof Error ? err.message : "Unknown error")
   }
   return results
 }
@@ -85,28 +111,36 @@ async function fetchBatch(addresses: string[], network: string): Promise<Record<
 export async function GET() {
   let pools: Record<string, string> = DEFAULT_POOLS
   let network: string = DEFAULT_NETWORK
-  let thresholds = { buy: 15, sell: 20 }
+  let thresholds = { buy: PRICE_THRESHOLDS.BUY_DEFAULT, sell: PRICE_THRESHOLDS.SELL_DEFAULT }
   let alertsConfig: Record<string, { enabled: boolean; priority: string; category: string }> = {}
   let banners: Array<{ id: string; position: string; enabled: boolean; imageUrl: string; linkUrl: string; altText: string; adScript: string }> = []
 
   try {
     const config = await getConfig()
-    pools = (config.pools && Object.keys(config.pools).length > 0) ? config.pools : pools
+    pools = config.pools && Object.keys(config.pools).length > 0 ? config.pools : pools
     network = config.network ?? network
     thresholds = config.thresholds ?? thresholds
     alertsConfig = config.alertsConfig ?? alertsConfig
     banners = (config.banners ?? []).filter((b) => b.enabled)
-  } catch {
-    // Use defaults
+  } catch (err) {
+    console.warn("[v0] Config load error, using defaults:", err)
   }
 
   const poolEntries = Object.entries(pools)
-  const addresses = poolEntries.map(([, addr]) => addr).filter((a) => a.startsWith("0x"))
+  const addresses = poolEntries
+    .map(([, addr]) => addr)
+    .filter((a) => {
+      try {
+        return VALIDATION_RULES.POOL_ADDRESS_PATTERN.test(a)
+      } catch {
+        return false
+      }
+    })
 
-  const batchSize = 15
+  // Process in batches
   const batches: string[][] = []
-  for (let i = 0; i < addresses.length; i += batchSize) {
-    batches.push(addresses.slice(i, i + batchSize))
+  for (let i = 0; i < addresses.length; i += API_CONFIG.PRICE_BATCH_SIZE) {
+    batches.push(addresses.slice(i, i + API_CONFIG.PRICE_BATCH_SIZE))
   }
 
   const batchResults = await Promise.all(batches.map((batch) => fetchBatch(batch, network)))
@@ -121,7 +155,7 @@ export async function GET() {
     const lowerAddr = addr.toLowerCase()
     if (allPrices[lowerAddr]) {
       const priceData = allPrices[lowerAddr]
-      // Usar imagem do alertsConfig (cadastrada pelo admin) se disponivel
+      // Use image from alertsConfig if available
       const adminImageUrl = (alertsConfig[symbol] as Record<string, unknown>)?.imageUrl as string | undefined
       if (adminImageUrl) {
         priceData.image_url = adminImageUrl
@@ -130,31 +164,31 @@ export async function GET() {
     }
   }
 
-  // Find DYNO COIN price by pool address (the symbol may vary: "COIN", "DYNO COIN", etc.)
+  // Find DYNO COIN price by pool address
   const DYNO_COIN_POOL_ADDRESS = "0x8d896c96ffcafbf12d86dd4510236de7bcfa7dcf"
   let dynoCoinPriceUsd = allPrices[DYNO_COIN_POOL_ADDRESS]?.price_usd ?? 0
   if (dynoCoinPriceUsd === 0) {
-    // Fallback: search by pool address in symbolPrices
-    for (const [symbol, addr] of poolEntries) {
-      if (addr.toLowerCase() === DYNO_COIN_POOL_ADDRESS && symbolPrices[symbol]) {
-        dynoCoinPriceUsd = symbolPrices[symbol].price_usd
+    for (const [, addr] of poolEntries) {
+      if (addr.toLowerCase() === DYNO_COIN_POOL_ADDRESS && symbolPrices[Object.keys(poolEntries).find(k => poolEntries[k] === addr) || ""]) {
+        const symbol = Object.keys(poolEntries).find(k => poolEntries[k] === addr) || ""
+        dynoCoinPriceUsd = symbolPrices[symbol]?.price_usd ?? 0
         break
       }
     }
   }
 
-  // Carregar receitas do DB (mesmas que o frontend usa) para calculo consistente
+  // Load recipes from DB
   let recipes: Recipe[] = DEFAULT_RECIPES
   try {
     const dbRecipes = await getConfigSection("recipes")
     if (dbRecipes && Array.isArray(dbRecipes) && dbRecipes.length > 0) {
       recipes = dbRecipes as Recipe[]
     }
-  } catch {
-    // fallback para hardcoded
+  } catch (err) {
+    console.warn("[v0] Recipes load error, using defaults:", err)
   }
 
-  // Calcular custos de producao: soma(preco_pool_input * quantidade) para cada input
+  // Calculate production costs
   const calculatedCosts: Record<string, number> = {}
   for (const recipe of recipes) {
     let totalCost = 0
@@ -165,15 +199,23 @@ export async function GET() {
     calculatedCosts[recipe.output] = totalCost
   }
 
-  return NextResponse.json({
-    prices: symbolPrices,
-    pools,
-    timestamp: new Date().toISOString(),
-    count: Object.keys(symbolPrices).length,
-    productionCosts: calculatedCosts,
-    thresholds,
-    alertsConfig,
-    banners,
-    dynoCoinPriceUsd,
-  })
+  return NextResponse.json(
+    {
+      prices: symbolPrices,
+      pools,
+      timestamp: new Date().toISOString(),
+      count: Object.keys(symbolPrices).length,
+      productionCosts: calculatedCosts,
+      thresholds,
+      alertsConfig,
+      banners,
+      dynoCoinPriceUsd,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+      },
+    }
+  )
 }
+
