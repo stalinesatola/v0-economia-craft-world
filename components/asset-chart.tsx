@@ -4,11 +4,10 @@ import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { X, TrendingUp, TrendingDown, BarChart3, Loader2 } from "lucide-react"
+import { X, BarChart3, Loader2 } from "lucide-react"
 import { formatPrice } from "@/lib/craft-data"
 import { useI18n } from "@/lib/i18n"
 
-// TradingView-inspired colors
 const TV_COLORS = {
   bg: "#131722",
   grid: "#1e222d",
@@ -59,23 +58,21 @@ const TIMEFRAMES = [
 ] as const
 
 export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation, signal, chartType: propChartType, onClose }: AssetChartProps) {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const [candles, setCandles] = useState<Candle[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTimeframe, setActiveTimeframe] = useState(4) // default 1H
+  const [activeTimeframe, setActiveTimeframe] = useState(4)
   const [showVolume, setShowVolume] = useState(false)
-  const [chartType, setChartType] = useState<"line" | "candle" | "area">(propChartType === "candlestick" ? "candle" : propChartType === "area" ? "area" : "line")
+  const [chartType, setChartType] = useState<"line" | "candle">(propChartType === "candlestick" ? "candle" : "line")
   const [isDrawing, setIsDrawing] = useState(false)
   const [lines, setLines] = useState<DrawingLine[]>([])
-  const [currentLine, setCurrentLine] = useState<{ x1: number; y1: number } | null>(null)
-  const chartRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     if (!poolAddress) {
       setLoading(false)
       return
     }
-    
     let cancelled = false
     const fetchData = async () => {
       setLoading(true)
@@ -94,57 +91,199 @@ export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation,
         if (!cancelled) setLoading(false)
       }
     }
-    
     fetchData()
     return () => { cancelled = true }
   }, [activeTimeframe, poolAddress])
 
+  useEffect(() => {
+    if (!canvasRef.current || candles.length === 0) return
+
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const dpr = window.devicePixelRatio || 1
+    const width = canvas.offsetWidth
+    const height = canvas.offsetHeight
+
+    canvas.width = width * dpr
+    canvas.height = height * dpr
+    ctx.scale(dpr, dpr)
+
+    // Background
+    ctx.fillStyle = TV_COLORS.bg
+    ctx.fillRect(0, 0, width, height)
+
+    // Calculate prices
+    const allPrices = candles.flatMap(c => [c.high, c.low])
+    const minPrice = Math.min(...allPrices) * 0.998
+    const maxPrice = Math.max(...allPrices) * 1.002
+    const priceRange = maxPrice - minPrice
+
+    // Dimensions
+    const chartLeft = 50
+    const chartRight = width - 60
+    const chartTop = 20
+    const chartBottom = showVolume ? height - 100 : height - 40
+    const chartW = chartRight - chartLeft
+    const chartH = chartBottom - chartTop
+
+    // Helper functions
+    const yScale = (price: number) => chartBottom - ((price - minPrice) / priceRange) * chartH
+    const xScale = (index: number) => chartLeft + (index / (candles.length - 1)) * chartW
+
+    // Grid lines
+    ctx.strokeStyle = TV_COLORS.grid
+    ctx.lineWidth = 1
+    ctx.globalAlpha = 0.3
+    for (let i = 0; i <= 4; i++) {
+      const y = chartTop + (chartH / 4) * i
+      ctx.beginPath()
+      ctx.moveTo(chartLeft, y)
+      ctx.lineTo(chartRight, y)
+      ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+
+    // Cost line
+    if (cost > 0 && cost >= minPrice && cost <= maxPrice) {
+      ctx.strokeStyle = TV_COLORS.costLine
+      ctx.lineWidth = 1
+      ctx.setLineDash([4, 2])
+      const y = yScale(cost)
+      ctx.beginPath()
+      ctx.moveTo(chartLeft, y)
+      ctx.lineTo(chartRight, y)
+      ctx.stroke()
+      ctx.setLineDash([])
+      
+      ctx.fillStyle = TV_COLORS.costLine
+      ctx.font = "10px monospace"
+      ctx.fillText(`Cost: ${formatPrice(cost)}`, chartLeft + 5, y - 5)
+    }
+
+    // Candles or line
+    const candleWidth = Math.max(chartW / candles.length * 0.7, 2)
+    const priceChange = candles[candles.length - 1].close - candles[0].open
+    const isPositive = priceChange >= 0
+
+    if (chartType === "candle") {
+      candles.forEach((candle, i) => {
+        const x = xScale(i)
+        const isUp = candle.close >= candle.open
+        const color = isUp ? TV_COLORS.bullish : TV_COLORS.bearish
+
+        const yOpen = yScale(candle.open)
+        const yClose = yScale(candle.close)
+        const yHigh = yScale(candle.high)
+        const yLow = yScale(candle.low)
+
+        // Wick
+        ctx.strokeStyle = color
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(x, yHigh)
+        ctx.lineTo(x, yLow)
+        ctx.stroke()
+
+        // Body
+        const bodyTop = Math.min(yOpen, yClose)
+        const bodyHeight = Math.abs(yClose - yOpen) || 1
+
+        if (isUp) {
+          ctx.fillStyle = color
+        } else {
+          ctx.fillStyle = "transparent"
+          ctx.strokeStyle = color
+          ctx.lineWidth = 1
+        }
+        ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight)
+        if (!isUp) ctx.strokeRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight)
+      })
+    } else {
+      // Line chart
+      ctx.strokeStyle = isPositive ? TV_COLORS.bullish : TV_COLORS.bearish
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      candles.forEach((c, i) => {
+        const x = xScale(i)
+        const y = yScale(c.close)
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+      })
+      ctx.stroke()
+
+      // Fill under line
+      ctx.lineTo(chartRight, chartBottom)
+      ctx.lineTo(chartLeft, chartBottom)
+      ctx.closePath()
+      ctx.fillStyle = isPositive ? TV_COLORS.bullish + "20" : TV_COLORS.bearish + "20"
+      ctx.fill()
+    }
+
+    // Volume
+    if (showVolume) {
+      const volTop = chartBottom + 10
+      const volHeight = height - volTop - 30
+      const maxVol = Math.max(...candles.map(c => c.volume), 1)
+
+      candles.forEach((c, i) => {
+        const x = xScale(i)
+        const isUp = c.close >= c.open
+        const h = (c.volume / maxVol) * volHeight
+        ctx.fillStyle = isUp ? TV_COLORS.bullish + "60" : TV_COLORS.bearish + "60"
+        ctx.fillRect(x - candleWidth / 2, volTop + volHeight - h, candleWidth, h)
+      })
+    }
+
+    // User lines
+    lines.forEach(line => {
+      ctx.strokeStyle = "#ffeb3b"
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(line.x1, line.y1)
+      ctx.lineTo(line.x2, line.y2)
+      ctx.stroke()
+    })
+
+    // Y-axis labels
+    ctx.fillStyle = TV_COLORS.text
+    ctx.font = "10px monospace"
+    ctx.textAlign = "right"
+    for (let i = 0; i <= 4; i++) {
+      const price = minPrice + (priceRange / 4) * i
+      const y = chartBottom - (chartH / 4) * i
+      ctx.fillText(formatPrice(price), chartRight + 10, y + 3)
+    }
+  }, [candles, showVolume, chartType, lines])
+
   const priceChange = candles.length > 1 ? candles[candles.length - 1].close - candles[0].open : 0
-  const priceChangePercent = candles.length > 1 && candles[0].open > 0
-    ? ((priceChange / candles[0].open) * 100)
-    : 0
   const isPositive = priceChange >= 0
 
-  const allPrices = candles.flatMap(c => [c.high, c.low])
-  const minPrice = allPrices.length > 0 ? Math.min(...allPrices) * 0.998 : 0
-  const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) * 1.002 : 0
-  const priceRange = maxPrice - minPrice
-
-  const chartWidth = 800
-  const chartHeight = showVolume ? 400 : 500
-  const candleWidth = Math.max(chartWidth / candles.length * 0.6, 2)
-  const spacing = chartWidth / Math.max(candles.length, 1)
-
-  const yScale = (price: number) => {
-    if (priceRange === 0) return chartHeight / 2
-    return chartHeight - ((price - minPrice) / priceRange) * chartHeight
-  }
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isDrawing || !chartRef.current) return
-    const rect = chartRef.current.getBoundingClientRect()
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (!isDrawing || !canvasRef.current) return
+    const rect = canvasRef.current.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    setCurrentLine({ x1: x, y1: y })
-  }
+    
+    const handleMove = (moveE: MouseEvent) => {
+      // Live preview would go here
+    }
+    
+    const handleUp = (upE: MouseEvent) => {
+      const x2 = upE.clientX - rect.left
+      const y2 = upE.clientY - rect.top
+      setLines([...lines, { x1: x, y1: y, x2, y2 }])
+      document.removeEventListener("mousemove", handleMove)
+      document.removeEventListener("mouseup", handleUp)
+    }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!currentLine || !isDrawing || !chartRef.current) return
-    // Preview handled via canvas rendering
-  }
-
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (!currentLine || !isDrawing || !chartRef.current) return
-    const rect = chartRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    setLines([...lines, { x1: currentLine.x1, y1: currentLine.y1, x2: x, y2: y }])
-    setCurrentLine(null)
+    document.addEventListener("mousemove", handleMove)
+    document.addEventListener("mouseup", handleUp)
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <Card className="w-full max-w-4xl border-[#363a45] shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: TV_COLORS.bg }}>
+      <Card className="w-full max-w-5xl border-[#363a45] shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: TV_COLORS.bg }}>
         <CardHeader className="pb-2 border-b border-[#363a45]">
           <div className="flex items-start justify-between">
             <div className="flex flex-col gap-1">
@@ -154,11 +293,6 @@ export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation,
                 </CardTitle>
                 {signal === "buy" && <Badge className="text-[10px] px-1.5 py-0 bg-emerald-500/20 text-emerald-400">BUY</Badge>}
                 {signal === "sell" && <Badge className="text-[10px] px-1.5 py-0 bg-red-500/20 text-red-400">SELL</Badge>}
-                {!loading && candles.length > 1 && (
-                  <span className={`text-sm font-mono font-medium ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
-                    {isPositive ? "+" : ""}{priceChangePercent.toFixed(2)}%
-                  </span>
-                )}
               </div>
               <div className="flex items-center gap-4 text-xs" style={{ color: TV_COLORS.text }}>
                 <span>Last: <span className="font-mono" style={{ color: TV_COLORS.textLight }}>{formatPrice(currentPrice)}</span></span>
@@ -229,149 +363,13 @@ export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation,
               No data available for {symbol}
             </div>
           ) : (
-            <div style={{ backgroundColor: TV_COLORS.bg }}>
-              <div
-                ref={chartRef}
-                className="relative cursor-crosshair"
-                style={{ width: "100%", aspectRatio: "2 / 1" }}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-              >
-                <svg 
-                  width={chartWidth} 
-                  height={chartHeight} 
-                  viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                  preserveAspectRatio="none"
-                  className="w-full h-full"
-                >
-                  <defs>
-                    <linearGradient id={`candle-gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={isPositive ? TV_COLORS.bullish : TV_COLORS.bearish} stopOpacity={0.1} />
-                      <stop offset="100%" stopColor={isPositive ? TV_COLORS.bullish : TV_COLORS.bearish} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Grid */}
-                  {[0.25, 0.5, 0.75].map((pct, i) => (
-                    <line
-                      key={`grid-h-${i}`}
-                      x1={0}
-                      y1={chartHeight * pct}
-                      x2={chartWidth}
-                      y2={chartHeight * pct}
-                      stroke={TV_COLORS.grid}
-                      strokeWidth={1}
-                      opacity={0.3}
-                    />
-                  ))}
-
-                  {/* Cost reference line */}
-                  {cost > 0 && cost >= minPrice && cost <= maxPrice && (
-                    <>
-                      <line
-                        x1={0}
-                        y1={yScale(cost)}
-                        x2={chartWidth}
-                        y2={yScale(cost)}
-                        stroke={TV_COLORS.costLine}
-                        strokeWidth={1}
-                        strokeDasharray="4 2"
-                      />
-                      <text x={5} y={yScale(cost) - 3} fontSize={10} fill={TV_COLORS.costLine}>
-                        Cost: {formatPrice(cost)}
-                      </text>
-                    </>
-                  )}
-
-                  {/* Candles or Line */}
-                  {chartType === "candle" ? (
-                    candles.map((candle, i) => {
-                      const x = i * spacing + spacing / 2
-                      const isUp = candle.close >= candle.open
-                      const color = isUp ? TV_COLORS.bullish : TV_COLORS.bearish
-
-                      const yOpen = yScale(candle.open)
-                      const yClose = yScale(candle.close)
-                      const yHigh = yScale(candle.high)
-                      const yLow = yScale(candle.low)
-
-                      const bodyTop = Math.min(yOpen, yClose)
-                      const bodyHeight = Math.abs(yClose - yOpen) || 1
-
-                      return (
-                        <g key={i}>
-                          <line x1={x} y1={yHigh} x2={x} y2={yLow} stroke={color} strokeWidth={1} />
-                          <rect
-                            x={x - candleWidth / 2}
-                            y={bodyTop}
-                            width={candleWidth}
-                            height={Math.max(bodyHeight, 1)}
-                            fill={isUp ? color : "transparent"}
-                            stroke={color}
-                            strokeWidth={1}
-                          />
-                        </g>
-                      )
-                    })
-                  ) : (
-                    <polyline
-                      points={candles.map((c, i) => `${i * spacing + spacing / 2},${yScale(c.close)}`).join(" ")}
-                      fill="none"
-                      stroke={isPositive ? TV_COLORS.bullish : TV_COLORS.bearish}
-                      strokeWidth={2}
-                    />
-                  )}
-
-                  {/* User drawn lines */}
-                  {lines.map((line, i) => (
-                    <line
-                      key={i}
-                      x1={line.x1}
-                      y1={line.y1}
-                      x2={line.x2}
-                      y2={line.y2}
-                      stroke="#ffeb3b"
-                      strokeWidth={2}
-                    />
-                  ))}
-                </svg>
-
-                {/* Y-axis labels */}
-                <div className="absolute right-0 top-0 h-full w-16 flex flex-col justify-between text-[10px] pr-1 pointer-events-none" style={{ color: TV_COLORS.text }}>
-                  <span className="text-right">{formatPrice(maxPrice)}</span>
-                  <span className="text-right">{formatPrice((minPrice + maxPrice) / 2)}</span>
-                  <span className="text-right">{formatPrice(minPrice)}</span>
-                </div>
-              </div>
-
-              {/* Volume chart */}
-              {showVolume && (
-                <div style={{ backgroundColor: TV_COLORS.bg, borderTop: `1px solid ${TV_COLORS.grid}`, position: "relative", width: "100%", aspectRatio: "6 / 1" }}>
-                  <svg width={chartWidth} height={80} viewBox={`0 0 ${chartWidth} 80`} preserveAspectRatio="none" className="w-full h-full">
-                    {(() => {
-                      const maxVol = Math.max(...candles.map(c => c.volume), 1)
-                      return candles.map((candle, i) => {
-                        const x = i * spacing + spacing / 2
-                        const isUp = candle.close >= candle.open
-                        const h = (candle.volume / maxVol) * 70
-                        return (
-                          <rect
-                            key={i}
-                            x={x - candleWidth / 2}
-                            y={80 - h}
-                            width={candleWidth}
-                            height={h}
-                            fill={isUp ? TV_COLORS.bullish : TV_COLORS.bearish}
-                            opacity={0.4}
-                          />
-                        )
-                      })
-                    })()}
-                  </svg>
-                </div>
-              )}
-            </div>
+            <canvas
+              ref={canvasRef}
+              className="w-full"
+              style={{ height: showVolume ? "500px" : "400px", backgroundColor: TV_COLORS.bg }}
+              onMouseDown={handleCanvasMouseDown}
+              onMouseMove={() => {}}
+            />
           )}
         </CardContent>
       </Card>
