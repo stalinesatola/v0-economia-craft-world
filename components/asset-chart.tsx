@@ -116,122 +116,116 @@ export function AssetChart({
 
   // Initialize and manage chart using useLayoutEffect to avoid flicker
   useLayoutEffect(() => {
-    if (!containerRef.current || candles.length === 0 || loading) return
+    if (!chartRef.current || candles.length === 0) return
 
-    // Create chart if not exists
-    if (!chartRef.current) {
-      chartRef.current = createChart(containerRef.current, {
-        layout: {
-          background: { color: TV_COLORS.bg, type: ColorType.Solid },
-          textColor: TV_COLORS.text,
-          fontSize: 11,
-          fontFamily: "'JetBrains Mono', monospace",
-        },
-        grid: {
-          vertLines: { color: TV_COLORS.grid },
-          horzLines: { color: TV_COLORS.grid },
-        },
-        width: containerRef.current.offsetWidth,
-        height: showVolume ? 500 : 400,
-        timeScale: {
-          timeVisible: true,
-          secondsVisible: false,
-        },
-      })
-
+    try {
       const chart = chartRef.current
 
-      // Handle resize
-      const handleResize = () => {
-        if (containerRef.current && chart) {
-          chart.applyOptions({
-            width: containerRef.current.offsetWidth,
-            height: showVolume ? 500 : 400,
+      // Verify chart exists before using it
+      if (!chart) {
+        console.error("[v0] Chart reference is null")
+        return
+      }
+
+      // Update chart height when volume visibility changes
+      chart.applyOptions({
+        height: showVolume ? 500 : 400,
+      })
+
+      // Remove existing series safely
+      if (candlestickSeriesRef.current && chart) {
+        try {
+          chart.removeSeries(candlestickSeriesRef.current)
+        } catch (e) {
+          console.warn("[v0] Error removing candlestick series:", e)
+        }
+        candlestickSeriesRef.current = null
+      }
+      if (lineSeriesRef.current && chart) {
+        try {
+          chart.removeSeries(lineSeriesRef.current)
+        } catch (e) {
+          console.warn("[v0] Error removing line series:", e)
+        }
+        lineSeriesRef.current = null
+      }
+      if (volumeSeriesRef.current && chart) {
+        try {
+          chart.removeSeries(volumeSeriesRef.current)
+        } catch (e) {
+          console.warn("[v0] Error removing volume series:", e)
+        }
+        volumeSeriesRef.current = null
+      }
+
+      // Transform candles to chart format (time in seconds)
+      const chartData = candles.map((c) => ({
+        time: Math.floor(c.timestamp / 1000) as any,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }))
+
+      const volumeData = candles.map((c) => ({
+        time: Math.floor(c.timestamp / 1000) as any,
+        value: c.volume,
+        color: c.close >= c.open ? TV_COLORS.bullish + "80" : TV_COLORS.bearish + "80",
+      }))
+
+      // Add appropriate series based on chart type
+      if (chartType === "candle") {
+        candlestickSeriesRef.current = chart.addCandlestickSeries({
+          upColor: TV_COLORS.bullish,
+          downColor: TV_COLORS.bearish,
+          borderUpColor: TV_COLORS.bullish,
+          borderDownColor: TV_COLORS.bearish,
+          wickUpColor: TV_COLORS.bullish,
+          wickDownColor: TV_COLORS.bearish,
+        })
+        candlestickSeriesRef.current.setData(chartData)
+
+        // Add markers
+        const markers: SeriesMarker<any>[] = []
+        if (cost > 0) {
+          markers.push({
+            time: chartData[0].time,
+            position: "inBar",
+            color: TV_COLORS.costLine,
+            shape: "square",
+            text: `Cost: ${formatPrice(cost)}`,
           })
         }
-      }
-
-      window.addEventListener("resize", handleResize)
-      return () => window.removeEventListener("resize", handleResize)
-    }
-
-    const chart = chartRef.current
-
-    // Update chart height when volume visibility changes
-    chart.applyOptions({
-      height: showVolume ? 500 : 400,
-    })
-
-    // Remove existing series
-    if (candlestickSeriesRef.current) chart.removeSeries(candlestickSeriesRef.current)
-    if (lineSeriesRef.current) chart.removeSeries(lineSeriesRef.current)
-    if (volumeSeriesRef.current) chart.removeSeries(volumeSeriesRef.current)
-
-    // Transform candles to chart format (time in seconds)
-    const chartData = candles.map((c) => ({
-      time: Math.floor(c.timestamp / 1000) as any,
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close,
-    }))
-
-    const volumeData = candles.map((c) => ({
-      time: Math.floor(c.timestamp / 1000) as any,
-      value: c.volume,
-      color: c.close >= c.open ? TV_COLORS.bullish + "80" : TV_COLORS.bearish + "80",
-    }))
-
-    // Add appropriate series based on chart type
-    if (chartType === "candle") {
-      candlestickSeriesRef.current = chart.addCandlestickSeries({
-        upColor: TV_COLORS.bullish,
-        downColor: TV_COLORS.bearish,
-        borderUpColor: TV_COLORS.bullish,
-        borderDownColor: TV_COLORS.bearish,
-        wickUpColor: TV_COLORS.bullish,
-        wickDownColor: TV_COLORS.bearish,
-      })
-      candlestickSeriesRef.current.setData(chartData)
-
-      // Add markers
-      const markers: SeriesMarker<any>[] = []
-      if (cost > 0) {
-        markers.push({
-          time: chartData[0].time,
-          position: "inBar",
-          color: TV_COLORS.costLine,
-          shape: "square",
-          text: `Cost: ${formatPrice(cost)}`,
+        candlestickSeriesRef.current.setMarkers(markers)
+      } else {
+        lineSeriesRef.current = chart.addLineSeries({
+          color: TV_COLORS.line,
+          lineWidth: 2,
+          crosshairMarkerVisible: true,
         })
+        lineSeriesRef.current.setData(chartData)
       }
-      candlestickSeriesRef.current.setMarkers(markers)
-    } else {
-      lineSeriesRef.current = chart.addLineSeries({
-        color: TV_COLORS.line,
-        lineWidth: 2,
-        crosshairMarkerVisible: true,
-      })
-      lineSeriesRef.current.setData(chartData)
+
+      // Add volume series if visible
+      if (showVolume) {
+        volumeSeriesRef.current = chart.addHistogramSeries({
+          color: TV_COLORS.bullish,
+          priceFormat: {
+            type: "volume",
+          },
+        })
+        volumeSeriesRef.current.setData(volumeData)
+      }
+
+      // Fit content
+      chart.timeScale().fitContent()
+
+      // Ensure proper rendering
+      chart.applyOptions({})
+    } catch (err) {
+      console.error("[v0] Chart rendering error:", err)
     }
-
-    // Add volume series if visible
-    if (showVolume) {
-      volumeSeriesRef.current = chart.addHistogramSeries({
-        color: TV_COLORS.bullish,
-        priceFormat: {
-          type: "volume",
-        },
-      })
-      volumeSeriesRef.current.setData(volumeData)
-    }
-
-    // Fit content
-    chart.timeScale().fitContent()
-
-    // Ensure proper rendering
-    chart.applyOptions({})
-  }, [candles, chartType, showVolume, loading])
+  }, [candles, chartType, showVolume])
 
   const priceChange =
     candles.length > 1 ? candles[candles.length - 1].close - candles[0].open : 0
