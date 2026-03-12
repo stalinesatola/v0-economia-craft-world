@@ -43,6 +43,7 @@ interface AssetChartProps {
   cost: number
   deviation: number
   signal: "buy" | "sell" | "neutral"
+  chartType?: "area" | "candlestick" | "line"
   onClose: () => void
 }
 
@@ -57,13 +58,13 @@ const TIMEFRAMES = [
   { label: "1M", timeframe: "day", aggregate: "30", limit: "12" },
 ] as const
 
-export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation, signal, onClose }: AssetChartProps) {
+export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation, signal, chartType: propChartType, onClose }: AssetChartProps) {
   const { t, locale } = useI18n()
   const [candles, setCandles] = useState<Candle[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTimeframe, setActiveTimeframe] = useState(4) // default 1H
   const [showVolume, setShowVolume] = useState(false)
-  const [chartType, setChartType] = useState<"line" | "candle">("line")
+  const [chartType, setChartType] = useState<"line" | "candle" | "area">(propChartType === "candlestick" ? "candle" : propChartType === "area" ? "area" : "line")
   const [isDrawing, setIsDrawing] = useState(false)
   const [lines, setLines] = useState<DrawingLine[]>([])
   const [currentLine, setCurrentLine] = useState<{ x1: number; y1: number } | null>(null)
@@ -232,12 +233,18 @@ export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation,
               <div
                 ref={chartRef}
                 className="relative cursor-crosshair"
-                style={{ width: "100%", height: chartHeight }}
+                style={{ width: "100%", aspectRatio: "2 / 1" }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
               >
-                <svg width={chartWidth} height={chartHeight} className="w-full h-full">
+                <svg 
+                  width={chartWidth} 
+                  height={chartHeight} 
+                  viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                  preserveAspectRatio="none"
+                  className="w-full h-full"
+                >
                   <defs>
                     <linearGradient id={`candle-gradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={isPositive ? TV_COLORS.bullish : TV_COLORS.bearish} stopOpacity={0.1} />
@@ -340,8 +347,8 @@ export function AssetChart({ symbol, poolAddress, currentPrice, cost, deviation,
 
               {/* Volume chart */}
               {showVolume && (
-                <div style={{ backgroundColor: TV_COLORS.bg, height: 80, borderTop: `1px solid ${TV_COLORS.grid}` }}>
-                  <svg width={chartWidth} height={80} className="w-full h-full">
+                <div style={{ backgroundColor: TV_COLORS.bg, borderTop: `1px solid ${TV_COLORS.grid}`, position: "relative", width: "100%", aspectRatio: "6 / 1" }}>
+                  <svg width={chartWidth} height={80} viewBox={`0 0 ${chartWidth} 80`} preserveAspectRatio="none" className="w-full h-full">
                     {(() => {
                       const maxVol = Math.max(...candles.map(c => c.volume), 1)
                       return candles.map((candle, i) => {

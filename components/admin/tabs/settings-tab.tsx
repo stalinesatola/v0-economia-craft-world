@@ -67,6 +67,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const [backgroundColor, setBackgroundColor] = useState(cust.backgroundColor ?? "#0a0a14")
   const [modules, setModules] = useState(cust.modules ?? { showOpportunities: true, showStats: true, showBanners: true, showChain: true })
   const [template, setTemplate] = useState<"default" | "compact" | "cards">(cust.template ?? "default")
+  const [chartType, setChartType] = useState<"area" | "candlestick" | "line">(cust.chartType ?? "area")
   const [hasCustomChanges, setHasCustomChanges] = useState(false)
 
   useEffect(() => {
@@ -93,6 +94,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
     setBackgroundColor(c.backgroundColor ?? "#0a0a14")
     setModules(c.modules ?? { showOpportunities: true, showStats: true, showBanners: true, showChain: true })
     setTemplate(c.template ?? "default")
+    setChartType(c.chartType ?? "area")
     setHasCustomChanges(false)
   }, [config.customization])
 
@@ -153,7 +155,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const handleSaveCustomization = async () => {
     const success = await onUpdate("customization", {
       headerLogo, headerText, footerCredits, footerLinks, footerDisclaimer, loginTitle, loginCredits,
-      primaryColor, accentColor, backgroundColor, modules, template,
+      primaryColor, accentColor, backgroundColor, modules, template, chartType,
     })
     if (success) setHasCustomChanges(false)
   }
@@ -481,6 +483,29 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
                 >
                   <span className="text-sm font-medium text-card-foreground">{tmpl.label}</span>
                   <span className="text-[10px] text-muted-foreground">{tmpl.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Chart Type */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Tipo de Grafico</h4>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                { value: "area" as const, label: "Area", desc: "Gráfico de área preenchida" },
+                { value: "candlestick" as const, label: "Candlestick", desc: "Velas com wicks (OHLCV)" },
+                { value: "line" as const, label: "Linha", desc: "Gráfico de linha simples" },
+              ].map((chart) => (
+                <button
+                  key={chart.value}
+                  onClick={() => { setChartType(chart.value); setHasCustomChanges(true) }}
+                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-all ${
+                    chartType === chart.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                  }`}
+                >
+                  <span className="text-sm font-medium text-card-foreground">{chart.label}</span>
+                  <span className="text-[10px] text-muted-foreground">{chart.desc}</span>
                 </button>
               ))}
             </div>

@@ -132,6 +132,7 @@ export interface CustomizationConfig {
     showChain: boolean
   }
   template?: "default" | "compact" | "cards"
+  chartType?: "area" | "candlestick" | "line"
 }
 
 export interface ChainNode {

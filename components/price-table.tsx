@@ -36,6 +36,10 @@ interface PriceTableProps {
 export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts: dynCosts, thresholds: dynThresholds, alertsConfig: dynAlerts, dynoCoinPriceUsd = 0 }: PriceTableProps) {
   const { t } = useI18n()
 
+  // Fetch customization to get chartType setting
+  const { data: customization } = useSWR("/api/customization", configFetcher, { revalidateOnFocus: false })
+  const chartType = customization?.chartType || "area"
+
   const [selectedAsset, setSelectedAsset] = useState<{
     symbol: string
     poolAddress: string
@@ -410,6 +414,7 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
           cost={selectedAsset.cost}
           deviation={selectedAsset.deviation}
           signal={selectedAsset.signal}
+          chartType={chartType as "area" | "candlestick" | "line"}
           onClose={() => setSelectedAsset(null)}
         />
       )}
