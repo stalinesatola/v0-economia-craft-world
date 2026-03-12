@@ -12,7 +12,8 @@ import { useMemo, useEffect } from "react"
 import { applyTheme, type UITheme } from "@/lib/themes"
 import useSWR from "swr"
 
-const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
+// Shared fetcher function
+const fetcher = (url: string) => fetch(url, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null))
 
 export default function Home() {
   const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners, dynoCoinPriceUsd } = usePrices()

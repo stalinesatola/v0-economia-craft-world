@@ -76,6 +76,54 @@ export function AssetChart({
   const lineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null)
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null)
 
+  // Initialize chart on mount
+  useLayoutEffect(() => {
+    if (!containerRef.current || chartRef.current) return
+
+    try {
+      const chart = createChart(containerRef.current, {
+        layout: {
+          background: { type: ColorType.Solid, color: TV_COLORS.bg },
+          textColor: TV_COLORS.text,
+          fontSize: 12,
+          fontFamily: "monospace",
+        },
+        width: containerRef.current.clientWidth,
+        height: showVolume ? 500 : 400,
+        timeScale: {
+          timeVisible: true,
+          secondsVisible: false,
+          rightOffset: 12,
+        },
+        grid: {
+          horzLines: { color: TV_COLORS.grid, visible: true },
+          vertLines: { color: TV_COLORS.grid, visible: false },
+        },
+        crosshair: {
+          mode: 2, // Both price and time
+          vertLine: { color: TV_COLORS.grid, width: 1, style: 2 },
+          horzLine: { color: TV_COLORS.grid, width: 1, style: 2 },
+        },
+      })
+
+      chartRef.current = chart
+
+      // Handle window resize
+      const handleResize = () => {
+        if (containerRef.current && chartRef.current) {
+          chartRef.current.applyOptions({ width: containerRef.current.clientWidth })
+        }
+      }
+      window.addEventListener("resize", handleResize)
+
+      return () => {
+        window.removeEventListener("resize", handleResize)
+      }
+    } catch (err) {
+      console.error("[v0] Chart creation error:", err)
+    }
+  }, [])
+
   // Fetch OHLCV data
   useEffect(() => {
     if (!poolAddress) {
@@ -226,6 +274,20 @@ export function AssetChart({
       console.error("[v0] Chart rendering error:", err)
     }
   }, [candles, chartType, showVolume])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (chartRef.current) {
+        try {
+          chartRef.current.remove()
+        } catch (err) {
+          console.warn("[v0] Error cleaning up chart:", err)
+        }
+        chartRef.current = null
+      }
+    }
+  }, [])
 
   const priceChange =
     candles.length > 1 ? candles[candles.length - 1].close - candles[0].open : 0
