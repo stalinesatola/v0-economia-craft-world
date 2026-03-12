@@ -109,33 +109,44 @@ async function fetchBatch(addresses: string[], network: string): Promise<Record<
 }
 
 export async function GET() {
-  let pools: Record<string, string> = DEFAULT_POOLS
-  let network: string = DEFAULT_NETWORK
-  let thresholds = { buy: PRICE_THRESHOLDS.BUY_DEFAULT, sell: PRICE_THRESHOLDS.SELL_DEFAULT }
-  let alertsConfig: Record<string, { enabled: boolean; priority: string; category: string }> = {}
-  let banners: Array<{ id: string; position: string; enabled: boolean; imageUrl: string; linkUrl: string; altText: string; adScript: string }> = []
-
   try {
-    const config = await getConfig()
-    pools = config.pools && Object.keys(config.pools).length > 0 ? config.pools : pools
-    network = config.network ?? network
-    thresholds = config.thresholds ?? thresholds
-    alertsConfig = config.alertsConfig ?? alertsConfig
-    banners = (config.banners ?? []).filter((b) => b.enabled)
-  } catch (err) {
-    console.warn("[v0] Config load error, using defaults:", err)
-  }
+    console.log("[v0] Prices API called")
+    let pools: Record<string, string> = DEFAULT_POOLS
+    let network: string = DEFAULT_NETWORK
+    let thresholds = { buy: PRICE_THRESHOLDS.BUY_DEFAULT, sell: PRICE_THRESHOLDS.SELL_DEFAULT }
+    let alertsConfig: Record<string, { enabled: boolean; priority: string; category: string }> = {}
+    let banners: Array<{ id: string; position: string; enabled: boolean; imageUrl: string; linkUrl: string; altText: string; adScript: string }> = []
 
-  const poolEntries = Object.entries(pools)
-  const addresses = poolEntries
-    .map(([, addr]) => addr)
-    .filter((a) => {
-      try {
-        return VALIDATION_RULES.POOL_ADDRESS_PATTERN.test(a)
-      } catch {
-        return false
-      }
-    })
+    try {
+      const config = await getConfig()
+      console.log("[v0] Config loaded, pool count:", Object.keys(config.pools || {}).length)
+      pools = config.pools && Object.keys(config.pools).length > 0 ? config.pools : pools
+      network = config.network ?? network
+      thresholds = config.thresholds ?? thresholds
+      alertsConfig = config.alertsConfig ?? alertsConfig
+      banners = (config.banners ?? []).filter((b) => b.enabled)
+    } catch (err) {
+      console.warn("[v0] Config load error, using defaults:", err)
+    }
+
+    const poolEntries = Object.entries(pools)
+    console.log("[v0] Pool entries:", poolEntries.length)
+    
+    const addresses = poolEntries
+      .map(([symbol, addr]) => {
+        const isValid = VALIDATION_RULES.POOL_ADDRESS_PATTERN.test(addr)
+        if (!isValid) console.warn("[v0] Invalid pool address for", symbol, ":", addr)
+        return addr
+      })
+      .filter((a) => {
+        try {
+          return VALIDATION_RULES.POOL_ADDRESS_PATTERN.test(a)
+        } catch {
+          return false
+        }
+      })
+
+    console.log("[v0] Valid addresses to fetch:", addresses.length)
 
   // Process in batches
   const batches: string[][] = []
