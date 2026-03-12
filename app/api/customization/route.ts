@@ -17,6 +17,8 @@ export async function GET() {
       backgroundColor: "",
       modules: { showOpportunities: true, showStats: true, showBanners: true, showChain: true },
       template: "default",
+      chartType: "area",
+      uiTheme: "craft",
     })
   } catch {
     return NextResponse.json({})

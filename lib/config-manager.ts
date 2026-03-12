@@ -133,6 +133,7 @@ export interface CustomizationConfig {
   }
   template?: "default" | "compact" | "cards"
   chartType?: "area" | "candlestick" | "line"
+  uiTheme?: "craft" | "modern"
 }
 
 export interface ChainNode {

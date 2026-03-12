@@ -68,6 +68,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const [modules, setModules] = useState(cust.modules ?? { showOpportunities: true, showStats: true, showBanners: true, showChain: true })
   const [template, setTemplate] = useState<"default" | "compact" | "cards">(cust.template ?? "default")
   const [chartType, setChartType] = useState<"area" | "candlestick" | "line">(cust.chartType ?? "area")
+  const [uiTheme, setUiTheme] = useState<"craft" | "modern">(cust.uiTheme ?? "craft")
   const [hasCustomChanges, setHasCustomChanges] = useState(false)
 
   useEffect(() => {
@@ -95,6 +96,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
     setModules(c.modules ?? { showOpportunities: true, showStats: true, showBanners: true, showChain: true })
     setTemplate(c.template ?? "default")
     setChartType(c.chartType ?? "area")
+    setUiTheme(c.uiTheme ?? "craft")
     setHasCustomChanges(false)
   }, [config.customization])
 
@@ -155,7 +157,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const handleSaveCustomization = async () => {
     const success = await onUpdate("customization", {
       headerLogo, headerText, footerCredits, footerLinks, footerDisclaimer, loginTitle, loginCredits,
-      primaryColor, accentColor, backgroundColor, modules, template, chartType,
+      primaryColor, accentColor, backgroundColor, modules, template, chartType, uiTheme,
     })
     if (success) setHasCustomChanges(false)
   }
@@ -506,6 +508,28 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
                 >
                   <span className="text-sm font-medium text-card-foreground">{chart.label}</span>
                   <span className="text-[10px] text-muted-foreground">{chart.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* UI Theme */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Tema da Interface</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {[
+                { value: "craft" as const, label: "Craft World", desc: "Deep volcanic dark theme inspired by Craft World Economy" },
+                { value: "modern" as const, label: "Modern", desc: "Clean, minimal SaaS design with soft shadows" },
+              ].map((theme) => (
+                <button
+                  key={theme.value}
+                  onClick={() => { setUiTheme(theme.value); setHasCustomChanges(true) }}
+                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-all ${
+                    uiTheme === theme.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                  }`}
+                >
+                  <span className="text-sm font-medium text-card-foreground">{theme.label}</span>
+                  <span className="text-[10px] text-muted-foreground">{theme.desc}</span>
                 </button>
               ))}
             </div>

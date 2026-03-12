@@ -8,7 +8,8 @@ import { OpportunitiesPanel } from "@/components/opportunities-panel"
 import { AdBanner } from "@/components/ad-banner"
 import { MaintenancePage } from "@/components/maintenance-page"
 import { useI18n } from "@/lib/i18n"
-import { useMemo } from "react"
+import { useMemo, useEffect } from "react"
+import { applyTheme, type UITheme } from "@/lib/themes"
 import useSWR from "swr"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
@@ -28,6 +29,13 @@ export default function Home() {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
   })
+
+  // Apply theme when customization changes
+  useEffect(() => {
+    if (customization?.uiTheme) {
+      applyTheme(customization.uiTheme as UITheme)
+    }
+  }, [customization?.uiTheme])
 
   const bannersByPosition = useMemo(() => {
     const map: Record<string, typeof banners[number]> = {}
