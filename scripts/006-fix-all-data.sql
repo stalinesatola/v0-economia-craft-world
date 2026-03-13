@@ -120,7 +120,7 @@ UPDATE app_config SET data = '[
 UPDATE app_config SET data = '{
   "headerLogo": "",
   "headerText": "Craft World Economy",
-  "footerCredits": "Craft World Economy v1.0.0 | Desenvolvido por Plum com Qwen",
+  "footerCredits": "",
   "footerLinks": "Telegram: @bondsbtc | Dados via GeckoTerminal API | Rede Ronin",
   "footerDisclaimer": "",
   "loginTitle": "Seja Bem-vindo",

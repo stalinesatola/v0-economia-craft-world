@@ -383,7 +383,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
               <Input
                 value={footerCredits}
                 onChange={(e) => { setFooterCredits(e.target.value); setHasCustomChanges(true) }}
-                placeholder="Craft World Economy v1.0.0"
+                placeholder="Digite os créditos do footer"
                 className="bg-secondary border-border text-card-foreground h-9 text-sm"
               />
             </div>

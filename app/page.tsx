@@ -44,7 +44,7 @@ export default function Home() {
     return <MaintenancePage message={maintenance.message} />
   }
 
-  const footerCredits = customization?.footerCredits || "Craft World Economy v1.0.0 | Desenvolvido por Plum com Qwen"
+  const footerCredits = customization?.footerCredits || ""
   const footerLinks = customization?.footerLinks || "Telegram: @bondsbtc | Dados via GeckoTerminal API | Rede Ronin"
   const footerDisclaimer = customization?.footerDisclaimer || t("footer.disclaimer")
   const footerSocialLinks = customization?.footerSocialLinks || {
