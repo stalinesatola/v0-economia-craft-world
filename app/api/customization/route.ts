@@ -17,6 +17,8 @@ export async function GET() {
       backgroundColor: "",
       modules: { showOpportunities: true, showStats: true, showBanners: true, showChain: true },
       template: "default",
+      footerSocialLinks: { github: "", telegram: "", twitter: "" },
+      footerBannerAd: { enabled: false, imageUrl: "", linkUrl: "", altText: "Advertisement" },
     })
   } catch {
     return NextResponse.json({})
