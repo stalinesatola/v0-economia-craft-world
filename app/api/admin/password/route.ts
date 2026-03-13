@@ -12,8 +12,25 @@ export async function PUT(request: NextRequest) {
   try {
     const { currentPassword, newPassword, targetUsername } = await request.json()
 
-    if (!newPassword || newPassword.length < 4) {
-      return NextResponse.json({ error: "Nova password deve ter pelo menos 4 caracteres" }, { status: 400 })
+    // Enforce stronger password requirements
+    if (!newPassword || typeof newPassword !== "string") {
+      return NextResponse.json({ error: "Nova password obrigatoria" }, { status: 400 })
+    }
+
+    if (newPassword.length < 12) {
+      return NextResponse.json({ error: "Nova password deve ter pelo menos 12 caracteres" }, { status: 400 })
+    }
+
+    // Check for complexity: at least 1 uppercase, 1 lowercase, 1 number
+    const hasUppercase = /[A-Z]/.test(newPassword)
+    const hasLowercase = /[a-z]/.test(newPassword)
+    const hasNumber = /[0-9]/.test(newPassword)
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)
+
+    if (!(hasUppercase && hasLowercase && hasNumber && (hasSpecial || newPassword.length >= 16))) {
+      return NextResponse.json({
+        error: "Password deve conter: maiusculas, minusculas, numeros e caracteres especiais (ou 16+ caracteres)",
+      }, { status: 400 })
     }
 
     // Admin changing another user's password

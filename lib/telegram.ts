@@ -2,6 +2,7 @@ import { getConfig, getConfigSection, setConfigSection } from "./config-manager"
 import { RECIPES as DEFAULT_RECIPES } from "./resource-images"
 import type { Recipe } from "./resource-images"
 import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "./craft-data"
+import { randomUUID } from "crypto"
 
 const TELEGRAM_API = "https://api.telegram.org"
 const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
@@ -78,7 +79,7 @@ async function saveAlertHistory(entry: Omit<AlertHistoryEntry, "id">) {
     const history: AlertHistoryEntry[] = (config as Record<string, unknown>).alertHistory as AlertHistoryEntry[] ?? []
     const newEntry: AlertHistoryEntry = {
       ...entry,
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: randomUUID(), // Use cryptographically secure UUID
     }
     // Keep last 100 entries
     const updated = [newEntry, ...history].slice(0, 100)

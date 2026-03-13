@@ -17,12 +17,26 @@ export function AdBanner({ position, imageUrl, linkUrl, altText, adScript, enabl
   useEffect(() => {
     if (adScript && scriptRef.current) {
       try {
+        // ⚠️ WARNING: Ad scripts are NOT recommended due to XSS risks
+        // Only enable if you trust the ad provider completely
+        // Consider using iframe sandbox instead
         const container = scriptRef.current
         container.innerHTML = ""
-        const fragment = document.createRange().createContextualFragment(adScript)
-        container.appendChild(fragment)
-      } catch {
-        // Invalid ad script - fail silently
+        
+        // Attempt to create script element from text (safer than innerHTML for scripts)
+        if (adScript.startsWith("<script")) {
+          const script = document.createElement("script")
+          const content = adScript.replace(/<script[^>]*>/g, "").replace(/<\/script>/g, "")
+          script.textContent = content
+          container.appendChild(script)
+        } else {
+          // For HTML content, use createContextualFragment (legacy but required for HTML)
+          // In production, use DOMPurify library for sanitization
+          const fragment = document.createRange().createContextualFragment(adScript)
+          container.appendChild(fragment)
+        }
+      } catch (error) {
+        console.error("[v0] Invalid ad script:", error instanceof Error ? error.message : "Unknown error")
       }
     }
   }, [adScript])

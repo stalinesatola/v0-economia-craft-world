@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from "next/server"
 import { validatePassword, validateUserLogin, createSession } from "@/lib/auth"
 import { getFullConfig, getUsers, getUserByUsername, DEFAULT_ADMIN_PERMISSIONS, DEFAULT_VIEWER_PERMISSIONS } from "@/lib/config-manager"
 
+// Simple in-memory rate limiting (replace with Redis in production)
+const loginAttempts = new Map<string, { count: number; resetTime: number }>()
+const RATE_LIMIT_ATTEMPTS = 5
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
+
+function checkRateLimit(identifier: string): boolean {
+  const now = Date.now()
+  const attempt = loginAttempts.get(identifier)
+
+  if (!attempt || now > attempt.resetTime) {
+    loginAttempts.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS })
+    return true
+  }
+
+  if (attempt.count >= RATE_LIMIT_ATTEMPTS) {
+    return false
+  }
+
+  attempt.count++
+  return true
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -9,6 +31,17 @@ export async function POST(request: NextRequest) {
 
     if (!password || typeof password !== "string") {
       return NextResponse.json({ error: "Password obrigatoria" }, { status: 400 })
+    }
+
+    // Check rate limiting based on IP and username
+    const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown"
+    const rateLimitKey = username ? `${username}:${clientIp}` : `anon:${clientIp}`
+
+    if (!checkRateLimit(rateLimitKey)) {
+      return NextResponse.json(
+        { error: "Demasiadas tentativas de login. Tente novamente mais tarde." },
+        { status: 429 }
+      )
     }
 
     let authUser = ""
@@ -63,6 +96,10 @@ export async function POST(request: NextRequest) {
       user: { username: authUser, role: authRole, permissions },
     })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Erro interno" }, { status: 500 })
+    console.error("[v0] Login error:", error instanceof Error ? error.message : "Unknown error")
+    return NextResponse.json(
+      { error: "Erro ao processar login" },
+      { status: 500 }
+    )
   }
 }
