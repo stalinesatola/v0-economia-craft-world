@@ -6,6 +6,7 @@ import { StatsCards } from "@/components/stats-cards"
 import { PriceTable } from "@/components/price-table"
 import { OpportunitiesPanel } from "@/components/opportunities-panel"
 import { AdBanner } from "@/components/ad-banner"
+import { Footer } from "@/components/footer"
 import { MaintenancePage } from "@/components/maintenance-page"
 import { useI18n } from "@/lib/i18n"
 import { useMemo } from "react"
@@ -43,9 +44,21 @@ export default function Home() {
     return <MaintenancePage message={maintenance.message} />
   }
 
-  const footerCredits = customization?.footerCredits || "Craft World Economy v1.0.0 | Desenvolvido por Plum com Qwen"
+  const footerCredits = customization?.footerCredits || ""
   const footerLinks = customization?.footerLinks || "Telegram: @bondsbtc | Dados via GeckoTerminal API | Rede Ronin"
   const footerDisclaimer = customization?.footerDisclaimer || t("footer.disclaimer")
+  const footerSocialLinks = customization?.footerSocialLinks || {
+    github: "https://github.com",
+    telegram: "https://t.me/bondsbtc",
+    twitter: "https://x.com",
+  }
+  const footerBannerAd = customization?.footerBannerAd || {
+    enabled: false,
+    imageUrl: undefined,
+    linkUrl: undefined,
+    altText: "Advertisement",
+    adScript: undefined,
+  }
 
   // Module visibility from customization
   const showStats = customization?.modules?.showStats !== false
@@ -111,19 +124,14 @@ export default function Home() {
           {/* Resource Cards */}
           <PriceTable prices={prices} pools={pools} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} dynoCoinPriceUsd={dynoCoinPriceUsd} />
 
-          <footer className="border-t border-border pt-4 pb-6">
-            <div className="flex flex-col items-center gap-1 text-center">
-              <p className="text-xs text-muted-foreground">
-                {footerCredits}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {footerLinks}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground/60">
-                {footerDisclaimer}
-              </p>
-            </div>
-          </footer>
+          {/* Footer with social links and banner ad */}
+          <Footer
+            credits={footerCredits}
+            links={footerLinks}
+            disclaimer={footerDisclaimer}
+            socialLinks={footerSocialLinks}
+            bannerAd={footerBannerAd}
+          />
         </div>
       </div>
     </main>

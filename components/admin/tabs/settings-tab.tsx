@@ -54,6 +54,8 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const cust = config.customization ?? {
     headerLogo: "", headerText: "", footerCredits: "", footerLinks: "",
     footerDisclaimer: "", loginTitle: "", loginCredits: "",
+    footerSocialLinks: { github: "", telegram: "", twitter: "" },
+    footerBannerAd: { enabled: false, imageUrl: "", linkUrl: "", altText: "" },
   }
   const [headerLogo, setHeaderLogo] = useState(cust.headerLogo)
   const [headerText, setHeaderText] = useState(cust.headerText)
@@ -62,6 +64,13 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const [footerDisclaimer, setFooterDisclaimer] = useState(cust.footerDisclaimer)
   const [loginTitle, setLoginTitle] = useState(cust.loginTitle)
   const [loginCredits, setLoginCredits] = useState(cust.loginCredits)
+  const [footerGithubUrl, setFooterGithubUrl] = useState(cust.footerSocialLinks?.github ?? "")
+  const [footerTelegramUrl, setFooterTelegramUrl] = useState(cust.footerSocialLinks?.telegram ?? "")
+  const [footerTwitterUrl, setFooterTwitterUrl] = useState(cust.footerSocialLinks?.twitter ?? "")
+  const [bannerAdEnabled, setBannerAdEnabled] = useState(cust.footerBannerAd?.enabled ?? false)
+  const [bannerAdImageUrl, setBannerAdImageUrl] = useState(cust.footerBannerAd?.imageUrl ?? "")
+  const [bannerAdLinkUrl, setBannerAdLinkUrl] = useState(cust.footerBannerAd?.linkUrl ?? "")
+  const [bannerAdAltText, setBannerAdAltText] = useState(cust.footerBannerAd?.altText ?? "Advertisement")
   const [primaryColor, setPrimaryColor] = useState(cust.primaryColor ?? "#6366f1")
   const [accentColor, setAccentColor] = useState(cust.accentColor ?? "#10b981")
   const [backgroundColor, setBackgroundColor] = useState(cust.backgroundColor ?? "#0a0a14")
@@ -80,6 +89,8 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
     const c = config.customization ?? {
       headerLogo: "", headerText: "", footerCredits: "", footerLinks: "",
       footerDisclaimer: "", loginTitle: "", loginCredits: "",
+      footerSocialLinks: { github: "", telegram: "", twitter: "" },
+      footerBannerAd: { enabled: false, imageUrl: "", linkUrl: "", altText: "" },
     }
     setHeaderLogo(c.headerLogo)
     setHeaderText(c.headerText)
@@ -88,6 +99,13 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
     setFooterDisclaimer(c.footerDisclaimer)
     setLoginTitle(c.loginTitle)
     setLoginCredits(c.loginCredits)
+    setFooterGithubUrl(c.footerSocialLinks?.github ?? "")
+    setFooterTelegramUrl(c.footerSocialLinks?.telegram ?? "")
+    setFooterTwitterUrl(c.footerSocialLinks?.twitter ?? "")
+    setBannerAdEnabled(c.footerBannerAd?.enabled ?? false)
+    setBannerAdImageUrl(c.footerBannerAd?.imageUrl ?? "")
+    setBannerAdLinkUrl(c.footerBannerAd?.linkUrl ?? "")
+    setBannerAdAltText(c.footerBannerAd?.altText ?? "Advertisement")
     setPrimaryColor(c.primaryColor ?? "#6366f1")
     setAccentColor(c.accentColor ?? "#10b981")
     setBackgroundColor(c.backgroundColor ?? "#0a0a14")
@@ -154,6 +172,8 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
     const success = await onUpdate("customization", {
       headerLogo, headerText, footerCredits, footerLinks, footerDisclaimer, loginTitle, loginCredits,
       primaryColor, accentColor, backgroundColor, modules, template,
+      footerSocialLinks: { github: footerGithubUrl, telegram: footerTelegramUrl, twitter: footerTwitterUrl },
+      footerBannerAd: { enabled: bannerAdEnabled, imageUrl: bannerAdImageUrl, linkUrl: bannerAdLinkUrl, altText: bannerAdAltText },
     })
     if (success) setHasCustomChanges(false)
   }
@@ -363,7 +383,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
               <Input
                 value={footerCredits}
                 onChange={(e) => { setFooterCredits(e.target.value); setHasCustomChanges(true) }}
-                placeholder="Craft World Economy v1.0.0"
+                placeholder="Digite os créditos do footer"
                 className="bg-secondary border-border text-card-foreground h-9 text-sm"
               />
             </div>
@@ -403,6 +423,83 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
               placeholder="Texto adicional exibido abaixo do login"
               className="bg-secondary border-border text-card-foreground h-9 text-sm"
             />
+          </div>
+
+          {/* Social Links - Footer */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Links Sociais do Footer</h4>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">GitHub URL</Label>
+                <Input
+                  value={footerGithubUrl}
+                  onChange={(e) => { setFooterGithubUrl(e.target.value); setHasCustomChanges(true) }}
+                  placeholder="https://github.com/..."
+                  className="bg-secondary border-border text-card-foreground h-9 text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">Telegram URL</Label>
+                <Input
+                  value={footerTelegramUrl}
+                  onChange={(e) => { setFooterTelegramUrl(e.target.value); setHasCustomChanges(true) }}
+                  placeholder="https://t.me/..."
+                  className="bg-secondary border-border text-card-foreground h-9 text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs text-muted-foreground">X (Twitter) URL</Label>
+                <Input
+                  value={footerTwitterUrl}
+                  onChange={(e) => { setFooterTwitterUrl(e.target.value); setHasCustomChanges(true) }}
+                  placeholder="https://x.com/..."
+                  className="bg-secondary border-border text-card-foreground h-9 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Banner Ad - Footer */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Banner Publicitario do Footer</h4>
+            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 px-3 py-2 mb-3">
+              <span className="text-xs text-card-foreground">Ativar Banner</span>
+              <Switch
+                checked={bannerAdEnabled}
+                onCheckedChange={(v) => { setBannerAdEnabled(v); setHasCustomChanges(true) }}
+              />
+            </div>
+            {bannerAdEnabled && (
+              <div className="grid gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">URL da Imagem</Label>
+                  <Input
+                    value={bannerAdImageUrl}
+                    onChange={(e) => { setBannerAdImageUrl(e.target.value); setHasCustomChanges(true) }}
+                    placeholder="https://..."
+                    className="bg-secondary border-border text-card-foreground h-9 text-sm"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">URL de Link (clique)</Label>
+                  <Input
+                    value={bannerAdLinkUrl}
+                    onChange={(e) => { setBannerAdLinkUrl(e.target.value); setHasCustomChanges(true) }}
+                    placeholder="https://..."
+                    className="bg-secondary border-border text-card-foreground h-9 text-sm"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Texto Alternativo</Label>
+                  <Input
+                    value={bannerAdAltText}
+                    onChange={(e) => { setBannerAdAltText(e.target.value); setHasCustomChanges(true) }}
+                    placeholder="Advertisement"
+                    className="bg-secondary border-border text-card-foreground h-9 text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Cores */}
