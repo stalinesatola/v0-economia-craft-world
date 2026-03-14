@@ -148,9 +148,48 @@ const VALID_SECTIONS = [
   "categories", "recipes", "alertHistory",
 ]
 
+// ── Validation helpers ──
+
+function validateSection(section: string): boolean {
+  if (!VALID_SECTIONS.includes(section)) {
+    throw new Error(`Invalid config section: ${section}`)
+  }
+  return true
+}
+
+function validatePoolConfig(pools: unknown): Record<string, string> {
+  if (typeof pools !== "object" || pools === null) {
+    throw new Error("pools must be an object")
+  }
+  for (const [key, value] of Object.entries(pools)) {
+    if (typeof key !== "string" || typeof value !== "string") {
+      throw new Error(`Invalid pool entry: ${key}`)
+    }
+  }
+  return pools as Record<string, string>
+}
+
+function validateTelegramConfig(config: unknown): Record<string, unknown> {
+  if (typeof config !== "object" || config === null) {
+    throw new Error("telegram config must be an object")
+  }
+  const cfg = config as Record<string, unknown>
+  if (cfg.botToken && typeof cfg.botToken !== "string") {
+    throw new Error("botToken must be a string")
+  }
+  if (cfg.chatId && typeof cfg.chatId !== "string") {
+    throw new Error("chatId must be a string")
+  }
+  if (cfg.enabled && typeof cfg.enabled !== "boolean") {
+    throw new Error("enabled must be a boolean")
+  }
+  return cfg
+}
+
 // ── Config section read/write ──────────────────────
 
 export async function getConfigSection(sectionName: string): Promise<unknown> {
+  validateSection(sectionName)
   const sql = getSql()
   const rows = await sql`SELECT data FROM app_config WHERE section = ${sectionName}`
   if (rows.length === 0) return null
@@ -158,9 +197,12 @@ export async function getConfigSection(sectionName: string): Promise<unknown> {
 }
 
 export async function setConfigSection(sectionName: string, value: unknown): Promise<void> {
-  if (!VALID_SECTIONS.includes(sectionName)) {
-    throw new Error(`Unknown config section: ${sectionName}`)
-  }
+  validateSection(sectionName)
+  
+  // Validate specific sections
+  if (sectionName === "pools") validatePoolConfig(value)
+  if (sectionName === "telegram") validateTelegramConfig(value)
+  
   const sql = getSql()
   const jsonValue = JSON.stringify(value)
   await sql`

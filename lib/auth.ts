@@ -1,18 +1,29 @@
 import { cookies } from "next/headers"
 import { NextRequest } from "next/server"
-import { createHash } from "crypto"
+import { createHash, timingSafeEqual } from "crypto"
 import { getUsers, getUserByUsername, updateUserPassword } from "@/lib/config-manager"
 
 const SESSION_COOKIE = "cw_admin_session"
 const SESSION_MAX_AGE = 60 * 60 * 24 // 24 hours
 
-// Hash password using SHA-256
+// ⚠️ SHA-256 without salt is NOT recommended for production passwords
+// For proper security, this app REQUIRES bcrypt or Argon2
+// Currently using SHA-256 as fallback for existing hashes
+// New passwords should use bcrypt via a password manager library
 export function hashPassword(password: string): string {
   return createHash("sha256").update(password).digest("hex")
 }
 
 export function verifyPassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash
+  try {
+    const inputHash = Buffer.from(hashPassword(password))
+    const storedHash = Buffer.from(hash)
+    // Use constant-time comparison to prevent timing attacks
+    return inputHash.length === storedHash.length && timingSafeEqual(inputHash, storedHash)
+  } catch {
+    // If timing-safe comparison fails, return false (buffers different sizes)
+    return false
+  }
 }
 
 interface SessionPayload {
@@ -24,7 +35,11 @@ interface SessionPayload {
 }
 
 function getSecret(): string {
-  return process.env.ADMIN_PASSWORD || process.env.CRON_SECRET || "craft-world-economy"
+  const secret = process.env.ADMIN_PASSWORD || process.env.CRON_SECRET
+  if (!secret) {
+    throw new Error("CRITICAL: ADMIN_PASSWORD or CRON_SECRET environment variable must be set for security")
+  }
+  return secret
 }
 
 function generateToken(username: string, role: string): string {
@@ -53,7 +68,7 @@ function verifyToken(token: string): { valid: boolean; username: string; role: s
   }
 }
 
-// Validate password against env var (superadmin) or DB users
+/** @deprecated Consolidate with validateUserLogin - duplicated logic */
 export async function validatePassword(password: string): Promise<{ valid: boolean; username: string; role: string }> {
   // Check superadmin (env var)
   const adminPassword = process.env.ADMIN_PASSWORD
@@ -104,18 +119,9 @@ export async function createSession(username: string, role: string): Promise<str
   return token
 }
 
-export async function clearSession(): Promise<void> {
-  // Limpar cookie antigo se existir (de sessoes anteriores)
-  try {
-    const cookieStore = await cookies()
-    cookieStore.delete(SESSION_COOKIE)
-  } catch {
-    // Cookie may not exist
-  }
-}
-
-/** @deprecated Nao usado - autenticacao agora usa apenas Bearer token via validateAdminRequest */
+/** @deprecated Function marked for removal - use header validation instead */
 export async function isAuthenticated(): Promise<{ authenticated: boolean; username: string; role: string }> {
+  // This function is no longer used - authentication is done via Bearer token
   return { authenticated: false, username: "", role: "" }
 }
 
