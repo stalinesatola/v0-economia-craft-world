@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { TrendingDown, TrendingUp, Zap } from "lucide-react"
+import { TrendingDown, TrendingUp, Zap, Flame } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -172,10 +172,14 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                   </span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {sellOpps.map((opp) => (
+                  {sellOpps.map((opp, index) => (
                     <div
                       key={opp.symbol}
-                      className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5"
+                      className={`flex items-center justify-between rounded-lg border px-3 py-2.5 transition-all ${
+                        index === 0 
+                          ? "flame-card border-destructive/40 bg-destructive/10" 
+                          : "border-destructive/20 bg-destructive/5"
+                      }`}
                     >
                       <div className="flex flex-col gap-0.5">
                         <span className="font-mono text-sm font-bold text-card-foreground">
@@ -195,13 +199,19 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="font-mono text-sm font-bold text-destructive">
+                      <div className={`flex flex-col items-end gap-0.5 ${index === 0 ? "hot-trend" : ""}`}>
+                        <span className={`font-mono text-sm font-bold ${index === 0 ? "text-orange-400 flame-icon" : "text-destructive"}`}>
                           +{opp.deviation.toFixed(1)}%
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {t("opps.vol")}: {formatPrice(opp.volume)}
                         </span>
+                        {index === 0 && (
+                          <div className="flex items-center gap-1 text-xs text-orange-400 mt-1">
+                            <Flame className="h-3 w-3 flame-icon" />
+                            <span className="text-xs font-semibold">HOT</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
