@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       const botToken = config.telegram?.botToken
 
       if (!botToken) {
-        return NextResponse.json({ success: false, message: "Bot token nao configurado" }, { status: 400 })
+        return NextResponse.json({ success: false, message: "Bot token not configured" }, { status: 400 })
       }
 
       // Use the current host to build webhook URL
@@ -74,11 +74,11 @@ export async function GET(request: NextRequest) {
       const data = await res.json()
       return NextResponse.json({
         success: data.ok,
-        message: data.ok ? `Webhook configurado: ${webhookUrl}` : `Erro: ${data.description}`,
+        message: data.ok ? `Webhook configured: ${webhookUrl}` : `Error: ${data.description}`,
         webhookUrl,
       })
     } catch (error) {
-      return NextResponse.json({ success: false, message: `Erro: ${error instanceof Error ? error.message : "Unknown"}` }, { status: 500 })
+      return NextResponse.json({ success: false, message: `Error: ${error instanceof Error ? error.message : "Unknown"}` }, { status: 500 })
     }
   }
 
@@ -87,13 +87,13 @@ export async function GET(request: NextRequest) {
       const config = await getConfig()
       const botToken = config.telegram?.botToken
       if (!botToken) {
-        return NextResponse.json({ success: false, message: "Bot token nao configurado" })
+        return NextResponse.json({ success: false, message: "Bot token not configured" })
       }
       const res = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`)
       const data = await res.json()
       return NextResponse.json(data)
     } catch (error) {
-      return NextResponse.json({ success: false, message: `Erro: ${error instanceof Error ? error.message : "Unknown"}` })
+      return NextResponse.json({ success: false, message: `Error: ${error instanceof Error ? error.message : "Unknown"}` })
     }
   }
 
@@ -102,13 +102,13 @@ export async function GET(request: NextRequest) {
       const config = await getConfig()
       const botToken = config.telegram?.botToken
       if (!botToken) {
-        return NextResponse.json({ success: false, message: "Bot token nao configurado" })
+        return NextResponse.json({ success: false, message: "Bot token not configured" })
       }
       const res = await fetch(`https://api.telegram.org/bot${botToken}/deleteWebhook`)
       const data = await res.json()
-      return NextResponse.json({ success: data.ok, message: data.ok ? "Webhook removido" : data.description })
+      return NextResponse.json({ success: data.ok, message: data.ok ? "Webhook removed" : data.description })
     } catch (error) {
-      return NextResponse.json({ success: false, message: `Erro: ${error instanceof Error ? error.message : "Unknown"}` })
+      return NextResponse.json({ success: false, message: `Error: ${error instanceof Error ? error.message : "Unknown"}` })
     }
   }
 
