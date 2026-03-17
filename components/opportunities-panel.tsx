@@ -126,7 +126,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                   </span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {buyOpps.map((opp) => (
+                  {buyOpps.map((opp, index) => (
                     <div
                       key={opp.symbol}
                       className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5"
