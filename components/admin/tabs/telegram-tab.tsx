@@ -30,31 +30,31 @@ interface AlertHistoryEntry {
 }
 
 const TEMPLATE_VARS = [
-  { var: "{SIGNAL_ICON}", desc: "Icone do sinal" },
-  { var: "{SIGNAL_TYPE}", desc: "COMPRA ou VENDA" },
-  { var: "{SYMBOL}", desc: "Nome do recurso" },
-  { var: "{PRICE}", desc: "Preco de mercado" },
-  { var: "{COST}", desc: "Custo de producao" },
-  { var: "{DEVIATION}", desc: "Desvio percentual" },
-  { var: "{TIMESTAMP}", desc: "Data/hora" },
+  { var: "{SIGNAL_ICON}", desc: "Signal icon" },
+  { var: "{SIGNAL_TYPE}", desc: "BUY or SELL" },
+  { var: "{SYMBOL}", desc: "Resource name" },
+  { var: "{PRICE}", desc: "Market price" },
+  { var: "{COST}", desc: "Production cost" },
+  { var: "{DEVIATION}", desc: "Percentage deviation" },
+  { var: "{TIMESTAMP}", desc: "Date/time" },
 ]
 
 const DEFAULT_TEMPLATE = `<b>Craft World Economy Alert</b>
 
 {SIGNAL_ICON} <b>{SIGNAL_TYPE}</b> - {SYMBOL}
-Preco: \${PRICE}
-Custo: \${COST}
-Desvio: {DEVIATION}%
+Price: \${PRICE}
+Cost: \${COST}
+Deviation: {DEVIATION}%
 
 {TIMESTAMP}`
 
 const BOT_COMMANDS = [
-  { cmd: "/precos", desc: "Ver todos os precos actuais" },
-  { cmd: "/preco [SYM]", desc: "Preco de um recurso (ex: /preco DYNO)" },
-  { cmd: "/alertas", desc: "Oportunidades de compra/venda" },
-  { cmd: "/status", desc: "Estado do bot e config" },
-  { cmd: "/historico", desc: "Ultimos 5 alertas" },
-  { cmd: "/help", desc: "Ajuda" },
+  { cmd: "/prices", desc: "View all current prices" },
+  { cmd: "/price [SYM]", desc: "Price of a resource (ex: /price DYNO)" },
+  { cmd: "/alerts", desc: "Buy/sell opportunities" },
+  { cmd: "/status", desc: "Bot status and config" },
+  { cmd: "/history", desc: "Last 5 alerts" },
+  { cmd: "/help", desc: "Help" },
 ]
 
 const historyFetcher = async (url: string) => {
@@ -142,11 +142,11 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
       const data = await res.json()
       setTriggerResult({
         success: data.success ?? res.ok,
-        message: data.message || (res.ok ? "Monitor executado com sucesso" : "Falha ao executar")
+        message: data.message || (res.ok ? "Monitor executed successfully" : "Failed to execute")
       })
       refreshHistory()
     } catch {
-      setTriggerResult({ success: false, message: "Erro de rede ao disparar monitor" })
+      setTriggerResult({ success: false, message: "Network error when triggering monitor" })
     } finally {
       setTriggering(false)
     }
@@ -158,10 +158,10 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
     try {
       const res = await fetch("/api/admin/telegram/test", { method: "POST", headers: getAuthHeaders() })
       const data = await res.json()
-      setTestResult({ success: res.ok, message: data.message || data.error || "Desconhecido" })
+      setTestResult({ success: res.ok, message: data.message || data.error || "Unknown" })
       refreshHistory()
     } catch {
-      setTestResult({ success: false, message: "Erro de rede" })
+      setTestResult({ success: false, message: "Network error" })
     } finally {
       setTesting(false)
     }
@@ -173,10 +173,10 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
     try {
       const res = await fetch("/api/admin/telegram/check", { method: "POST", headers: getAuthHeaders() })
       const data = await res.json()
-      setCheckResult({ success: res.ok, message: data.message || data.error || "Desconhecido", alerts: data.alerts })
+      setCheckResult({ success: res.ok, message: data.message || data.error || "Unknown", alerts: data.alerts })
       refreshHistory()
     } catch {
-      setCheckResult({ success: false, message: "Erro de rede" })
+      setCheckResult({ success: false, message: "Network error" })
     } finally {
       setChecking(false)
     }
@@ -191,13 +191,13 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
         const info = data.result
         setWebhookStatus({
           loading: false,
-          result: info?.url ? `Webhook ativo: ${info.url}\nPending: ${info.pending_update_count || 0}` : "Webhook nao configurado",
+          result: info?.url ? `Active webhook: ${info.url}\nPending: ${info.pending_update_count || 0}` : "Webhook not configured",
         })
       } else {
         setWebhookStatus({ loading: false, result: data.message || JSON.stringify(data) })
       }
     } catch (e) {
-      setWebhookStatus({ loading: false, result: `Erro: ${e instanceof Error ? e.message : "Unknown"}` })
+      setWebhookStatus({ loading: false, result: `Error: ${e instanceof Error ? e.message : "Unknown"}` })
     }
   }
 
@@ -233,18 +233,18 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base text-card-foreground">{t("admin.telegram")} Bot</CardTitle>
-              <CardDescription>Token do bot, Chat ID e configuracoes de alertas automaticos</CardDescription>
+              <CardDescription>Bot token, Chat ID and automatic alert settings</CardDescription>
             </div>
             <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
               <Save className="h-3.5 w-3.5" />
-              {saving ? "..." : "Guardar"}
+              {saving ? "..." : "Save"}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs text-muted-foreground">Token do Bot</Label>
+              <Label className="text-xs text-muted-foreground">Bot Token</Label>
               <Input
                 type="password"
                 value={botToken}
@@ -252,7 +252,7 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
                 className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
                 placeholder="123456789:AAHXXXXXXXX..."
               />
-              <p className="text-xs text-muted-foreground">Obtenha via @BotFather no Telegram</p>
+              <p className="text-xs text-muted-foreground">Get via @BotFather on Telegram</p>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">Chat ID</Label>
@@ -262,20 +262,20 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
                 className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
                 placeholder="-100XXXXXXXXXX"
               />
-              <p className="text-xs text-muted-foreground">ID do chat/grupo para alertas</p>
+              <p className="text-xs text-muted-foreground">Chat/group ID for alerts</p>
             </div>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 px-4 py-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-card-foreground">Bot Ativo</span>
-              <span className="text-xs text-muted-foreground">Enviar alertas automaticos quando oportunidades forem detetadas</span>
+              <span className="text-sm font-medium text-card-foreground">Bot Active</span>
+              <span className="text-xs text-muted-foreground">Send automatic alerts when opportunities are detected</span>
             </div>
             <Switch checked={enabled} onCheckedChange={(v) => { setEnabled(v); setHasChanges(true) }} />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">Intervalo de Verificacao (minutos)</Label>
+            <Label className="text-xs text-muted-foreground">Check Interval (minutes)</Label>
             <div className="flex items-center gap-3">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <Input
@@ -289,17 +289,17 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
 
           {/* Price Alert */}
           <div className="border-t border-border pt-4">
-            <h4 className="text-sm font-semibold text-card-foreground mb-3">Alerta de Preco Periodico</h4>
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Periodic Price Alert</h4>
             <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/50 px-4 py-3 mb-3">
               <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium text-card-foreground">Alerta de Preco Ativo</span>
-                <span className="text-xs text-muted-foreground">Envia preco, variacao 24h e volume do recurso selecionado</span>
+                <span className="text-sm font-medium text-card-foreground">Price Alert Active</span>
+                <span className="text-xs text-muted-foreground">Sends price, 24h variation and volume of selected resource</span>
               </div>
               <Switch checked={priceAlertEnabled} onCheckedChange={(v) => { setPriceAlertEnabled(v); setHasChanges(true) }} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">Simbolo do Recurso (da Pool)</Label>
+                <Label className="text-xs text-muted-foreground">Resource Symbol (from Pool)</Label>
                 <Input
                   value={priceAlertSymbol}
                   onChange={(e) => { setPriceAlertSymbol(e.target.value.toUpperCase()); setHasChanges(true) }}
@@ -308,7 +308,7 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs text-muted-foreground">Intervalo (minutos)</Label>
+                <Label className="text-xs text-muted-foreground">Interval (minutes)</Label>
                 <div className="flex items-center gap-3">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <Input
@@ -324,13 +324,13 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
 
           {/* Custom Message */}
           <div className="border-t border-border pt-4">
-            <h4 className="text-sm font-semibold text-card-foreground mb-3">Mensagem Personalizada</h4>
+            <h4 className="text-sm font-semibold text-card-foreground mb-3">Custom Message</h4>
             <Textarea
               value={customAlertMessage}
               onChange={(e) => { setCustomAlertMessage(e.target.value); setHasChanges(true) }}
               rows={2}
               className="bg-secondary border-border text-card-foreground text-sm resize-none"
-              placeholder="Ex: Craft World Economy - Alertas automaticos..."
+              placeholder="Ex: Craft World Economy - Automatic alerts..."
             />
           </div>
         </CardContent>
@@ -342,9 +342,9 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
           <div className="flex items-center gap-3">
             <Terminal className="h-5 w-5 text-muted-foreground" />
             <div>
-              <CardTitle className="text-sm text-card-foreground">Comandos do Bot</CardTitle>
+              <CardTitle className="text-sm text-card-foreground">Bot Commands</CardTitle>
               <CardDescription className="text-xs">
-                Comandos disponiveis quando o webhook esta ativo
+                Available commands when webhook is active
               </CardDescription>
             </div>
           </div>
@@ -367,9 +367,9 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
           <div className="flex items-center gap-3">
             <Wifi className="h-5 w-5 text-muted-foreground" />
             <div>
-              <CardTitle className="text-sm text-card-foreground">Webhook Telegram</CardTitle>
+              <CardTitle className="text-sm text-card-foreground">Telegram Webhook</CardTitle>
               <CardDescription className="text-xs">
-                Configure o webhook para que o bot responda a comandos directamente no Telegram
+                Configure the webhook so the bot responds to commands directly on Telegram
               </CardDescription>
             </div>
           </div>
@@ -378,15 +378,15 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => handleWebhook("setup")} disabled={webhookStatus.loading || !isConfigured} className="gap-1.5">
               <Wifi className="h-3.5 w-3.5" />
-              Ativar Webhook
+              Enable Webhook
             </Button>
             <Button variant="outline" size="sm" onClick={() => handleWebhook("info")} disabled={webhookStatus.loading || !isConfigured} className="gap-1.5">
               <Info className="h-3.5 w-3.5" />
-              Ver Estado
+              View Status
             </Button>
             <Button variant="outline" size="sm" onClick={() => handleWebhook("remove")} disabled={webhookStatus.loading || !isConfigured} className="gap-1.5 text-destructive hover:text-destructive">
               <WifiOff className="h-3.5 w-3.5" />
-              Remover Webhook
+              Remove Webhook
             </Button>
           </div>
           {webhookStatus.result && (
@@ -397,7 +397,7 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
           {!isConfigured && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Configure o Token e Chat ID antes de configurar o webhook
+              Configure the Token and Chat ID before setting up the webhook
             </div>
           )}
         </CardContent>
@@ -406,21 +406,21 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
       {/* Test & Check */}
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="text-sm text-card-foreground">Testar Conexao</CardTitle>
+          <CardTitle className="text-sm text-card-foreground">Test Connection</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleTest} disabled={testing || !isConfigured} className="gap-1.5">
               <Send className={`h-3.5 w-3.5 ${testing ? "animate-pulse" : ""}`} />
-              Enviar Teste
+              Send Test
             </Button>
             <Button variant="outline" size="sm" onClick={handleCheck} disabled={checking || !isConfigured} className="gap-1.5">
               <Play className={`h-3.5 w-3.5 ${checking ? "animate-pulse" : ""}`} />
-              Simular Monitor
+              Simulate Monitor
             </Button>
             <Button size="sm" onClick={handleTriggerNow} disabled={triggering || !isConfigured} className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
               <AlertTriangle className={`h-3.5 w-3.5 ${triggering ? "animate-pulse" : ""}`} />
-              {triggering ? "A enviar..." : "Disparar Alerta Agora"}
+              {triggering ? "Sending..." : "Trigger Alert Now"}
             </Button>
           </div>
           {testResult && (
@@ -430,7 +430,7 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
           )}
           {triggerResult && (
             <div className={`rounded-lg border px-3 py-2 text-xs ${triggerResult.success ? "border-primary/30 bg-primary/5 text-primary" : "border-destructive/30 bg-destructive/5 text-destructive"}`}>
-              <p className="font-semibold">{triggerResult.success ? "Monitor executado" : "Falha no monitor"}</p>
+              <p className="font-semibold">{triggerResult.success ? "Monitor executed" : "Monitor failed"}</p>
               <p>{triggerResult.message}</p>
             </div>
           )}
