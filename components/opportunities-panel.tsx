@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { TrendingDown, TrendingUp, Zap } from "lucide-react"
+import { TrendingDown, TrendingUp, Zap, Flame } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -81,6 +81,9 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
 
   const buyOpps = opportunities.filter((o) => o.type === "buy")
   const sellOpps = opportunities.filter((o) => o.type === "sell")
+
+  // Get top 2 sell opportunities for flame animation
+  const topSellOpps = sellOpps.slice(0, 2).map(o => o.symbol)
 
   return (
     <Card className="bg-card">
@@ -172,39 +175,51 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
                   </span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {sellOpps.map((opp) => (
-                    <div
-                      key={opp.symbol}
-                      className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-mono text-sm font-bold text-card-foreground">
-                          {opp.symbol}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {t("opps.market")}: {formatPrice(opp.marketPrice)}
+                  {sellOpps.map((opp) => {
+                    const hasFlames = topSellOpps.includes(opp.symbol)
+                    return (
+                      <div
+                        key={opp.symbol}
+                        className={`flex items-center justify-between rounded-lg border border-destructive/20 px-3 py-2.5 transition-all ${
+                          hasFlames
+                            ? "flame-card bg-destructive/10"
+                            : "bg-destructive/5"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm font-bold text-card-foreground">
+                              {opp.symbol}
+                            </span>
+                            {hasFlames && (
+                              <Flame className="flame-icon h-4 w-4 text-orange-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {t("opps.market")}: {formatPrice(opp.marketPrice)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {t("opps.cost")}: {formatPrice(opp.cost)}
+                            </span>
+                          </div>
+                          {dynoCoinPriceUsd > 0 && opp.symbol !== "DYNO COIN" && (
+                            <span className="font-mono text-[10px] font-semibold text-amber-400">
+                              {(opp.marketPrice / dynoCoinPriceUsd).toFixed(2)} DYNO
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="font-mono text-sm font-bold text-destructive">
+                            +{opp.deviation.toFixed(1)}%
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {t("opps.cost")}: {formatPrice(opp.cost)}
+                            {t("opps.vol")}: {formatPrice(opp.volume)}
                           </span>
                         </div>
-                        {dynoCoinPriceUsd > 0 && opp.symbol !== "DYNO COIN" && (
-                          <span className="font-mono text-[10px] font-semibold text-amber-400">
-                            {(opp.marketPrice / dynoCoinPriceUsd).toFixed(2)} DYNO
-                          </span>
-                        )}
                       </div>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="font-mono text-sm font-bold text-destructive">
-                          +{opp.deviation.toFixed(1)}%
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {t("opps.vol")}: {formatPrice(opp.volume)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
