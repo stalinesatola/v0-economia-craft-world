@@ -356,7 +356,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
         `<b>Thresholds:</b> Buy -${config.thresholds?.buy || 15}% / Sell +${config.thresholds?.sell || 15}%`
     }
 
-    if (cmd === "/precos") {
+    if (cmd === "/prices") {
       const prices = await fetchPrices(pools, network)
       if (Object.keys(prices).length === 0) {
         return "Could not get prices. Check if pools are registered."
@@ -366,8 +366,8 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       return buildAllPricesMessage(prices, costs, pools)
     }
 
-    if (cmd.startsWith("/preco ")) {
-      const symbol = cmd.replace("/preco ", "").trim().toUpperCase()
+    if (cmd.startsWith("/price ")) {
+      const symbol = cmd.replace("/price ", "").trim().toUpperCase()
       if (!pools[symbol]) {
         return `Resource <b>${symbol}</b> not found in registered pools.\n\nAvailable pools: ${Object.keys(pools).join(", ") || "none"}`
       }
@@ -378,7 +378,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       return buildPriceAlertMessage(symbol, prices[symbol], undefined, getDynoCoinPrice(prices, pools))
     }
 
-    if (cmd === "/alertas") {
+    if (cmd === "/alerts") {
       const prices = await fetchPrices(pools, network)
       if (Object.keys(prices).length === 0) {
         return "Could not get prices."
@@ -412,7 +412,7 @@ export async function handleBotCommand(command: string, chatId: string, botToken
       return buildAlertMessage(opportunities, undefined, getDynoCoinPrice(prices, pools))
     }
 
-    if (cmd === "/historico") {
+    if (cmd === "/history") {
       const history = await getAlertHistory()
       if (history.length === 0) {
         return "No alert history."
