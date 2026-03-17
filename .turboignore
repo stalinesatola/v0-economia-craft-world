@@ -1,0 +1,5 @@
+# Turbopack ignore file - forces rebuild
+.next
+dist
+node_modules
+.turbo
