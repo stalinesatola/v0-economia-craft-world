@@ -1,6 +1,5 @@
 "use client"
 
-// Force rebuild - turbopack cache invalidation
 import { usePrices } from "@/hooks/use-prices"
 import { ProductionChain } from "@/components/production-chain"
 import { DashboardHeader } from "@/components/dashboard-header"
