@@ -1,7 +1,7 @@
 {
   "buildCommand": "pnpm run build",
   "devCommand": "pnpm run dev",
-  "installCommand": "pnpm install",
+  "installCommand": "rm -f pnpm-lock.yaml && pnpm install",
   "framework": "nextjs",
   "crons": [
     {
