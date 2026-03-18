@@ -22,7 +22,17 @@ interface PricesResponse {
   dynoCoinPriceUsd?: number
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = (url: string) => 
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error(`API error: ${r.status}`)
+      return r.json()
+    })
+    .catch((err) => {
+      console.error("Fetch error:", err)
+      throw err
+    })
+
 
 export function usePrices() {
   const { data, error, isLoading, isValidating, mutate } = useSWR<PricesResponse>(

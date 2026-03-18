@@ -12,7 +12,14 @@ import { useI18n } from "@/lib/i18n"
 import { useMemo } from "react"
 import useSWR from "swr"
 
-const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
+const fetcher = (url: string) => 
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) return null
+      return r.json().catch(() => null)
+    })
+    .catch(() => null)
+
 
 export default function Home() {
   const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners, dynoCoinPriceUsd } = usePrices()
