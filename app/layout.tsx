@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import { I18nProvider } from '@/lib/i18n'
+import { GlobalErrorHandler } from './error-handler'
 import './globals.css'
 import './flames.css'
 
@@ -33,6 +34,7 @@ export default function RootLayout({
   return (
     <html lang="pt" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+        <GlobalErrorHandler />
         <I18nProvider>
           {children}
         </I18nProvider>
