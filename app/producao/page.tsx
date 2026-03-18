@@ -8,7 +8,13 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import useSWR from "swr"
 
-const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
+const fetcher = (url: string) => 
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) return null
+      return r.json().catch(() => null)
+    })
+    .catch(() => null)
 
 export default function ProducaoPage() {
   const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts } = usePrices()
@@ -16,6 +22,7 @@ export default function ProducaoPage() {
   const { data: customization } = useSWR("/api/customization", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
+    onError: (error) => console.error("[v0] Customization fetch error:", error),
   })
 
   return (

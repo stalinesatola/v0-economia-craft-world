@@ -25,13 +25,20 @@ interface PricesResponse {
 const fetcher = (url: string) => 
   fetch(url)
     .then((r) => {
-      if (!r.ok) throw new Error(`API error: ${r.status}`)
-      return r.json()
+      if (!r.ok) {
+        console.error(`[v0] API error: ${r.status}`)
+        return null
+      }
+      return r.json().catch((err) => {
+        console.error("[v0] JSON parse error:", err)
+        return null
+      })
     })
     .catch((err) => {
-      console.error("Fetch error:", err)
-      throw err
+      console.error("[v0] Fetch error:", err)
+      return null
     })
+
 
 
 export function usePrices() {
@@ -42,6 +49,7 @@ export function usePrices() {
       refreshInterval: 5 * 60 * 1000, // 5 minutes
       revalidateOnFocus: false,
       dedupingInterval: 60 * 1000,
+      onError: (error) => console.error("[v0] Prices fetch error:", error),
     }
   )
 

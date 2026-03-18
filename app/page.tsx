@@ -29,12 +29,14 @@ export default function Home() {
   const { data: maintenance } = useSWR("/api/maintenance", fetcher, {
     refreshInterval: 30 * 1000,
     revalidateOnFocus: true,
+    onError: (error) => console.error("[v0] Maintenance check error:", error),
   })
 
   // Fetch public customization
   const { data: customization } = useSWR("/api/customization", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
+    onError: (error) => console.error("[v0] Customization fetch error:", error),
   })
 
   const bannersByPosition = useMemo(() => {

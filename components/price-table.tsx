@@ -49,11 +49,19 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
   const [signalFilter, setSignalFilter] = useState<string>("all")
 
   // Fetch dynamic categories from config
-  const { data: catData } = useSWR("/api/categories", configFetcher, { revalidateOnFocus: false, dedupingInterval: 60000 })
+  const { data: catData } = useSWR("/api/categories", configFetcher, { 
+    revalidateOnFocus: false, 
+    dedupingInterval: 60000,
+    onError: (error) => console.error("[v0] Categories fetch error:", error),
+  })
   const dynamicCategories: { id: string; label: string; color: string; enabled: boolean }[] = catData ?? []
 
   // Fetch recipes for production chain details
-  const { data: recipesData } = useSWR("/api/recipes", configFetcher, { revalidateOnFocus: false, dedupingInterval: 60000 })
+  const { data: recipesData } = useSWR("/api/recipes", configFetcher, { 
+    revalidateOnFocus: false, 
+    dedupingInterval: 60000,
+    onError: (error) => console.error("[v0] Recipes fetch error:", error),
+  })
   const recipes: { output: string; inputs: { resource: string; quantity: number }[] }[] = recipesData ?? []
 
   // Build a map of recipes by output symbol
