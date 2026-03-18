@@ -6,9 +6,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Cache bust timestamp - forces full rebuild on Vercel
-  env: {
-    BUILD_TIMESTAMP: new Date().toISOString(),
+  // Force complete rebuild - cache invalidation
+  generateBuildId: async () => {
+    return Date.now().toString() + '-reset'
   },
 }
 
