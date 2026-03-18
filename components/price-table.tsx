@@ -21,7 +21,10 @@ import { getResourceColor } from "@/lib/resource-images"
 import { ShareButton } from "@/components/share-card"
 import useSWR from "swr"
 
-const configFetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null)
+const configFetcher = (url: string) => fetch(url)
+  .then(r => r.ok ? r.json().catch(() => null) : null)
+  .catch(() => null)
+
 
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string; token_name?: string }>

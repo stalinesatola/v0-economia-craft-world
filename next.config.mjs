@@ -6,10 +6,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Force rebuild on Vercel
-  generateBuildId: async () => {
-    return Date.now().toString()
-  },
 }
 
 export default nextConfig
