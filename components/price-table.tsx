@@ -21,7 +21,10 @@ import { getResourceColor } from "@/lib/resource-images"
 import { ShareButton } from "@/components/share-card"
 import useSWR from "swr"
 
-const configFetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : null)
+const configFetcher = (url: string) => fetch(url)
+  .then(r => r.ok ? r.json().catch(() => null) : null)
+  .catch(() => null)
+
 
 interface PriceTableProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string; token_name?: string }>
@@ -49,11 +52,19 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
   const [signalFilter, setSignalFilter] = useState<string>("all")
 
   // Fetch dynamic categories from config
-  const { data: catData } = useSWR("/api/categories", configFetcher, { revalidateOnFocus: false, dedupingInterval: 60000 })
+  const { data: catData } = useSWR("/api/categories", configFetcher, { 
+    revalidateOnFocus: false, 
+    dedupingInterval: 60000,
+    onError: (error) => console.error("[v0] Categories fetch error:", error),
+  })
   const dynamicCategories: { id: string; label: string; color: string; enabled: boolean }[] = catData ?? []
 
   // Fetch recipes for production chain details
-  const { data: recipesData } = useSWR("/api/recipes", configFetcher, { revalidateOnFocus: false, dedupingInterval: 60000 })
+  const { data: recipesData } = useSWR("/api/recipes", configFetcher, { 
+    revalidateOnFocus: false, 
+    dedupingInterval: 60000,
+    onError: (error) => console.error("[v0] Recipes fetch error:", error),
+  })
   const recipes: { output: string; inputs: { resource: string; quantity: number }[] }[] = recipesData ?? []
 
   // Build a map of recipes by output symbol

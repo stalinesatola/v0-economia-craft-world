@@ -13,7 +13,10 @@ import { getResourceColor, RECIPES as FALLBACK_RECIPES, type Recipe } from "@/li
 import { useI18n } from "@/lib/i18n"
 import useSWR from "swr"
 
-const fetcher = (url: string) => fetch(url).then(r => r.ok ? r.json() : [])
+const fetcher = (url: string) => fetch(url)
+  .then(r => r.ok ? r.json().catch(() => []) : [])
+  .catch(() => [])
+
 
 interface ProductionChainProps {
   prices: Record<string, { price_usd: number; volume_usd_24h: number; price_change_24h: number; image_url?: string; token_name?: string }>

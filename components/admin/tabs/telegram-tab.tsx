@@ -95,7 +95,11 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
   const { data: historyData, mutate: refreshHistory } = useSWR(
     authToken ? "/api/admin/telegram/history" : null,
     historyFetcher,
-    { revalidateOnFocus: false, dedupingInterval: 30000 }
+    { 
+      revalidateOnFocus: false, 
+      dedupingInterval: 30000,
+      onError: (error) => console.error("[v0] Telegram history fetch error:", error),
+    }
   )
   const alertHistory: AlertHistoryEntry[] = historyData?.history ?? []
 

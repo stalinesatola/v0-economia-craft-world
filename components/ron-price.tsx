@@ -4,9 +4,13 @@ import useSWR from "swr"
 import { TrendingUp, TrendingDown } from "lucide-react"
 
 const fetcher = async (url: string) => {
-  const r = await fetch(url)
-  if (!r.ok) return null
-  return r.json()
+  try {
+    const r = await fetch(url)
+    if (!r.ok) return null
+    return r.json().catch(() => null)
+  } catch {
+    return null
+  }
 }
 
 interface RonData {
@@ -22,6 +26,7 @@ export function RonPrice() {
     dedupingInterval: 30 * 1000,
     errorRetryCount: 3,
     shouldRetryOnError: true,
+    onError: (error) => console.error("[v0] RON price fetch error:", error),
   })
 
   const price = data?.price_usd

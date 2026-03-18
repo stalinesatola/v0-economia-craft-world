@@ -55,10 +55,11 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetch("/api/customization")
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => r.ok ? r.json().catch(() => null) : null)
       .then((d) => { if (d) setCustomization(d) })
       .catch(() => {})
   }, [])
+
 
   useEffect(() => {
     checkAuth()

@@ -6,12 +6,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    turbopack: {
-      resolveAlias: {
-        '@': './',
-      },
-    },
+  // Cache bust timestamp - forces full rebuild on Vercel
+  env: {
+    BUILD_TIMESTAMP: new Date().toISOString(),
   },
 }
 

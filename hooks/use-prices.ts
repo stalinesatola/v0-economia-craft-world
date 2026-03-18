@@ -22,7 +22,24 @@ interface PricesResponse {
   dynoCoinPriceUsd?: number
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = (url: string) => 
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) {
+        console.error(`[v0] API error: ${r.status}`)
+        return null
+      }
+      return r.json().catch((err) => {
+        console.error("[v0] JSON parse error:", err)
+        return null
+      })
+    })
+    .catch((err) => {
+      console.error("[v0] Fetch error:", err)
+      return null
+    })
+
+
 
 export function usePrices() {
   const { data, error, isLoading, isValidating, mutate } = useSWR<PricesResponse>(
@@ -32,6 +49,7 @@ export function usePrices() {
       refreshInterval: 5 * 60 * 1000, // 5 minutes
       revalidateOnFocus: false,
       dedupingInterval: 60 * 1000,
+      onError: (error) => console.error("[v0] Prices fetch error:", error),
     }
   )
 

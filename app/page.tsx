@@ -12,7 +12,14 @@ import { useI18n } from "@/lib/i18n"
 import { useMemo } from "react"
 import useSWR from "swr"
 
-const fetcher = (url: string) => fetch(url).then((r) => r.ok ? r.json() : null)
+const fetcher = (url: string) => 
+  fetch(url)
+    .then((r) => {
+      if (!r.ok) return null
+      return r.json().catch(() => null)
+    })
+    .catch(() => null)
+
 
 export default function Home() {
   const { prices, pools, timestamp, count, isLoading, isValidating, refresh, productionCosts, thresholds, alertsConfig, banners, dynoCoinPriceUsd } = usePrices()
@@ -22,12 +29,14 @@ export default function Home() {
   const { data: maintenance } = useSWR("/api/maintenance", fetcher, {
     refreshInterval: 30 * 1000,
     revalidateOnFocus: true,
+    onError: (error) => console.error("[v0] Maintenance check error:", error),
   })
 
   // Fetch public customization
   const { data: customization } = useSWR("/api/customization", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
+    onError: (error) => console.error("[v0] Customization fetch error:", error),
   })
 
   const bannersByPosition = useMemo(() => {
