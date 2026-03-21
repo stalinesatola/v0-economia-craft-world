@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { Save, UserPlus, Trash2, Key, Shield, Eye, Palette, Wrench } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import type { AppConfig } from "@/lib/config-manager"
 
 interface SettingsTabProps {
@@ -131,6 +132,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   })
   const [userMessage, setUserMessage] = useState("")
   const [userLoading, setUserLoading] = useState(false)
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<{ isOpen: boolean; username: string }>({ isOpen: false, username: "" })
 
   // Maintenance mode
   const maint = config.maintenance ?? { enabled: false, message: "" }
@@ -228,7 +230,10 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   }
 
   const handleDeleteUser = async (username: string) => {
-    if (!confirm(`Remover utilizador '${username}'?`)) return
+    setConfirmDeleteUser({ isOpen: true, username })
+  }
+
+  const handleDeleteUserConfirm = async (username: string) => {
     setUserLoading(true)
     try {
       const res = await fetch("/api/admin/users", {
@@ -247,6 +252,7 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
       setUserMessage("Erro de rede")
     } finally {
       setUserLoading(false)
+      setConfirmDeleteUser({ isOpen: false, username: "" })
     }
   }
 
@@ -284,6 +290,16 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <ConfirmDialog
+        isOpen={confirmDeleteUser.isOpen}
+        title="Remover Utilizador"
+        description={`Tem a certeza que deseja remover o utilizador '${confirmDeleteUser.username}'? Esta ação não pode ser desfeita.`}
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        isDangerous={true}
+        onConfirm={() => handleDeleteUserConfirm(confirmDeleteUser.username)}
+        onCancel={() => setConfirmDeleteUser({ isOpen: false, username: "" })}
+      />
       {/* Thresholds */}
       <Card className="border-border bg-card">
         <CardHeader>

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Save, RotateCcw, Eye, Code, ArrowRight, Plus, Trash2, Pencil, Check, X, ChevronUp, ChevronDown } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { RECIPES, getResourceColor, RESOURCE_IMAGES, type Recipe } from "@/lib/resource-images"
 import type { AppConfig, ChainNode, RecipeConfig } from "@/lib/config-manager"
 
@@ -230,6 +231,7 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
   // CRUD state
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingOutput, setEditingOutput] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; output: string }>({ isOpen: false, output: "" })
 
   useEffect(() => {
     setJsonText(JSON.stringify(config.productionChains ?? [], null, 2))
@@ -252,8 +254,13 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
   }
 
   const handleDeleteRecipe = (output: string) => {
+    setConfirmDelete({ isOpen: true, output })
+  }
+
+  const handleDeleteRecipeConfirm = (output: string) => {
     setRecipes(prev => prev.filter(r => r.output !== output))
     setHasChanges(true)
+    setConfirmDelete({ isOpen: false, output: "" })
   }
 
   const handleMoveRecipe = (output: string, dir: "up" | "down") => {
@@ -296,6 +303,16 @@ export function ChainsTab({ config, onUpdate, saving }: ChainsTabProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <ConfirmDialog
+        isOpen={confirmDelete.isOpen}
+        title="Remover Receita"
+        description={`Tem a certeza que deseja remover a receita de '${confirmDelete.output}'? Esta ação não pode ser desfeita.`}
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        isDangerous={true}
+        onConfirm={() => handleDeleteRecipeConfirm(confirmDelete.output)}
+        onCancel={() => setConfirmDelete({ isOpen: false, output: "" })}
+      />
       <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
