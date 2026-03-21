@@ -7,4 +7,3 @@ node_modules
 .gitignore
 README.md
 .eslintrc.json
-tsconfig.json
