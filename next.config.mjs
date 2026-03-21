@@ -6,10 +6,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Force complete rebuild - cache invalidation
-  generateBuildId: async () => {
-    return Date.now().toString() + '-reset'
-  },
 }
 
 export default nextConfig
