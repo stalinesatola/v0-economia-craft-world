@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select"
 import { Save, Search, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import type { AppConfig } from "@/lib/config-manager"
 
 interface PoolsTabProps {
@@ -31,6 +32,9 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [localPools, setLocalPools] = useState<Record<string, string>>(config?.pools ?? {})
   const [localAlerts, setLocalAlerts] = useState<Record<string, { enabled?: boolean; priority?: string; category?: string }>>(config?.alertsConfig ?? {})
   const [hasChanges, setHasChanges] = useState(false)
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; symbol: string }>({ isOpen: false, symbol: "" })
 
   useEffect(() => {
     setLocalPools(config?.pools ?? {})
@@ -81,8 +85,11 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     setShowAddForm(false)
   }
 
-  const handleDeletePool = (symbol: string) => {
-    if (!confirm(`Remover '${symbol}'?`)) return
+  const handleDeletePoolClick = (symbol: string) => {
+    setConfirmDialog({ isOpen: true, symbol })
+  }
+
+  const handleDeletePoolConfirm = (symbol: string) => {
     setLocalPools((prev) => {
       const next = { ...prev }
       delete next[symbol]
@@ -95,6 +102,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     })
     setHasChanges(true)
     if (expandedResource === symbol) setExpandedResource(null)
+    setConfirmDialog({ isOpen: false, symbol: "" })
   }
 
   const handleSave = async () => {
@@ -107,7 +115,16 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="border-border bg-card">
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title="Remover Recurso"
+        description={`Tem a certeza que deseja remover '${confirmDialog.symbol}'? Esta ação não pode ser desfeita.`}
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        isDangerous={true}
+        onConfirm={() => handleDeletePoolConfirm(confirmDialog.symbol)}
+        onCancel={() => setConfirmDialog({ isOpen: false, symbol: "" })}
+      />
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -405,7 +422,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeletePool(symbol)}
+                          onClick={() => handleDeletePoolClick(symbol)}
                           className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

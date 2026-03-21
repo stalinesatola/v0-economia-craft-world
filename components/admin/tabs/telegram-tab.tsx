@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Save, Send, Play, MessageSquare, Clock, AlertTriangle, Info, History, Wifi, WifiOff, RefreshCw, CheckCircle2, XCircle, Terminal } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import type { AppConfig } from "@/lib/config-manager"
 import useSWR from "swr"
 
@@ -90,6 +91,7 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
   const [triggerResult, setTriggerResult] = useState<{ success: boolean; message: string } | null>(null)
   const [showTemplateHelp, setShowTemplateHelp] = useState(false)
   const [webhookStatus, setWebhookStatus] = useState<{ loading: boolean; result: string | null }>({ loading: false, result: null })
+  const [confirmRemoveWebhook, setConfirmRemoveWebhook] = useState(false)
 
   // Fetch alert history
   const { data: historyData, mutate: refreshHistory } = useSWR(
@@ -187,6 +189,10 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
   }
 
   const handleWebhook = async (action: "setup" | "info" | "remove") => {
+    if (action === "remove") {
+      setConfirmRemoveWebhook(true)
+      return
+    }
     setWebhookStatus({ loading: true, result: null })
     try {
       const res = await fetch(`/api/telegram/webhook?action=${action}`)
@@ -202,6 +208,19 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
       }
     } catch (e) {
       setWebhookStatus({ loading: false, result: `Error: ${e instanceof Error ? e.message : "Unknown"}` })
+    }
+  }
+
+  const handleRemoveWebhookConfirm = async () => {
+    setWebhookStatus({ loading: true, result: null })
+    try {
+      const res = await fetch("/api/telegram/webhook?action=remove")
+      const data = await res.json()
+      setWebhookStatus({ loading: false, result: data.message || JSON.stringify(data) })
+    } catch (e) {
+      setWebhookStatus({ loading: false, result: `Error: ${e instanceof Error ? e.message : "Unknown"}` })
+    } finally {
+      setConfirmRemoveWebhook(false)
     }
   }
 
@@ -231,6 +250,16 @@ export function TelegramTab({ config, onUpdate, saving, authToken }: TelegramTab
 
   return (
     <div className="flex flex-col gap-4">
+      <ConfirmDialog
+        isOpen={confirmRemoveWebhook}
+        title="Remover Webhook Telegram"
+        description="Tem a certeza que deseja remover o webhook? O bot não será capaz de responder a comandos até que configure novamente."
+        confirmLabel="Remover"
+        cancelLabel="Cancelar"
+        isDangerous={true}
+        onConfirm={handleRemoveWebhookConfirm}
+        onCancel={() => setConfirmRemoveWebhook(false)}
+      />
       {/* Configuration Card */}
       <Card className="border-border bg-card">
         <CardHeader>
