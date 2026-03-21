@@ -125,6 +125,7 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
         onConfirm={() => handleDeletePoolConfirm(confirmDialog.symbol)}
         onCancel={() => setConfirmDialog({ isOpen: false, symbol: "" })}
       />
+      <Card className="border-border bg-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
