@@ -1,27 +1,36 @@
-import { cookies } from "next/headers"
 import { NextRequest } from "next/server"
-import { createHash, timingSafeEqual } from "crypto"
+import { createHash, timingSafeEqual, scryptSync, randomBytes } from "node:crypto"
 import { getUsers, getUserByUsername, updateUserPassword } from "@/lib/config-manager"
 
 const SESSION_COOKIE = "cw_admin_session"
 const SESSION_MAX_AGE = 60 * 60 * 24 // 24 hours
 
-// ⚠️ SHA-256 without salt is NOT recommended for production passwords
-// For proper security, this app REQUIRES bcrypt or Argon2
-// Currently using SHA-256 as fallback for existing hashes
-// New passwords should use bcrypt via a password manager library
+// Use scrypt for password hashing (much more secure than SHA-256)
 export function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex")
+  const salt = randomBytes(16).toString("hex")
+  const hash = scryptSync(password, salt, 64).toString("hex")
+  return `${salt}:${hash}`
 }
 
-export function verifyPassword(password: string, hash: string): boolean {
+export function verifyPassword(password: string, storedValue: string): boolean {
   try {
-    const inputHash = Buffer.from(hashPassword(password))
-    const storedHash = Buffer.from(hash)
-    // Use constant-time comparison to prevent timing attacks
-    return inputHash.length === storedHash.length && timingSafeEqual(inputHash, storedHash)
-  } catch {
-    // If timing-safe comparison fails, return false (buffers different sizes)
+    // Check if it's the old SHA-256 format or the new salt:hash format
+    if (!storedValue.includes(":")) {
+      // Fallback for legacy SHA-256 hashes
+      const legacyHash = createHash("sha256").update(password).digest("hex")
+      return timingSafeEqual(Buffer.from(legacyHash), Buffer.from(storedValue))
+    }
+
+    const [salt, hash] = storedValue.split(":")
+    const loginHash = scryptSync(password, salt, 64).toString("hex")
+    
+    const loginHashBuffer = Buffer.from(loginHash)
+    const storedHashBuffer = Buffer.from(hash)
+    
+    return loginHashBuffer.length === storedHashBuffer.length && 
+           timingSafeEqual(loginHashBuffer, storedHashBuffer)
+  } catch (error) {
+    console.error("[v0] Auth verification error:", error)
     return false
   }
 }
@@ -68,29 +77,6 @@ function verifyToken(token: string): { valid: boolean; username: string; role: s
   }
 }
 
-/** @deprecated Consolidate with validateUserLogin - duplicated logic */
-export async function validatePassword(password: string): Promise<{ valid: boolean; username: string; role: string }> {
-  // Check superadmin (env var)
-  const adminPassword = process.env.ADMIN_PASSWORD
-  if (adminPassword && password === adminPassword) {
-    return { valid: true, username: "admin", role: "admin" }
-  }
-
-  // Check DB users
-  try {
-    const users = await getUsers()
-    for (const user of users) {
-      if (verifyPassword(password, user.passwordHash)) {
-        return { valid: true, username: user.username, role: user.role }
-      }
-    }
-  } catch {
-    // DB not available
-  }
-
-  return { valid: false, username: "", role: "" }
-}
-
 // Validate with username + password
 export async function validateUserLogin(username: string, password: string): Promise<{ valid: boolean; role: string }> {
   // Check superadmin
@@ -114,21 +100,12 @@ export async function validateUserLogin(username: string, password: string): Pro
 
 export async function createSession(username: string, role: string): Promise<string> {
   const token = generateToken(username, role)
-  // Nao setar cookie persistente - usar apenas Bearer token via sessionStorage
-  // Isso garante que o utilizador precisa fazer login a cada sessao de browser
+  // Use Bearer token via sessionStorage (client-side)
   return token
 }
 
-/** @deprecated Function marked for removal - use header validation instead */
-export async function isAuthenticated(): Promise<{ authenticated: boolean; username: string; role: string }> {
-  // This function is no longer used - authentication is done via Bearer token
-  return { authenticated: false, username: "", role: "" }
-}
-
 // Synchronous token validation for API routes (does not need DB)
-// Checks both cookie and Authorization header for token
 export function validateAdminRequest(request: NextRequest): { valid: boolean; username: string; role: string } {
-  // Usar APENAS Bearer token no Authorization header (nao cookies)
   const authHeader = request.headers.get("Authorization")
   if (!authHeader?.startsWith("Bearer ")) {
     return { valid: false, username: "", role: "" }

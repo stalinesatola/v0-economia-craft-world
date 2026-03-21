@@ -2,7 +2,8 @@ import { getConfig, getConfigSection, setConfigSection } from "./config-manager"
 import { RECIPES as DEFAULT_RECIPES } from "./resource-images"
 import type { Recipe } from "./resource-images"
 import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "./craft-data"
-import { randomUUID } from "crypto"
+import { randomUUID } from "node:crypto"
+import { calculateSignal, formatPrice } from "./calc"
 
 const TELEGRAM_API = "https://api.telegram.org"
 const GECKO_BASE_URL = "https://api.geckoterminal.com/api/v2"
@@ -75,8 +76,8 @@ function calcCostsFromRecipes(
 // ── Alert History ──
 async function saveAlertHistory(entry: Omit<AlertHistoryEntry, "id">) {
   try {
-    const config = await getConfig()
-    const history: AlertHistoryEntry[] = (config as Record<string, unknown>).alertHistory as AlertHistoryEntry[] ?? []
+    const historyRaw = await getConfigSection("alertHistory")
+    const history: AlertHistoryEntry[] = Array.isArray(historyRaw) ? historyRaw as AlertHistoryEntry[] : []
     const newEntry: AlertHistoryEntry = {
       ...entry,
       id: randomUUID(), // Use cryptographically secure UUID
@@ -232,11 +233,11 @@ function buildCardMessage(
   msg += `<i>${now}</i>\n\n`
 
   // Price info
-  msg += `<b>Market Price:</b> $${opp.marketPrice.toFixed(8)}\n`
+  msg += `<b>Market Price:</b> ${formatPrice(opp.marketPrice)}\n`
   if (coinPrice > 0 && opp.symbol !== "DYNO COIN") {
     msg += `<b>DYNO Value:</b> ${(opp.marketPrice / coinPrice).toFixed(2)} DYNO\n`
   }
-  msg += `<b>Production Cost:</b> $${opp.costPrice.toFixed(8)}\n`
+  msg += `<b>Production Cost:</b> ${formatPrice(opp.costPrice)}\n`
   msg += `<b>Deviation:</b> ${deviation}\n`
   msg += `<b>24h Change:</b> ${changeIcon}${priceChange.toFixed(2)}%\n`
   if (volume > 0) msg += `<b>24h Volume:</b> $${volume.toFixed(2)}\n`
@@ -271,7 +272,7 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string,
     for (const opp of buyOps) {
       const dev = opp.deviation > 0 ? `+${opp.deviation.toFixed(1)}%` : `${opp.deviation.toFixed(1)}%`
       const coinStr = dynoCoinPrice && dynoCoinPrice > 0 && opp.symbol !== "DYNO COIN" ? ` | ${(opp.marketPrice / dynoCoinPrice).toFixed(2)} DYNO` : ""
-      msg += `🟢 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Cost: $${opp.costPrice.toFixed(8)} | ${dev}\n`
+      msg += `🟢 <b>${opp.symbol}</b> | ${formatPrice(opp.marketPrice)}${coinStr} | Cost: ${formatPrice(opp.costPrice)} | ${dev}\n`
     }
     msg += "\n"
   }
@@ -280,7 +281,7 @@ function buildAlertMessage(opportunities: Opportunity[], customMessage?: string,
     for (const opp of sellOps) {
       const dev = `+${opp.deviation.toFixed(1)}%`
       const coinStr = dynoCoinPrice && dynoCoinPrice > 0 && opp.symbol !== "DYNO COIN" ? ` | ${(opp.marketPrice / dynoCoinPrice).toFixed(2)} DYNO` : ""
-      msg += `🔴 <b>${opp.symbol}</b> | $${opp.marketPrice.toFixed(8)}${coinStr} | Cost: $${opp.costPrice.toFixed(8)} | ${dev}\n`
+      msg += `🔴 <b>${opp.symbol}</b> | ${formatPrice(opp.marketPrice)}${coinStr} | Cost: ${formatPrice(opp.costPrice)} | ${dev}\n`
     }
   }
   msg += `\nTotal: ${opportunities.length} alerts`
@@ -294,7 +295,7 @@ function buildPriceAlertMessage(symbol: string, price: PriceResult, customMessag
   let msg = `<b>Craft World Economy - Price ${symbol}</b>\n${now}\n\n`
   if (customMessage) msg += `${customMessage}\n\n`
 
-  msg += `<b>Price:</b> $${price.price_usd.toFixed(8)}\n`
+  msg += `<b>Price:</b> ${formatPrice(price.price_usd)}\n`
   if (dynoCoinPrice && dynoCoinPrice > 0 && symbol !== "DYNO COIN") {
     msg += `<b>DYNO Value:</b> ${(price.price_usd / dynoCoinPrice).toFixed(2)} DYNO\n`
   }
@@ -314,10 +315,10 @@ function buildAllPricesMessage(prices: Record<string, PriceResult>, costs: Recor
   for (const [symbol, p] of sorted) {
     const cost = costs[symbol] ?? 0
     const changeIcon = p.price_change_24h >= 0 ? "+" : ""
-    const deviation = cost > 0 ? ((p.price_usd - cost) / cost * 100) : 0
-    const devStr = cost > 0 ? ` | Deviation: ${deviation > 0 ? "+" : ""}${deviation.toFixed(1)}%` : ""
+    const { deviation } = calculateSignal(p.price_usd, cost)
+    const devStr = cost > 0 ? ` | Dev: ${deviation > 0 ? "+" : ""}${deviation.toFixed(1)}%` : ""
     const coinStr = coinPrice > 0 && symbol !== "DYNO COIN" ? ` | ${(p.price_usd / coinPrice).toFixed(2)} DYNO` : ""
-    msg += `<b>${symbol}</b>: $${p.price_usd.toFixed(8)}${coinStr} (${changeIcon}${p.price_change_24h.toFixed(1)}%)${devStr}\n`
+    msg += `<b>${symbol}</b>: ${formatPrice(p.price_usd)}${coinStr} (${changeIcon}${p.price_change_24h.toFixed(1)}%)${devStr}\n`
   }
 
   msg += `\nTotal: ${sorted.length} resources`
@@ -398,10 +399,10 @@ export async function handleBotCommand(command: string, chatId: string, botToken
         if (!hasRecipe) continue
         if (costValue === 0) continue
 
-        const deviation = ((price.price_usd - costValue) / costValue) * 100
-        if (deviation < -thresholds.buy) {
+        const { deviation, signal } = calculateSignal(price.price_usd, costValue, thresholds)
+        if (signal === "buy") {
           opportunities.push({ symbol, signal: "buy", marketPrice: price.price_usd, costPrice: costValue, deviation, priority: alertCfg.priority, category: alertCfg.category })
-        } else if (deviation > thresholds.sell) {
+        } else if (signal === "sell") {
           opportunities.push({ symbol, signal: "sell", marketPrice: price.price_usd, costPrice: costValue, deviation, priority: alertCfg.priority, category: alertCfg.category })
         }
       }
@@ -521,13 +522,13 @@ export async function runMonitorCycle(): Promise<{
     if (!hasRecipe) continue
     if (costValue === 0) continue
 
-    const deviation = ((price.price_usd - costValue) / costValue) * 100
+    const { deviation, signal } = calculateSignal(price.price_usd, costValue, thresholds)
     console.log(`[v0] ${symbol}: preco=$${price.price_usd.toFixed(8)}, custo=$${costValue.toFixed(8)}, desvio=${deviation.toFixed(1)}%, thresholds: buy=-${thresholds.buy}%, sell=+${thresholds.sell}%`)
 
-    if (deviation < -thresholds.buy) {
+    if (signal === "buy") {
       opportunities.push({ symbol, signal: "buy", marketPrice: price.price_usd, costPrice: costValue, deviation, priority: alertCfg.priority, category: alertCfg.category })
       alertMessages.push(`COMPRAR ${symbol}: ${deviation.toFixed(1)}% abaixo do custo`)
-    } else if (deviation > thresholds.sell) {
+    } else if (signal === "sell") {
       opportunities.push({ symbol, signal: "sell", marketPrice: price.price_usd, costPrice: costValue, deviation, priority: alertCfg.priority, category: alertCfg.category })
       alertMessages.push(`VENDER ${symbol}: +${deviation.toFixed(1)}% acima do custo`)
     }

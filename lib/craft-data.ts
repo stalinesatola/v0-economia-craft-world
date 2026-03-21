@@ -212,9 +212,6 @@ export const PRODUCTION_CHAINS: ChainNode[] = [
   },
 ]
 
-export const BUY_THRESHOLD = 15
-export const SELL_THRESHOLD = 20
-
 export function getAllResources(): ResourceInfo[] {
   return Object.entries(POOLS).map(([symbol, poolAddress]) => {
     const cost = PRODUCTION_COSTS[symbol]
@@ -235,22 +232,4 @@ export function getAllResources(): ResourceInfo[] {
   })
 }
 
-export function formatPrice(value: number): string {
-  if (value === 0) return "$0.00"
-  if (value >= 1) return `$${value.toFixed(2)}`
-  if (value >= 0.01) return `$${value.toFixed(4)}`
-  if (value >= 0.0001) return `$${value.toFixed(6)}`
-  return `$${value.toFixed(8)}`
-}
-
-export function getDeviationColor(deviation: number): string {
-  if (deviation < -BUY_THRESHOLD) return "text-success"
-  if (deviation > SELL_THRESHOLD) return "text-destructive"
-  return "text-muted-foreground"
-}
-
-export function getDeviationLabel(deviation: number): string {
-  if (deviation < -BUY_THRESHOLD) return "COMPRAR"
-  if (deviation > SELL_THRESHOLD) return "VENDER"
-  return "NEUTRO"
-}
+export { BUY_THRESHOLD, SELL_THRESHOLD, formatPrice, getDeviationColor, getDeviationLabel } from "./calc"

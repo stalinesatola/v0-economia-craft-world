@@ -14,7 +14,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { formatPrice } from "@/lib/craft-data"
+import { formatPrice, calculateSignal } from "@/lib/calc"
 import { AssetChart } from "@/components/asset-chart"
 import { useI18n } from "@/lib/i18n"
 import { getResourceColor } from "@/lib/resource-images"
@@ -81,14 +81,11 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
     return Object.entries(prices).map(([symbol, priceData]) => {
       const cost = dynCosts?.[symbol] ?? 0
       const marketPrice = priceData.price_usd
-      const deviation = cost > 0 && marketPrice > 0 ? ((marketPrice - cost) / cost) * 100 : 0
-      const buyTh = dynThresholds?.buy ?? 15
-      const sellTh = dynThresholds?.sell ?? 20
       const alertCfg = dynAlerts?.[symbol]
-
-      let signal: "buy" | "sell" | "neutral" = "neutral"
-      if (deviation < -buyTh) signal = "buy"
-      else if (deviation > sellTh) signal = "sell"
+      const { deviation, signal } = calculateSignal(marketPrice, cost, {
+        buy: dynThresholds?.buy ?? 15,
+        sell: dynThresholds?.sell ?? 20
+      })
 
       const finalImageUrl = alertCfg?.imageUrl || priceData.image_url
 
@@ -226,7 +223,8 @@ export function PriceTable({ prices, pools: poolMap, isLoading, productionCosts:
           }
           const cfg = signalConfig[res.signal]
           const SignalIcon = cfg.icon
-          const catConfig = dynamicCategories.find(c => c.id === res.category)
+          const alertCfg = dynAlerts?.[res.symbol]
+          const catConfig = dynamicCategories.find(c => c.id === (alertCfg?.category || res.category))
 
           return (
             <Card

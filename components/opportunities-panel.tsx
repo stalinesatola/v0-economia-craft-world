@@ -8,8 +8,8 @@ import {
   getAllResources,
   BUY_THRESHOLD,
   SELL_THRESHOLD,
-  formatPrice,
 } from "@/lib/craft-data"
+import { formatPrice, calculateSignal } from "@/lib/calc"
 import { useI18n } from "@/lib/i18n"
 
 interface OpportunitiesPanelProps {
@@ -48,9 +48,12 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
 
       if (cost <= 0 || marketPrice <= 0) continue
 
-      const deviation = ((marketPrice - cost) / cost) * 100
+      const { deviation, signal } = calculateSignal(marketPrice, cost, {
+        buy: buyTh,
+        sell: sellTh
+      })
 
-      if (deviation < -buyTh) {
+      if (signal === "buy") {
         opps.push({
           symbol: res.symbol,
           marketPrice,
@@ -60,7 +63,7 @@ export function OpportunitiesPanel({ prices, isLoading, productionCosts: dynCost
           priority: res.priority,
           volume: priceData.volume_usd_24h,
         })
-      } else if (deviation > sellTh) {
+      } else if (signal === "sell") {
         opps.push({
           symbol: res.symbol,
           marketPrice,

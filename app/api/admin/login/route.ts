@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { validatePassword, validateUserLogin, createSession } from "@/lib/auth"
+import { validateUserLogin, createSession } from "@/lib/auth"
 import { getFullConfig, getUsers, getUserByUsername, DEFAULT_ADMIN_PERMISSIONS, DEFAULT_VIEWER_PERMISSIONS } from "@/lib/config-manager"
 
 // Simple in-memory rate limiting (replace with Redis in production)
@@ -44,24 +44,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let authUser = ""
+    let authUser = username || "admin"
     let authRole = ""
 
-    if (username) {
-      const result = await validateUserLogin(username, password)
-      if (!result.valid) {
-        return NextResponse.json({ error: "Credenciais incorretas" }, { status: 401 })
-      }
-      authUser = username
-      authRole = result.role
-    } else {
-      const result = await validatePassword(password)
-      if (!result.valid) {
-        return NextResponse.json({ error: "Password incorreta" }, { status: 401 })
-      }
-      authUser = result.username
-      authRole = result.role
+    const result = await validateUserLogin(authUser, password)
+    if (!result.valid) {
+      return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
     }
+    authRole = result.role
 
     const token = await createSession(authUser, authRole)
 
