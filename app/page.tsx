@@ -98,8 +98,15 @@ export default function Home() {
             />
           )}
 
+          {/* Stats Cards */}
           {showStats && (
-            <StatsCards prices={prices} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} />
+            <StatsCards
+              prices={prices}
+              isLoading={isLoading}
+              productionCosts={productionCosts}
+              thresholds={thresholds}
+              alertsConfig={alertsConfig}
+            />
           )}
 
           {/* Between Banner */}
