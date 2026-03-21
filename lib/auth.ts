@@ -79,10 +79,22 @@ function verifyToken(token: string): { valid: boolean; username: string; role: s
 
 // Validate with username + password
 export async function validateUserLogin(username: string, password: string): Promise<{ valid: boolean; role: string }> {
+  console.log("[v0] validateUserLogin - checking username:", username)
+  
   // Check superadmin
   const adminPassword = process.env.ADMIN_PASSWORD
-  if (username === "admin" && adminPassword && password === adminPassword) {
-    return { valid: true, role: "admin" }
+  console.log("[v0] ADMIN_PASSWORD env var set:", !!adminPassword)
+  
+  if (username === "admin") {
+    console.log("[v0] Checking admin password...")
+    console.log("[v0] Password provided length:", password.length)
+    console.log("[v0] Admin password length:", adminPassword?.length)
+    console.log("[v0] Passwords match:", password === adminPassword)
+    
+    if (adminPassword && password === adminPassword) {
+      console.log("[v0] Admin authentication successful")
+      return { valid: true, role: "admin" }
+    }
   }
 
   // Check DB users
@@ -91,10 +103,12 @@ export async function validateUserLogin(username: string, password: string): Pro
     if (user && verifyPassword(password, user.passwordHash)) {
       return { valid: true, role: user.role }
     }
-  } catch {
+  } catch (error) {
+    console.log("[v0] DB user check error:", error)
     // DB not available
   }
 
+  console.log("[v0] validateUserLogin failed for user:", username)
   return { valid: false, role: "" }
 }
 

@@ -7,7 +7,7 @@ import { PoolsTab } from "@/components/admin/tabs/pools-tab"
 import { SettingsTab } from "@/components/admin/tabs/settings-tab"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useI18n } from "@/lib/i18n"
-import { LogOut, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, XCircle } from "lucide-react"
+import { LogOut, ArrowLeft, RefreshCw, ShieldAlert, CheckCircle2, XCircle, Zap } from "lucide-react"
 import Link from "next/link"
 import type { AppConfig } from "@/lib/config-manager"
 
@@ -65,18 +65,19 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
   const [activeTab, setActiveTab] = useState("pools")
+  const [stats, setStats] = useState({ poolsCount: 0, chainDepth: 0, usersCount: 0, recipesCount: 0 })
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message })
     setTimeout(() => setToast(null), 3000)
   }
 
-  // Permission check - superadmin (username "admin") always has full access
+  // Permission system - superadmin ("admin" user) has full access
   const isSuperAdmin = userInfo?.username === "admin" || userInfo?.role === "admin"
   const perms = userInfo?.permissions ?? (isSuperAdmin ? {
-    pools: true, chains: true, telegram: true, sharing: true, banners: true, settings: true, users: true,
+    pools: true, chains: true, telegram: true, sharing: true, banners: true, settings: true, users: true, categories: true,
   } : {
-    pools: false, chains: false, telegram: false, sharing: false, banners: false, settings: false, users: false,
+    pools: false, chains: false, telegram: false, sharing: false, banners: false, settings: false, users: false, categories: false,
   })
 
   const canEdit = (section: string) => {
@@ -96,13 +97,23 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
       if (res.ok) {
         const data = await res.json()
         setConfig(sanitizeConfig(data))
+        updateStats(data)
       }
-    } catch {
-      // Error fetching config
+    } catch (error) {
+      console.error("[v0] Error fetching config:", error)
     } finally {
       setLoading(false)
     }
   }, [authHeaders])
+
+  const updateStats = (data: AppConfig) => {
+    setStats({
+      poolsCount: Object.keys(data.pools ?? {}).length,
+      chainDepth: (data.productionChains ?? []).length,
+      usersCount: (data.users ?? []).length,
+      recipesCount: (data.recipes ?? []).length,
+    })
+  }
 
   useEffect(() => {
     if (!initialConfig) fetchConfig()
@@ -110,7 +121,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
 
   const updateSection = async (section: string, data: unknown): Promise<boolean> => {
     if (!canEdit(section)) {
-      showToast("error", "Sem permissao para editar esta seccao")
+      showToast("error", "Sem permissão para editar esta seção")
       return false
     }
     setSaving(true)
@@ -122,14 +133,15 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
       })
       if (res.ok) {
         await fetchConfig()
-        showToast("success", "Definicoes salvas com sucesso!")
+        showToast("success", "Configurações salvas com sucesso!")
         return true
       }
       const errData = await res.json().catch(() => ({ error: "Erro desconhecido" }))
-      showToast("error", errData.error || "Erro ao salvar definicoes")
+      showToast("error", errData.error || "Erro ao salvar configurações")
       return false
-    } catch {
-      showToast("error", "Erro de rede ao salvar definicoes")
+    } catch (error) {
+      console.error("[v0] Error updating section:", error)
+      showToast("error", "Erro de rede ao salvar configurações")
       return false
     } finally {
       setSaving(false)
@@ -144,14 +156,14 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
     )
   }
 
-  // Determine which tabs to show
+  // Determine which tabs to show based on permissions
   const visibleTabs = [
-    { id: "pools", label: t("admin.pools"), perm: "pools" },
+    { id: "pools", label: t("admin.pools"), perm: "pools", icon: Zap },
     { id: "chains", label: t("admin.production"), perm: "chains" },
     { id: "telegram", label: t("admin.telegram"), perm: "telegram" },
     { id: "sharing", label: t("admin.sharing"), perm: "sharing" },
-    { id: "banners", label: t("admin.banners"), perm: "banners" },
-    { id: "categories", label: "Categorias", perm: "settings" },
+    { id: "banners", label: "Banners", perm: "banners" },
+    { id: "categories", label: "Categorias", perm: "categories" },
     { id: "settings", label: t("admin.config"), perm: "settings" },
   ].filter((tab) => isSuperAdmin || canEdit(tab.perm))
 
@@ -182,7 +194,8 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-6">
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -195,13 +208,13 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
                 {t("admin.dashboard")}
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-foreground">{t("admin.title")}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{t("admin.title")}</h1>
                 <p className="text-xs text-muted-foreground">
                   {userInfo?.username && (
                     <span className="font-medium text-card-foreground">{userInfo.username}</span>
                   )}
                   {userInfo?.role && (
-                    <span className="ml-1 text-muted-foreground">({userInfo.role})</span>
+                    <span className="ml-2 inline-block px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-semibold">{userInfo.role}</span>
                   )}
                   {" - "}{t("admin.subtitle")}
                 </p>
@@ -220,10 +233,32 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
             </div>
           </div>
 
+          {/* Quick Stats */}
+          {isSuperAdmin && (
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="rounded-lg border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">Pools</p>
+                <p className="text-2xl font-bold text-primary">{stats.poolsCount}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">Cadeias</p>
+                <p className="text-2xl font-bold text-primary">{stats.chainDepth}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">Receitas</p>
+                <p className="text-2xl font-bold text-primary">{stats.recipesCount}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">Utilizadores</p>
+                <p className="text-2xl font-bold text-primary">{stats.usersCount}</p>
+              </div>
+            </div>
+          )}
+
           {visibleTabs.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-20">
               <ShieldAlert className="h-10 w-10 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Sem permissoes de acesso a configuracoes.</p>
+              <p className="text-sm text-muted-foreground">Sem permissões de acesso às configurações.</p>
             </div>
           ) : (
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -268,7 +303,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
                   </Suspense>
                 </TabsContent>
               )}
-              {canEdit("settings") && (
+              {canEdit("categories") && (
                 <TabsContent value="categories" className="mt-4">
                   <Suspense fallback={<TabFallback />}>
                     <CategoriesTab config={config} onUpdate={updateSection} saving={saving} />
