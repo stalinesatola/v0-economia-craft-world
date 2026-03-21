@@ -60,14 +60,41 @@ export async function POST(request: NextRequest) {
 
     const token = await createSession(authUser, authRole)
 
-    const config = await getFullConfig()
-    const users = await getUsers()
+    // Try to get config and users, but don't fail if DB is not available
+    let config: any = {}
+    let users: any[] = []
+    
+    try {
+      config = await getFullConfig()
+      users = await getUsers()
+      console.log("[v0] Config and users loaded from database")
+    } catch (dbError) {
+      console.log("[v0] Database not available, using empty config:", dbError instanceof Error ? dbError.message : "Unknown error")
+      // Database not available, continue with empty config
+      config = {
+        pools: {},
+        productionCosts: {},
+        alertsConfig: {},
+        productionChains: [],
+        thresholds: { buy: 15, sell: 15 },
+        telegram: { botToken: "", chatId: "", enabled: false, intervalMinutes: 30 },
+        network: "ronin",
+        banners: [],
+        categories: [],
+        recipes: [],
+      }
+      users = []
+    }
 
     // Get user permissions
     let permissions = authRole === "admin" ? DEFAULT_ADMIN_PERMISSIONS : DEFAULT_VIEWER_PERMISSIONS
     if (authUser !== "admin") {
-      const user = await getUserByUsername(authUser)
-      if (user?.permissions) permissions = user.permissions
+      try {
+        const user = await getUserByUsername(authUser)
+        if (user?.permissions) permissions = user.permissions
+      } catch {
+        // User not in DB, use default permissions
+      }
     }
 
     const safeConfig = {
@@ -76,7 +103,7 @@ export async function POST(request: NextRequest) {
         ...config.telegram,
         botToken: config.telegram.botToken ? "****" + config.telegram.botToken.slice(-8) : "",
       } : { botToken: "", chatId: "", enabled: false, intervalMinutes: 30 },
-      users: users.map((u) => ({
+      users: users.map((u: any) => ({
         username: u.username,
         role: u.role,
         permissions: u.permissions,
