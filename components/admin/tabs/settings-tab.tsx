@@ -25,6 +25,7 @@ interface SettingsTabProps {
   config: AppConfig
   onUpdate: (section: string, data: unknown) => Promise<boolean>
   saving: boolean
+  authToken?: string | null
 }
 
 interface UserDisplay {
@@ -44,7 +45,7 @@ const PERMISSION_KEYS = [
   { key: "users", label: "Utilizadores" },
 ]
 
-export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
+export function SettingsTab({ config, onUpdate, saving, authToken }: SettingsTabProps) {
   const { t } = useI18n()
   const [buyThreshold, setBuyThreshold] = useState(config.thresholds?.buy ?? 15)
   const [sellThreshold, setSellThreshold] = useState(config.thresholds?.sell ?? 15)
@@ -196,9 +197,12 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
     setUserLoading(true)
     setUserMessage("")
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`
+      
       const res = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           username: newUsername,
           password: newPassword,
@@ -236,9 +240,12 @@ export function SettingsTab({ config, onUpdate, saving }: SettingsTabProps) {
   const handleDeleteUserConfirm = async (username: string) => {
     setUserLoading(true)
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`
+      
       const res = await fetch("/api/admin/users", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ username }),
       })
       const data = await res.json()

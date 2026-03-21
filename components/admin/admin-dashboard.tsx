@@ -312,7 +312,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
               )}
               {canEdit("settings") && (
                 <TabsContent value="settings" className="mt-4">
-                  <SettingsTab config={config} onUpdate={updateSection} saving={saving} />
+                  <SettingsTab config={config} onUpdate={updateSection} saving={saving} authToken={authToken} />
                 </TabsContent>
               )}
             </Tabs>

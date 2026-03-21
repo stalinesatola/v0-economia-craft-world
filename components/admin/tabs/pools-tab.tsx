@@ -7,13 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save, Search, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -36,9 +30,6 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [newSymbol, setNewSymbol] = useState("")
   const [newAddress, setNewAddress] = useState("")
-  const [newCategory, setNewCategory] = useState<string>("factory")
-  const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
-  const [newImageUrl, setNewImageUrl] = useState("")
 
   useEffect(() => {
     setLocalPools(config?.pools ?? {})
@@ -47,15 +38,15 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   }, [config?.pools, config?.alertsConfig])
 
   const safePools = localPools ?? {}
-  const symbols = Object.keys(safePools).filter((s) => s.toLowerCase().includes(search.toLowerCase()))
+  const symbols = Object.keys(safePools).filter(s => s.toLowerCase().includes(search.toLowerCase()))
 
   const handlePoolChange = (symbol: string, address: string) => {
-    setLocalPools((prev) => ({ ...prev, [symbol]: address }))
+    setLocalPools(prev => ({ ...prev, [symbol]: address }))
     setHasChanges(true)
   }
 
   const handleAlertChange = (symbol: string, field: string, value: unknown) => {
-    setLocalAlerts((prev) => ({
+    setLocalAlerts(prev => ({
       ...prev,
       [symbol]: { ...prev[symbol], [field]: value },
     }))
@@ -67,15 +58,14 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     if (!symbol || !newAddress.trim()) return
     if (safePools[symbol]) return
 
-    setLocalPools((prev) => ({ ...prev, [symbol]: newAddress.trim() }))
-    setLocalAlerts((prev) => ({
+    setLocalPools(prev => ({ ...prev, [symbol]: newAddress.trim() }))
+    setLocalAlerts(prev => ({
       ...prev,
-      [symbol]: { enabled: true, priority: newPriority, category: newCategory, imageUrl: newImageUrl.trim() || undefined },
+      [symbol]: { enabled: true, priority: "low", category: "factory" },
     }))
     setHasChanges(true)
     setNewSymbol("")
     setNewAddress("")
-    setNewImageUrl("")
     setShowAddForm(false)
   }
 
@@ -84,12 +74,12 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   }
 
   const handleDeletePoolConfirm = (symbol: string) => {
-    setLocalPools((prev) => {
+    setLocalPools(prev => {
       const next = { ...prev }
       delete next[symbol]
       return next
     })
-    setLocalAlerts((prev) => {
+    setLocalAlerts(prev => {
       const next = { ...prev }
       delete next[symbol]
       return next
@@ -122,147 +112,105 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base text-card-foreground">{t("admin.pools")} & {t("table.resource")}</CardTitle>
-              <CardDescription>{symbols.length} {t("dashboard.pools")}</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="gap-1.5"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {showAddForm ? t("chart.close") : t("table.resource")}
-              </Button>
-              <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
-                <Save className="h-3.5 w-3.5" />
-                {t("admin.save")}
-              </Button>
-            </div>
-          </div>
+          <CardTitle>{t("admin.pools")}</CardTitle>
+          <CardDescription>{t("admin.manageResourcePools")}</CardDescription>
         </CardHeader>
-
-        <CardContent className="flex flex-col gap-3">
-          {/* Search */}
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={t("admin.search")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-            />
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t("admin.search")}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9 bg-secondary border-border text-card-foreground"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowAddForm(!showAddForm)} className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              {t("admin.add")}
+            </Button>
           </div>
 
-          {/* Add Form */}
           {showAddForm && (
-            <div className="border-t border-border pt-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div>
-                  <Label className="text-xs">{t("admin.symbol")}</Label>
-                  <Input
-                    type="text"
-                    placeholder="ACID"
-                    value={newSymbol}
-                    onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">{t("admin.contract")}</Label>
-                  <Input
-                    type="text"
-                    placeholder="0x..."
-                    value={newAddress}
-                    onChange={(e) => setNewAddress(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">{t("admin.category")}</Label>
-                  <Select value={newCategory} onValueChange={setNewCategory}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="factory">Factory</SelectItem>
-                      <SelectItem value="slp">SLP</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">{t("admin.priority")}</Label>
-                  <Select value={newPriority} onValueChange={(v: any) => setNewPriority(v)}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="border border-border rounded-lg p-4 space-y-3 bg-secondary/30">
+              <div className="flex gap-2">
+                <Input placeholder="Symbol (e.g., ACID)" value={newSymbol} onChange={e => setNewSymbol(e.target.value)} className="bg-secondary border-border text-card-foreground" />
+                <Input placeholder="Contract Address" value={newAddress} onChange={e => setNewAddress(e.target.value)} className="flex-1 bg-secondary border-border text-card-foreground" />
               </div>
-              <Button onClick={handleAddPool} size="sm" className="mt-2 gap-1.5 w-full">
-                <Plus className="h-3.5 w-3.5" />
-                {t("admin.add")}
-              </Button>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => { setShowAddForm(false); setNewSymbol(""); setNewAddress(""); }}>
+                  {t("admin.cancel")}
+                </Button>
+                <Button size="sm" onClick={handleAddPool} disabled={!newSymbol || !newAddress}>
+                  {t("admin.add")}
+                </Button>
+              </div>
             </div>
           )}
 
-          {/* Pools List */}
-          <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <div className="space-y-2">
             {symbols.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">{t("admin.empty")}</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t("admin.noItems")}</p>
             ) : (
-              symbols.map((symbol) => (
-                <div key={symbol} className="border border-border rounded-lg p-2">
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => setExpandedResource(expandedResource === symbol ? null : symbol)}
-                      className="flex items-center gap-2 flex-1 hover:text-primary transition-colors"
-                    >
-                      {expandedResource === symbol ? (
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      )}
-                      <span className="font-semibold text-xs">{symbol}</span>
-                      <Badge variant="outline" className="text-xs ml-2">{localAlerts[symbol]?.priority || "low"}</Badge>
-                    </button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeletePoolClick(symbol)}
-                      className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+              symbols.map(symbol => (
+                <div key={symbol} className="border border-border rounded-lg bg-secondary/30">
+                  <button
+                    onClick={() => setExpandedResource(expandedResource === symbol ? null : symbol)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-secondary/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      {expandedResource === symbol ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      <span className="font-medium text-card-foreground">{symbol}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {localAlerts[symbol]?.priority || "low"}
+                      </Badge>
+                    </div>
+                  </button>
 
                   {expandedResource === symbol && (
-                    <div className="mt-2 pt-2 border-t border-border space-y-2">
+                    <div className="border-t border-border p-3 space-y-3 bg-card/30">
                       <div>
-                        <Label className="text-xs">{t("admin.contract")}</Label>
+                        <Label className="text-xs text-muted-foreground">{t("admin.address")}</Label>
                         <Input
-                          type="text"
                           value={safePools[symbol]}
-                          onChange={(e) => handlePoolChange(symbol, e.target.value)}
-                          className="h-8 text-xs"
+                          onChange={e => handlePoolChange(symbol, e.target.value)}
+                          className="mt-1 bg-secondary border-border text-card-foreground text-xs"
                         />
                       </div>
+
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs">{t("admin.enabled")}</Label>
+                        <Label className="text-xs text-muted-foreground">{t("admin.enabled")}</Label>
                         <Switch
                           checked={localAlerts[symbol]?.enabled ?? true}
-                          onCheckedChange={(v) => handleAlertChange(symbol, "enabled", v)}
+                          onCheckedChange={v => handleAlertChange(symbol, "enabled", v)}
                         />
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-muted-foreground">{t("admin.priority")}</Label>
+                        <Select value={localAlerts[symbol]?.priority || "low"} onValueChange={v => handleAlertChange(symbol, "priority", v)}>
+                          <SelectTrigger className="mt-1 bg-secondary border-border text-card-foreground h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeletePoolClick(symbol)}
+                          className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {t("admin.remove")}
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -272,6 +220,15 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      <Button
+        onClick={handleSave}
+        disabled={!hasChanges || saving}
+        className="w-full gap-2"
+      >
+        <Save className="h-4 w-4" />
+        {saving ? "A guardar..." : t("admin.save")}
+      </Button>
     </div>
   )
 }

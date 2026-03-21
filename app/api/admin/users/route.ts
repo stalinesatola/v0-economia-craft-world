@@ -24,15 +24,12 @@ export async function GET(request: NextRequest) {
 // POST: create user
 export async function POST(request: NextRequest) {
   const auth = validateAdminRequest(request)
-  console.log("[v0] POST /admin/users - auth:", auth)
-  
   if (!auth.valid) {
     return NextResponse.json({ error: "Não autorizado - token inválido" }, { status: 401 })
   }
   
   if (auth.role !== "admin") {
-    console.log("[v0] User role is not admin:", auth.role)
-    return NextResponse.json({ error: `Sem permissões - role: ${auth.role}` }, { status: 403 })
+    return NextResponse.json({ error: "Sem permissões - apenas admin pode criar utilizadores" }, { status: 403 })
   }
 
   try {
@@ -68,7 +65,6 @@ export async function POST(request: NextRequest) {
       users: users.map((u) => ({ username: u.username, role: u.role, permissions: u.permissions, createdAt: u.createdAt })),
     })
   } catch (error) {
-    console.error("[v0] Error creating user:", error)
     return NextResponse.json({ error: error instanceof Error ? error.message : "Erro interno" }, { status: 500 })
   }
 }
