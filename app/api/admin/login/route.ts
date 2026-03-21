@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { validateUserLogin, createSession } from "@/lib/auth"
 import { getFullConfig, getUsers, getUserByUsername, DEFAULT_ADMIN_PERMISSIONS, DEFAULT_VIEWER_PERMISSIONS } from "@/lib/config-manager"
+import { RECIPES } from "@/lib/resource-images"
 
 // Simple in-memory rate limiting (replace with Redis in production)
 const loginAttempts = new Map<string, { count: number; resetTime: number }>()
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
         network: "ronin",
         banners: [],
         categories: [],
-        recipes: [],
+        recipes: RECIPES,
       }
       users = []
     }
