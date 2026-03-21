@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { password, username } = body
 
+    console.log("[v0] Login attempt - username:", username, "password provided:", !!password)
+
     if (!password || typeof password !== "string") {
       return NextResponse.json({ error: "Password obrigatoria" }, { status: 400 })
     }
@@ -47,7 +49,10 @@ export async function POST(request: NextRequest) {
     let authUser = username || "admin"
     let authRole = ""
 
+    console.log("[v0] Validating user:", authUser)
     const result = await validateUserLogin(authUser, password)
+    console.log("[v0] Validation result:", result)
+    
     if (!result.valid) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
     }
@@ -79,6 +84,7 @@ export async function POST(request: NextRequest) {
       })),
     }
 
+    console.log("[v0] Login successful for user:", authUser)
     return NextResponse.json({
       success: true,
       token,

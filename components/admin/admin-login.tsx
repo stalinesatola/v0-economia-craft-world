@@ -34,7 +34,11 @@ export function AdminLogin({ onLogin, customization }: AdminLoginProps) {
     setSuccess(false)
     setLoading(true)
 
+    console.log("[v0] Attempting login - username:", showUsername ? username : "admin", "hasPassword:", !!password)
+    
     const loginSuccess = await onLogin(password, showUsername ? username : undefined)
+    console.log("[v0] Login result:", loginSuccess)
+    
     if (loginSuccess) {
       setSuccess(true)
       // Success state will trigger navigation automatically

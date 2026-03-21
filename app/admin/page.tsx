@@ -89,14 +89,19 @@ export default function AdminPage() {
       const body: Record<string, string> = { password }
       if (username) body.username = username
 
+      console.log("[v0] Admin page - calling login API with:", { username: body.username || "admin", passwordLength: password.length })
+
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       })
 
+      console.log("[v0] Login API response status:", res.status)
+      
       if (res.ok) {
         const data = await res.json()
+        console.log("[v0] Login success, received token and config")
         setIsAuthenticated(true)
         
         if (data.config) setInitialConfig(data.config)
@@ -110,6 +115,8 @@ export default function AdminPage() {
         return true
       }
 
+      const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+      console.log("[v0] Login failed:", errorData)
       return false
     } catch (error) {
       console.error("[v0] Login error:", error)
