@@ -7,13 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save, Search, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -32,9 +26,10 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const [localPools, setLocalPools] = useState<Record<string, string>>(config?.pools ?? {})
   const [localAlerts, setLocalAlerts] = useState<Record<string, { enabled?: boolean; priority?: string; category?: string }>>(config?.alertsConfig ?? {})
   const [hasChanges, setHasChanges] = useState(false)
-
-  // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; symbol: string }>({ isOpen: false, symbol: "" })
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newSymbol, setNewSymbol] = useState("")
+  const [newAddress, setNewAddress] = useState("")
 
   useEffect(() => {
     setLocalPools(config?.pools ?? {})
@@ -42,26 +37,16 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     setHasChanges(false)
   }, [config?.pools, config?.alertsConfig])
 
-  // Add pool form
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newSymbol, setNewSymbol] = useState("")
-  const [newAddress, setNewAddress] = useState("")
-  const [newCategory, setNewCategory] = useState<string>("factory")
-  const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
-  const [newImageUrl, setNewImageUrl] = useState("")
-
   const safePools = localPools ?? {}
-  const symbols = Object.keys(safePools).filter((s) =>
-    s.toLowerCase().includes(search.toLowerCase())
-  )
+  const symbols = Object.keys(safePools).filter(s => s.toLowerCase().includes(search.toLowerCase()))
 
   const handlePoolChange = (symbol: string, address: string) => {
-    setLocalPools((prev) => ({ ...prev, [symbol]: address }))
+    setLocalPools(prev => ({ ...prev, [symbol]: address }))
     setHasChanges(true)
   }
 
   const handleAlertChange = (symbol: string, field: string, value: unknown) => {
-    setLocalAlerts((prev) => ({
+    setLocalAlerts(prev => ({
       ...prev,
       [symbol]: { ...prev[symbol], [field]: value },
     }))
@@ -71,17 +56,16 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const handleAddPool = () => {
     const symbol = newSymbol.toUpperCase().trim()
     if (!symbol || !newAddress.trim()) return
-    if (safePools[symbol]) return // Already exists
+    if (safePools[symbol]) return
 
-    setLocalPools((prev) => ({ ...prev, [symbol]: newAddress.trim() }))
-    setLocalAlerts((prev) => ({
+    setLocalPools(prev => ({ ...prev, [symbol]: newAddress.trim() }))
+    setLocalAlerts(prev => ({
       ...prev,
-      [symbol]: { enabled: true, priority: newPriority, category: newCategory, imageUrl: newImageUrl.trim() || undefined },
+      [symbol]: { enabled: true, priority: "low", category: "factory" },
     }))
     setHasChanges(true)
     setNewSymbol("")
     setNewAddress("")
-    setNewImageUrl("")
     setShowAddForm(false)
   }
 
@@ -90,12 +74,12 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   }
 
   const handleDeletePoolConfirm = (symbol: string) => {
-    setLocalPools((prev) => {
+    setLocalPools(prev => {
       const next = { ...prev }
       delete next[symbol]
       return next
     })
-    setLocalAlerts((prev) => {
+    setLocalAlerts(prev => {
       const next = { ...prev }
       delete next[symbol]
       return next
@@ -125,300 +109,98 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
         onConfirm={() => handleDeletePoolConfirm(confirmDialog.symbol)}
         onCancel={() => setConfirmDialog({ isOpen: false, symbol: "" })}
       />
+
       <Card className="border-border bg-card">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base text-card-foreground">
-                {t("admin.pools")} & {t("table.resource")}
-              </CardTitle>
-              <CardDescription>
-                {symbols.length} {t("dashboard.pools")}
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="gap-1.5"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {showAddForm ? t("chart.close") : t("table.resource")}
-              </Button>
-              <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
-                <Save className="h-3.5 w-3.5" />
-                {saving ? "..." : t("admin.reload")}
-              </Button>
-            </div>
-          </div>
+          <CardTitle>{t("admin.pools")}</CardTitle>
+          <CardDescription>{t("admin.manageResourcePools")}</CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* Add Pool Form */}
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t("admin.search")}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9 bg-secondary border-border text-card-foreground"
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowAddForm(!showAddForm)} className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              {t("admin.add")}
+            </Button>
+          </div>
+
           {showAddForm && (
-            <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
-              <h3 className="mb-3 text-sm font-semibold text-card-foreground">Adicionar Novo Recurso</h3>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Simbolo</Label>
-                  <Input
-                    value={newSymbol}
-                    onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-                    placeholder="ex: GOLD"
-                    className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono uppercase"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Pool Address</Label>
-                  <Input
-                    value={newAddress}
-                    onChange={(e) => setNewAddress(e.target.value)}
-                    placeholder="0x..."
-                    className="bg-secondary border-border text-card-foreground h-9 text-sm font-mono"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Categoria</Label>
-                  <Select value={newCategory} onValueChange={(v) => setNewCategory(v)}>
-                    <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(config.categories ?? []).filter(c => c.enabled).map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          <span className="flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                            {cat.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                      {(!config.categories || config.categories.length === 0) && (
-                        <>
-                          <SelectItem value="mine">{t("table.mine")}</SelectItem>
-                          <SelectItem value="factory">{t("table.factory")}</SelectItem>
-                          <SelectItem value="token">{t("table.token")}</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">URL da Imagem</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={newImageUrl}
-                      onChange={(e) => setNewImageUrl(e.target.value)}
-                      placeholder="https://... (opcional)"
-                      className="bg-secondary border-border text-card-foreground h-9 text-sm"
-                    />
-                    {newImageUrl && (
-                      <img
-                        src={newImageUrl}
-                        alt="preview"
-                        className="h-9 w-9 rounded-md object-cover border border-border shrink-0"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
-                      />
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Prioridade</Label>
-                  <Select value={newPriority} onValueChange={(v) => setNewPriority(v as "high" | "medium" | "low")}>
-                    <SelectTrigger className="bg-secondary border-border text-card-foreground h-9 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">Alta</SelectItem>
-                      <SelectItem value="medium">Media</SelectItem>
-                      <SelectItem value="low">Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button
-                    onClick={handleAddPool}
-                    disabled={!newSymbol.trim() || !newAddress.trim() || !!safePools[newSymbol.toUpperCase().trim()]}
-                    size="sm"
-                    className="w-full gap-1.5"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Adicionar
-                  </Button>
-                </div>
+            <div className="border border-border rounded-lg p-4 space-y-3 bg-secondary/30">
+              <div className="flex gap-2">
+                <Input placeholder="Symbol (e.g., ACID)" value={newSymbol} onChange={e => setNewSymbol(e.target.value)} className="bg-secondary border-border text-card-foreground" />
+                <Input placeholder="Contract Address" value={newAddress} onChange={e => setNewAddress(e.target.value)} className="flex-1 bg-secondary border-border text-card-foreground" />
               </div>
-              {safePools[newSymbol.toUpperCase().trim()] && newSymbol.trim() && (
-                <p className="mt-2 text-xs text-destructive">Simbolo ja existe!</p>
-              )}
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => { setShowAddForm(false); setNewSymbol(""); setNewAddress(""); }}>
+                  {t("admin.cancel")}
+                </Button>
+                <Button size="sm" onClick={handleAddPool} disabled={!newSymbol || !newAddress}>
+                  {t("admin.add")}
+                </Button>
+              </div>
             </div>
           )}
 
-          {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder={t("table.search")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 bg-secondary border-border text-card-foreground h-9 text-sm"
-            />
-          </div>
-
-          {/* Resource List */}
-          <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-1">
-            {symbols.map((symbol) => {
-              const alert = localAlerts[symbol]
-              const isExpanded = expandedResource === symbol
-
-              return (
-                <div
-                  key={symbol}
-                  className="rounded-lg border border-border bg-secondary/50"
-                >
-                  {/* Collapsed row */}
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setExpandedResource(isExpanded ? null : symbol)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedResource(isExpanded ? null : symbol) } }}
-                    className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-secondary/80 transition-colors rounded-lg cursor-pointer"
+          <div className="space-y-2">
+            {symbols.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">{t("admin.noItems")}</p>
+            ) : (
+              symbols.map(symbol => (
+                <div key={symbol} className="border border-border rounded-lg bg-secondary/30">
+                  <button
+                    onClick={() => setExpandedResource(expandedResource === symbol ? null : symbol)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-secondary/50 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      {(alert as Record<string, unknown>)?.imageUrl ? (
-                        <img
-                          src={(alert as Record<string, unknown>).imageUrl as string}
-                          alt={symbol}
-                          className="h-7 w-7 rounded-full object-cover border border-border shrink-0"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
-                        />
-                      ) : (
-                        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground shrink-0">
-                          {symbol.slice(0, 2)}
-                        </div>
-                      )}
-                      <span className="font-mono text-sm font-semibold text-card-foreground w-20">
-                        {symbol}
-                      </span>
-                      {(() => {
-                        const catConfig = (config.categories ?? []).find(c => c.id === alert?.category)
-                        const catLabel = catConfig?.label || alert?.category || "factory"
-                        const catColor = catConfig?.color || "var(--primary)"
-                        return (
-                          <Badge variant="outline" style={{ borderColor: catColor, color: catColor }}>
-                            {catLabel}
-                          </Badge>
-                        )
-                      })()}
-                      <Badge
-                        variant="outline"
-                        className={
-                          alert?.priority === "high"
-                            ? "border-destructive text-destructive"
-                            : alert?.priority === "medium"
-                              ? "border-chart-3 text-chart-3"
-                              : "border-muted-foreground text-muted-foreground"
-                        }
-                      >
-                        {alert?.priority || "low"}
+                    <div className="flex items-center gap-2">
+                      {expandedResource === symbol ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      <span className="font-medium text-card-foreground">{symbol}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {localAlerts[symbol]?.priority || "low"}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Switch
-                          checked={alert?.enabled ?? false}
-                          onCheckedChange={(v) => handleAlertChange(symbol, "enabled", v)}
+                  </button>
+
+                  {expandedResource === symbol && (
+                    <div className="border-t border-border p-3 space-y-3 bg-card/30">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">{t("admin.address")}</Label>
+                        <Input
+                          value={safePools[symbol]}
+                          onChange={e => handlePoolChange(symbol, e.target.value)}
+                          className="mt-1 bg-secondary border-border text-card-foreground text-xs"
                         />
                       </div>
-                      {isExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Expanded details */}
-                  {isExpanded && (
-                    <div className="border-t border-border px-4 py-3">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="flex flex-col gap-1.5">
-                          <Label className="text-xs text-muted-foreground">Pool Address</Label>
-                          <Input
-                            value={safePools[symbol] ?? ""}
-                            onChange={(e) => handlePoolChange(symbol, e.target.value)}
-                            className="bg-background border-border text-card-foreground h-8 text-xs font-mono"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <Label className="text-xs text-muted-foreground">{t("table.productionCost")}</Label>
-                          <div className="flex items-center h-8 px-2 rounded-md bg-muted border border-border text-xs font-mono text-muted-foreground">
-                            Calculado automaticamente via cadeia de producao
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <Label className="text-xs text-muted-foreground">Categoria</Label>
-                          <Select
-                            value={alert?.category || "factory"}
-                            onValueChange={(v) => handleAlertChange(symbol, "category", v)}
-                          >
-                            <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(config.categories ?? []).filter(c => c.enabled).map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  <span className="flex items-center gap-2">
-                                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                                    {cat.label}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                              {(!config.categories || config.categories.length === 0) && (
-                                <>
-                                  <SelectItem value="mine">{t("table.mine")}</SelectItem>
-                                  <SelectItem value="factory">{t("table.factory")}</SelectItem>
-                                  <SelectItem value="token">{t("table.token")}</SelectItem>
-                                </>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <Label className="text-xs text-muted-foreground">Prioridade</Label>
-                          <Select
-                            value={alert?.priority || "low"}
-                            onValueChange={(v) => handleAlertChange(symbol, "priority", v)}
-                          >
-                            <SelectTrigger className="bg-background border-border text-card-foreground h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="high">Alta</SelectItem>
-                              <SelectItem value="medium">Media</SelectItem>
-                              <SelectItem value="low">Baixa</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5 sm:col-span-2">
-                          <Label className="text-xs text-muted-foreground">URL da Imagem</Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={(alert as Record<string, unknown>)?.imageUrl as string || ""}
-                              onChange={(e) => handleAlertChange(symbol, "imageUrl", e.target.value)}
-                              placeholder="https://... (opcional)"
-                              className="bg-background border-border text-card-foreground h-8 text-xs flex-1"
-                            />
-                            {(alert as Record<string, unknown>)?.imageUrl && (
-                              <img
-                                src={(alert as Record<string, unknown>)?.imageUrl as string}
-                                alt={symbol}
-                                className="h-8 w-8 rounded-md object-cover border border-border shrink-0"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
-                              />
-                            )}
-                          </div>
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs text-muted-foreground">{t("admin.enabled")}</Label>
+                        <Switch
+                          checked={localAlerts[symbol]?.enabled ?? true}
+                          onCheckedChange={v => handleAlertChange(symbol, "enabled", v)}
+                        />
                       </div>
+
+                      <div>
+                        <Label className="text-xs text-muted-foreground">{t("admin.priority")}</Label>
+                        <Select value={localAlerts[symbol]?.priority || "low"} onValueChange={v => handleAlertChange(symbol, "priority", v)}>
+                          <SelectTrigger className="mt-1 bg-secondary border-border text-card-foreground h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <div className="mt-3 flex justify-end">
                         <Button
                           variant="ghost"
@@ -427,17 +209,26 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
                           className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                          Remover
+                          {t("admin.remove")}
                         </Button>
                       </div>
                     </div>
                   )}
                 </div>
-              )
-            })}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
+
+      <Button
+        onClick={handleSave}
+        disabled={!hasChanges || saving}
+        className="w-full gap-2"
+      >
+        <Save className="h-4 w-4" />
+        {saving ? "A guardar..." : t("admin.save")}
+      </Button>
     </div>
   )
 }

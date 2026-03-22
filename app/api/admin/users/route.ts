@@ -24,8 +24,12 @@ export async function GET(request: NextRequest) {
 // POST: create user
 export async function POST(request: NextRequest) {
   const auth = validateAdminRequest(request)
-  if (!auth.valid || auth.role !== "admin") {
-    return NextResponse.json({ error: "Sem permissoes" }, { status: 403 })
+  if (!auth.valid) {
+    return NextResponse.json({ error: "Não autorizado - token inválido" }, { status: 401 })
+  }
+  
+  if (auth.role !== "admin") {
+    return NextResponse.json({ error: "Sem permissões - apenas admin pode criar utilizadores" }, { status: 403 })
   }
 
   try {

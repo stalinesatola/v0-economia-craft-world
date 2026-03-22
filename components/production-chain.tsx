@@ -146,7 +146,7 @@ function ResourceCard({
                 <span className="text-[10px] font-mono text-muted-foreground shrink-0">x{inp.quantity}</span>
                 {inputPool && (
                   <a
-                    href={`https://app.geckoterminal.com/ronin/pools/${inputPool}`}
+                    href={`https://geckoterminal.com/ronin/pools/${inputPool}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground/50 hover:text-primary transition-colors shrink-0"
@@ -183,7 +183,7 @@ function ResourceCard({
             <span className="text-[10px] text-muted-foreground">{t("chain.marketPrice")}</span>
             {poolAddress && (
               <a
-                href={`https://app.geckoterminal.com/ronin/pools/${poolAddress}`}
+                href={`https://geckoterminal.com/ronin/pools/${poolAddress}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground/50 hover:text-primary transition-colors"
