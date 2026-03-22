@@ -1,6 +1,6 @@
 "use client"
 
-import { RefreshCw, Activity, Zap, Link2 } from "lucide-react"
+import { RefreshCw, Activity, Zap, Link2, Gem } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RonPrice } from "@/components/ron-price"
 import { LanguageSwitcher } from "@/components/language-switcher"
@@ -73,6 +73,13 @@ export function DashboardHeader({ timestamp, count, isValidating, onRefresh, cus
             </Button>
           </Link>
         )}
+
+        <Link href="/nfts">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Gem className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">NFTs</span>
+          </Button>
+        </Link>
 
         <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2">
           <Activity className={`h-3.5 w-3.5 ${isValidating ? "text-primary animate-pulse" : "text-primary"}`} />
