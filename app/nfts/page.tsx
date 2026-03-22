@@ -52,10 +52,7 @@ export default function NFTsPage() {
           />
 
           {/* NFT Stats */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4 text-foreground">Fire Dynos NFT Collection</h2>
-            <NFTStats />
-          </div>
+          <NFTStats />
 
           {/* Footer */}
           <Footer
