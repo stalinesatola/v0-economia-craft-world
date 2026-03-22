@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { ChevronRight, ChevronDown, ArrowRight, TrendingDown, TrendingUp, Minus, Loader2, ExternalLink } from "lucide-react"
+import { ChevronRight, ChevronDown, ArrowRight, TrendingDown, TrendingUp, Minus, Loader2, ExternalLink, Search, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
   BUY_THRESHOLD,
   SELL_THRESHOLD,
@@ -216,6 +217,7 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
   const { t } = useI18n()
   const [activeGroup, setActiveGroup] = useState(0)
   const [expanded, setExpanded] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
 
   // Buscar receitas e categorias do DB
   const { data: dbRecipes, isLoading: loadingRecipes } = useSWR<Recipe[]>("/api/recipes", fetcher, {
@@ -238,21 +240,29 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
     return costs
   }, [recipes, prices])
 
-  // Agrupar recursos por categoria
+  // Agrupar recursos por categoria com filtro de pesquisa
   const groups = useMemo(() => {
+    const filterRecipes = (recipes: Recipe[]) => {
+      if (!searchQuery.trim()) return recipes
+      return recipes.filter(r =>
+        r.output.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (r.name && r.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    }
+
     if (dbCategories && dbCategories.length > 0) {
       const enabledCats = dbCategories.filter(c => c.enabled)
       const catGroups = enabledCats.map(cat => ({
         id: cat.id,
         label: cat.label,
         color: cat.color,
-        recipes: recipes.filter(r => {
+        recipes: filterRecipes(recipes.filter(r => {
           const fallback = FALLBACK_GROUPS.find(fg => fg.symbols.includes(r.output))
           return fallback?.id === cat.id
-        }),
+        })),
       }))
       const assignedOutputs = new Set(catGroups.flatMap(g => g.recipes.map(r => r.output)))
-      const unassigned = recipes.filter(r => !assignedOutputs.has(r.output))
+      const unassigned = filterRecipes(recipes.filter(r => !assignedOutputs.has(r.output)))
       if (unassigned.length > 0) {
         catGroups.push({ id: "_other", label: t("chain.others"), color: "#9E9E9E", recipes: unassigned })
       }
@@ -263,9 +273,9 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
       id: fg.id,
       label: fg.label,
       color: fg.color,
-      recipes: recipes.filter(r => fg.symbols.includes(r.output)),
+      recipes: filterRecipes(recipes.filter(r => fg.symbols.includes(r.output))),
     })).filter(g => g.recipes.length > 0)
-  }, [dbCategories, recipes])
+  }, [dbCategories, recipes, searchQuery])
 
   const safeActiveGroup = Math.min(activeGroup, Math.max(groups.length - 1, 0))
   const group = groups[safeActiveGroup]
@@ -303,6 +313,25 @@ export function ProductionChain({ prices, pools }: ProductionChainProps) {
 
       {expanded && (
         <CardContent className="flex flex-col gap-3">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("chain.search") || "Pesquisar receitas..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 h-9 bg-secondary border-border text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
           {/* Category tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             {groups.map((g, i) => (
