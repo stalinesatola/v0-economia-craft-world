@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getFullConfig } from '@/lib/config-manager'
 
 // Collections: Fire Dynos and Water Dynos
 const COLLECTIONS = {
@@ -18,14 +19,30 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Fetch without API key first (free tier)
+    // Get API key from config or environment
+    let apiKey = process.env.OPENSEA_API_KEY
+    try {
+      const config = await getFullConfig()
+      apiKey = (config as any)?.customization?.openSeaApiKey || apiKey
+    } catch {
+      // Config not available, use env var
+    }
+
+    // Prepare headers
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+    }
+    
+    if (apiKey) {
+      headers['x-api-key'] = apiKey
+    }
+
+    // Fetch from OpenSea
     const response = await fetch(
       `https://api.opensea.io/api/v2/collections/${collectionId}/stats`,
       {
         method: 'GET',
-        headers: {
-          'accept': 'application/json',
-        },
+        headers,
         cache: 'no-store'
       }
     )

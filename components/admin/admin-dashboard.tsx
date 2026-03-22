@@ -17,6 +17,7 @@ const TelegramTab = lazy(() => import("@/components/admin/tabs/telegram-tab").th
 const BannersTab = lazy(() => import("@/components/admin/tabs/banners-tab").then(m => ({ default: m.BannersTab })))
 const SharingTab = lazy(() => import("@/components/admin/tabs/sharing-tab").then(m => ({ default: m.SharingTab })))
 const CategoriesTab = lazy(() => import("@/components/admin/tabs/categories-tab").then(m => ({ default: m.CategoriesTab })))
+const NFTsTab = lazy(() => import("@/components/admin/tabs/nfts-tab").then(m => ({ default: m.NFTsTab })))
 
 function TabFallback() {
   return (
@@ -164,6 +165,7 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
     { id: "sharing", label: t("admin.sharing"), perm: "sharing" },
     { id: "banners", label: "Banners", perm: "banners" },
     { id: "categories", label: "Categorias", perm: "categories" },
+    { id: "nfts", label: "NFTs", perm: "settings" },
     { id: "settings", label: t("admin.config"), perm: "settings" },
   ].filter((tab) => isSuperAdmin || canEdit(tab.perm))
 
@@ -307,6 +309,13 @@ export function AdminDashboard({ onLogout, initialConfig, userInfo, authToken }:
                 <TabsContent value="categories" className="mt-4">
                   <Suspense fallback={<TabFallback />}>
                     <CategoriesTab config={config} onUpdate={updateSection} saving={saving} />
+                  </Suspense>
+                </TabsContent>
+              )}
+              {canEdit("settings") && (
+                <TabsContent value="nfts" className="mt-4">
+                  <Suspense fallback={<TabFallback />}>
+                    <NFTsTab config={config} onUpdate={updateSection} saving={saving} />
                   </Suspense>
                 </TabsContent>
               )}
