@@ -1,17 +1,23 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Save, Search, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react'
-import { useI18n } from '@/lib/i18n'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import type { AppConfig } from '@/lib/config-manager'
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Save, Search, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react"
+import { useI18n } from "@/lib/i18n"
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import type { AppConfig } from "@/lib/config-manager"
 
 interface PoolsTabProps {
   config: AppConfig
@@ -21,18 +27,17 @@ interface PoolsTabProps {
 
 export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   const { t } = useI18n()
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState("")
   const [expandedResource, setExpandedResource] = useState<string | null>(null)
   const [localPools, setLocalPools] = useState<Record<string, string>>(config?.pools ?? {})
-  const [localAlerts, setLocalAlerts] = useState<Record<string, { enabled?: boolean; priority?: string; category?: string }>>(
-    config?.alertsConfig ?? {}
-  )
+  const [localAlerts, setLocalAlerts] = useState<Record<string, { enabled?: boolean; priority?: string; category?: string }>>(config?.alertsConfig ?? {})
   const [hasChanges, setHasChanges] = useState(false)
-  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; symbol: string }>({ isOpen: false, symbol: '' })
-
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; symbol: string }>({ isOpen: false, symbol: "" })
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newSymbol, setNewSymbol] = useState('')
-  const [newAddress, setNewAddress] = useState('')
+  const [newSymbol, setNewSymbol] = useState("")
+  const [newAddress, setNewAddress] = useState("")
+  const [newCategory, setNewCategory] = useState<string>("factory")
+  const [newPriority, setNewPriority] = useState<"high" | "medium" | "low">("low")
 
   useEffect(() => {
     setLocalPools(config?.pools ?? {})
@@ -41,15 +46,17 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   }, [config?.pools, config?.alertsConfig])
 
   const safePools = localPools ?? {}
-  const symbols = Object.keys(safePools).filter(s => s.toLowerCase().includes(search.toLowerCase()))
+  const symbols = Object.keys(safePools).filter((s) =>
+    s.toLowerCase().includes(search.toLowerCase())
+  )
 
   const handlePoolChange = (symbol: string, address: string) => {
-    setLocalPools(prev => ({ ...prev, [symbol]: address }))
+    setLocalPools((prev) => ({ ...prev, [symbol]: address }))
     setHasChanges(true)
   }
 
   const handleAlertChange = (symbol: string, field: string, value: unknown) => {
-    setLocalAlerts(prev => ({
+    setLocalAlerts((prev) => ({
       ...prev,
       [symbol]: { ...prev[symbol], [field]: value },
     }))
@@ -61,40 +68,40 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
     if (!symbol || !newAddress.trim()) return
     if (safePools[symbol]) return
 
-    setLocalPools(prev => ({ ...prev, [symbol]: newAddress.trim() }))
-    setLocalAlerts(prev => ({
+    setLocalPools((prev) => ({ ...prev, [symbol]: newAddress.trim() }))
+    setLocalAlerts((prev) => ({
       ...prev,
-      [symbol]: { enabled: true, priority: 'low', category: 'factory' },
+      [symbol]: { enabled: true, priority: newPriority, category: newCategory },
     }))
     setHasChanges(true)
-    setNewSymbol('')
-    setNewAddress('')
+    setNewSymbol("")
+    setNewAddress("")
     setShowAddForm(false)
   }
 
   const handleDeletePoolClick = (symbol: string) => {
-    setConfirmDialog({ isOpen: true, symbol })
+    setConfirmDelete({ isOpen: true, symbol })
   }
 
   const handleDeletePoolConfirm = (symbol: string) => {
-    setLocalPools(prev => {
+    setLocalPools((prev) => {
       const next = { ...prev }
       delete next[symbol]
       return next
     })
-    setLocalAlerts(prev => {
+    setLocalAlerts((prev) => {
       const next = { ...prev }
       delete next[symbol]
       return next
     })
     setHasChanges(true)
     if (expandedResource === symbol) setExpandedResource(null)
-    setConfirmDialog({ isOpen: false, symbol: '' })
+    setConfirmDelete({ isOpen: false, symbol: "" })
   }
 
   const handleSave = async () => {
-    const r1 = await onUpdate('pools', localPools)
-    const r2 = await onUpdate('alertsConfig', localAlerts)
+    const r1 = await onUpdate("pools", localPools)
+    const r2 = await onUpdate("alertsConfig", localAlerts)
     if (r1 && r2) {
       setHasChanges(false)
     }
@@ -103,125 +110,180 @@ export function PoolsTab({ config, onUpdate, saving }: PoolsTabProps) {
   return (
     <div className="flex flex-col gap-4">
       <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
+        isOpen={confirmDelete.isOpen}
         title="Remover Recurso"
-        description={`Tem a certeza que deseja remover '${confirmDialog.symbol}'?`}
+        description={`Tem a certeza que deseja remover '${confirmDelete.symbol}'? Esta ação não pode ser desfeita.`}
         confirmLabel="Remover"
         cancelLabel="Cancelar"
         isDangerous={true}
-        onConfirm={() => handleDeletePoolConfirm(confirmDialog.symbol)}
-        onCancel={() => setConfirmDialog({ isOpen: false, symbol: '' })}
+        onConfirm={() => handleDeletePoolConfirm(confirmDelete.symbol)}
+        onCancel={() => setConfirmDelete({ isOpen: false, symbol: "" })}
       />
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle>{t('admin.pools')}</CardTitle>
-          <CardDescription>Gerir recursos de pools</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <span>{t("admin.pools") || "Pools"}</span>
+          </CardTitle>
+          <CardDescription>{t("admin.poolsDesc") || "Gerencie os pools de recursos"}</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-3">
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Pesquisar recursos..."
+              placeholder="Pesquisar..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9"
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-secondary border-border text-sm"
             />
           </div>
 
-          <div className="space-y-2">
-            {symbols.map(symbol => (
-              <div key={symbol} className="border border-border rounded-lg p-3">
-                <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedResource(expandedResource === symbol ? null : symbol)}>
-                  <div className="flex items-center gap-2">
-                    <Badge>{symbol}</Badge>
-                    <span className="text-sm text-muted-foreground">{safePools[symbol]}</span>
-                  </div>
-                  {expandedResource === symbol ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {/* Add Pool Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="gap-1.5 w-fit"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Adicionar Pool
+          </Button>
+
+          {/* Add Pool Form */}
+          {showAddForm && (
+            <div className="border-t border-border pt-3 space-y-2">
+              <Label className="text-xs">Símbolo</Label>
+              <Input
+                placeholder="Ex: ACID"
+                value={newSymbol}
+                onChange={(e) => setNewSymbol(e.target.value)}
+                className="h-8 text-sm bg-secondary border-border"
+              />
+              <Label className="text-xs">Endereço do Pool</Label>
+              <Input
+                placeholder="0x..."
+                value={newAddress}
+                onChange={(e) => setNewAddress(e.target.value)}
+                className="h-8 text-sm bg-secondary border-border"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Categoria</Label>
+                  <Select value={newCategory} onValueChange={setNewCategory}>
+                    <SelectTrigger className="h-8 text-xs bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="factory">Factory</SelectItem>
+                      <SelectItem value="cooking">Cooking</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div>
+                  <Label className="text-xs">Prioridade</Label>
+                  <Select value={newPriority} onValueChange={(v) => setNewPriority(v as any)}>
+                    <SelectTrigger className="h-8 text-xs bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">Alta</SelectItem>
+                      <SelectItem value="medium">Média</SelectItem>
+                      <SelectItem value="low">Baixa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button size="sm" onClick={handleAddPool} className="w-full h-7">
+                Salvar
+              </Button>
+            </div>
+          )}
 
-                {expandedResource === symbol && (
-                  <div className="mt-3 space-y-3 pt-3 border-t border-border">
-                    <div>
-                      <Label className="text-xs">Endereço</Label>
-                      <Input
-                        value={safePools[symbol]}
-                        onChange={e => handlePoolChange(symbol, e.target.value)}
-                        className="h-8 mt-1"
-                      />
-                    </div>
+          {/* Resources List */}
+          <div className="space-y-1 max-h-96 overflow-y-auto">
+            {symbols.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">Nenhum recurso encontrado</p>
+            ) : (
+              symbols.map((symbol) => (
+                <div key={symbol} className="rounded-lg border border-border bg-secondary/50">
+                  <button
+                    onClick={() =>
+                      setExpandedResource(expandedResource === symbol ? null : symbol)
+                    }
+                    className="w-full flex items-center justify-between p-2 hover:bg-secondary/75 transition-colors"
+                  >
+                    <span className="font-medium text-sm">{symbol}</span>
+                    {expandedResource === symbol ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
 
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs">Alertas Ativo</Label>
-                      <Switch
-                        checked={localAlerts[symbol]?.enabled !== false}
-                        onCheckedChange={e => handleAlertChange(symbol, 'enabled', e)}
-                      />
-                    </div>
-
-                    <div className="flex justify-end gap-2">
+                  {expandedResource === symbol && (
+                    <div className="border-t border-border p-2 space-y-2">
+                      <div>
+                        <Label className="text-xs">Endereço</Label>
+                        <Input
+                          value={safePools[symbol] || ""}
+                          onChange={(e) => handlePoolChange(symbol, e.target.value)}
+                          className="h-7 text-xs bg-card border-border"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">Alertas Ativados</Label>
+                        <Switch
+                          checked={localAlerts[symbol]?.enabled ?? true}
+                          onCheckedChange={(enabled) =>
+                            handleAlertChange(symbol, "enabled", enabled)
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Prioridade</Label>
+                        <Select
+                          value={localAlerts[symbol]?.priority || "low"}
+                          onValueChange={(priority) =>
+                            handleAlertChange(symbol, "priority", priority)
+                          }
+                        >
+                          <SelectTrigger className="h-7 text-xs bg-card border-border">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="high">Alta</SelectItem>
+                            <SelectItem value="medium">Média</SelectItem>
+                            <SelectItem value="low">Baixa</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeletePoolClick(symbol)}
-                        className="gap-1.5 text-destructive"
+                        className="w-full gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 h-7"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Remover
                       </Button>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              ))
+            )}
           </div>
 
-          {showAddForm && (
-            <Card className="bg-muted/50 border-border">
-              <CardContent className="pt-4">
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs">Símbolo do Recurso</Label>
-                    <Input
-                      placeholder="ex: ACID"
-                      value={newSymbol}
-                      onChange={e => setNewSymbol(e.target.value)}
-                      className="h-8 mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Endereço da Pool</Label>
-                    <Input
-                      placeholder="0x..."
-                      value={newAddress}
-                      onChange={e => setNewAddress(e.target.value)}
-                      className="h-8 mt-1"
-                    />
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button size="sm" variant="outline" onClick={() => setShowAddForm(false)}>
-                      Cancelar
-                    </Button>
-                    <Button size="sm" onClick={handleAddPool}>
-                      Adicionar
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {!showAddForm && (
-            <Button onClick={() => setShowAddForm(true)} variant="outline" size="sm" className="gap-1.5 w-full">
-              <Plus className="h-3.5 w-3.5" />
-              Adicionar Pool
-            </Button>
-          )}
-
+          {/* Save Button */}
           {hasChanges && (
-            <Button onClick={handleSave} disabled={saving} className="gap-1.5 w-full">
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+              className="gap-1.5 w-fit"
+            >
               <Save className="h-3.5 w-3.5" />
-              {saving ? 'A guardar...' : 'Guardar Alterações'}
+              {saving ? "Salvando..." : "Salvar Alterações"}
             </Button>
           )}
         </CardContent>
