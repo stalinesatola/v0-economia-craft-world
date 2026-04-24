@@ -58,7 +58,7 @@ async function fetchCollectionStats(slug: string, apiKey: string): Promise<OpenS
 async function fetchNFTs(slug: string, limit: number = 20, apiKey: string): Promise<NFTData[]> {
   try {
     const res = await fetch(
-      `${OPENSEA_API_URL}/collections/${slug}/nfts?limit=${limit}`,
+      `${OPENSEA_API_URL}/collection/${slug}/nfts?limit=${limit}`,
       {
         headers: API_HEADERS(apiKey),
         next: { revalidate: 30 }, // Cache 30 seg
