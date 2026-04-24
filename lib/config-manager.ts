@@ -11,6 +11,14 @@ export interface MaintenanceConfig {
   message: string
 }
 
+export interface NFTCollection {
+  slug: string
+  name: string
+  enabled: boolean
+  icon?: string
+  description?: string
+}
+
 export interface AppConfig {
   pools: Record<string, string>
   productionCosts: Record<string, number>
@@ -42,6 +50,7 @@ export interface AppConfig {
   maintenance?: MaintenanceConfig
   categories?: CategoryConfig[]
   recipes?: RecipeConfig[]
+  nftCollections?: NFTCollection[]
 }
 
 export interface UserPermissions {
@@ -130,6 +139,7 @@ export interface CustomizationConfig {
     showStats: boolean
     showBanners: boolean
     showChain: boolean
+    showNFTs?: boolean
   }
   template?: "default" | "compact" | "cards"
 }

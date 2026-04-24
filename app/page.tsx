@@ -8,6 +8,7 @@ import { OpportunitiesPanel } from "@/components/opportunities-panel"
 import { AdBanner } from "@/components/ad-banner"
 import { Footer } from "@/components/footer"
 import { MaintenancePage } from "@/components/maintenance-page"
+import { NFTGallery } from "@/components/nft-gallery"
 import { useI18n } from "@/lib/i18n"
 import { useMemo } from "react"
 import useSWR from "swr"
@@ -73,6 +74,7 @@ export default function Home() {
   const showStats = customization?.modules?.showStats !== false
   const showOpportunities = customization?.modules?.showOpportunities !== false
   const showBanners = customization?.modules?.showBanners !== false
+  const showNFTs = customization?.modules?.showNFTs !== false
 
   return (
     <main className="min-h-screen bg-background">
@@ -132,6 +134,9 @@ export default function Home() {
 
           {/* Resource Cards */}
           <PriceTable prices={prices} pools={pools} isLoading={isLoading} productionCosts={productionCosts} thresholds={thresholds} alertsConfig={alertsConfig} dynoCoinPriceUsd={dynoCoinPriceUsd} />
+
+          {/* NFT Gallery - Angry Dynomites Lab */}
+          {showNFTs && <NFTGallery />}
 
           {/* Footer with social links and banner ad */}
           <Footer

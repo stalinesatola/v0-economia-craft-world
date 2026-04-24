@@ -191,6 +191,14 @@ const translations = {
     "producao.title": "Cadeia de Producao",
     "producao.subtitle": "Monitor de custos de producao | Rede Ronin",
     "producao.backToDashboard": "Voltar ao Dashboard",
+    // NFT Gallery
+    "nft.title": "NFTs - Angry Dynomites Lab",
+    "nft.floor": "Floor",
+    "nft.volume": "Volume",
+    "nft.viewOnOpenSea": "Ver no OpenSea",
+    "nft.traits": "Traits",
+    "nft.noNfts": "Nenhum NFT encontrado",
+    "nft.loading": "A carregar NFTs...",
   },
   en: {
     // Dashboard
@@ -378,6 +386,14 @@ const translations = {
     "producao.title": "Production Chain",
     "producao.subtitle": "Production cost monitor | Ronin Network",
     "producao.backToDashboard": "Back to Dashboard",
+    // NFT Gallery
+    "nft.title": "NFTs - Angry Dynomites Lab",
+    "nft.floor": "Floor",
+    "nft.volume": "Volume",
+    "nft.viewOnOpenSea": "View on OpenSea",
+    "nft.traits": "Traits",
+    "nft.noNfts": "No NFTs found",
+    "nft.loading": "Loading NFTs...",
   },
 } as const
 
