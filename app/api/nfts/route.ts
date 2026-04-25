@@ -66,7 +66,7 @@ async function fetchNFTs(slug: string, limit: number = 20, apiKey: string): Prom
     )
     if (!res.ok) return []
     const data = await res.json()
-    
+
     return (data.nfts || []).map((nft: OpenSeaNFT) => ({
       identifier: nft.identifier,
       name: nft.name,
