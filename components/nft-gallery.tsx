@@ -179,24 +179,9 @@ export default function NFTGallery() {
             onClick={() => setSelectedNFT(null)}
           >
             <div
-              className="bg-background rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-background rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="aspect-square relative bg-muted">
-                {nft.image_url ? (
-                  <Image
-                    src={nft.image_url}
-                    alt={nft.name}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-6xl">
-                    {collection?.icon || "🔥"}
-                  </div>
-                )}
-              </div>
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold">{nft.name}</h2>
@@ -234,7 +219,7 @@ export default function NFTGallery() {
                   ) : nftHistory.length === 0 ? (
                     <p className="text-muted-foreground text-sm">Nenhum histórico de compra encontrado.</p>
                   ) : (
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                    <div className="space-y-2 max-h-40 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                       {nftHistory.map((item, i) => (
                         <div key={i} className="flex justify-between items-center text-sm bg-secondary/50 p-2 rounded-md">
                           <div>
