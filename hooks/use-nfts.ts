@@ -1,6 +1,6 @@
 "use client"
 
-import useSWR from "swr"
+import useSWRInfinite from "swr/infinite"
 
 export interface NFTData {
   identifier: string
@@ -26,6 +26,7 @@ interface NFTResponse {
   }
   stats: CollectionStats
   nfts: NFTData[]
+  nextCursor?: string | null
   timestamp: string
 }
 
@@ -47,26 +48,39 @@ const fetcher = (url: string) =>
     })
 
 export function useNFTs(slug?: string, limit: number = 20) {
-  const url = `/api/nfts?slug=${slug || "angry-dynomites-lab"}&limit=${limit}`
+  const getKey = (pageIndex: number, previousPageData: NFTResponse | null) => {
+    if (previousPageData && !previousPageData.nextCursor) return null // reached the end
+    const baseSlug = slug || "angry-dynomites-lab-fire-dynos"
+    const url = `/api/nfts?slug=${baseSlug}&limit=${limit}`
+    if (pageIndex === 0) return url
+    return `${url}&cursor=${previousPageData.nextCursor}`
+  }
 
-  const { data, error, isLoading, isValidating, mutate } = useSWR<NFTResponse>(
-    url,
+  const { data, error, size, setSize, isValidating, mutate } = useSWRInfinite<NFTResponse>(
+    getKey,
     fetcher,
     {
-      refreshInterval: 60 * 1000, // 1 minute
-      revalidateOnFocus: true,
-      dedupingInterval: 30 * 1000,
+      revalidateOnFocus: false,
+      revalidateFirstPage: false,
       onError: (error) => console.error("[v0] NFTs fetch error:", error),
     }
   )
 
+  const nfts = data ? data.flatMap(page => page.nfts || []) : []
+  const hasMore = data ? data[data.length - 1]?.nextCursor != null : false
+  const isLoadingMore = size > 0 && data && typeof data[size - 1] === "undefined"
+  const collection = data?.[0]?.collection
+  const stats = data?.[0]?.stats
+
   return {
-    collection: data?.collection,
-    stats: data?.stats,
-    nfts: data?.nfts ?? [],
-    timestamp: data?.timestamp,
-    isLoading,
+    collection,
+    stats,
+    nfts,
+    hasMore,
+    loadMore: () => setSize(size + 1),
+    isLoading: !data && !error,
     isValidating,
+    isLoadingMore,
     error,
     refresh: mutate,
   }

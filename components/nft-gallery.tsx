@@ -9,12 +9,19 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
 
 export default function NFTGallery() {
   const { t } = useI18n()
   const [activeCollection, setActiveCollection] = useState<string>("angry-dynomites-lab-fire-dynos")
-  const { collection, stats, nfts, isLoading, error, refresh } = useNFTs(activeCollection, 20)
+  const { collection, stats, nfts, isLoading, isLoadingMore, hasMore, loadMore, error, refresh } = useNFTs(activeCollection, 20)
   const [selectedNFT, setSelectedNFT] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const filteredNfts = nfts.filter(nft => 
+    (nft.name && nft.name.toLowerCase().includes(searchQuery.toLowerCase())) || 
+    nft.identifier.includes(searchQuery)
+  )
 
   if (error) {
     return (
@@ -37,12 +44,18 @@ export default function NFTGallery() {
           )}
           <div>
             <h2 className="text-2xl font-bold">{collection?.name || "NFT Collection"}</h2>
-            <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-1">
               {stats?.floor_price !== undefined && (
-                <span>{t("nft.floor")}: <strong>Ξ {stats.floor_price.toFixed(4)}</strong></span>
+                <span>
+                  {t("nft.floor")}: <strong>Ξ {stats.floor_price.toFixed(4)}</strong>
+                  {stats.eth_usd_price ? <span className="ml-1 opacity-70">(${ (stats.floor_price * stats.eth_usd_price).toFixed(2) })</span> : null}
+                </span>
               )}
               {stats?.volume_all_time !== undefined && (
-                <span>{t("nft.volume")}: <strong>Ξ {stats.volume_all_time.toFixed(2)}</strong></span>
+                <span>
+                  {t("nft.volume")}: <strong>Ξ {stats.volume_all_time.toFixed(2)}</strong>
+                  {stats.eth_usd_price ? <span className="ml-1 opacity-70">(${ (stats.volume_all_time * stats.eth_usd_price).toLocaleString('en-US', { maximumFractionDigits: 0 }) })</span> : null}
+                </span>
               )}
             </div>
           </div>
@@ -64,6 +77,16 @@ export default function NFTGallery() {
         </div>
       </div>
 
+      <div className="relative max-w-md w-full">
+        <Input
+          type="text"
+          placeholder="Pesquisar por nome ou ID..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full"
+        />
+      </div>
+
       {/* Grid de NFTs */}
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -75,14 +98,15 @@ export default function NFTGallery() {
             </div>
           ))}
         </div>
-      ) : nfts.length === 0 ? (
+      ) : filteredNfts.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
           <span className="text-6xl mb-4">🔥</span>
           <p>{t("chart.noData")}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {nfts.map((nft) => (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {filteredNfts.map((nft) => (
             <Card
               key={nft.identifier}
               className={cn(
@@ -120,6 +144,19 @@ export default function NFTGallery() {
               </CardContent>
             </Card>
           ))}
+        </div>
+          
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+               <button
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className="px-6 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+               >
+                 {isLoadingMore ? "Carregando..." : "Ver mais"}
+               </button>
+            </div>
+          )}
         </div>
       )}
 

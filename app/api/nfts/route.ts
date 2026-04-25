@@ -27,7 +27,7 @@ interface NFTData {
 interface OpenSeaCollectionStats {
   total: {
     floor_price: number
-    volume: number   
+    volume: number
   }
 }
 
@@ -71,19 +71,19 @@ async function fetchEthPrice(): Promise<number> {
   }
 }
 
-async function fetchNFTs(slug: string, limit: number = 20, apiKey: string): Promise<NFTData[]> {
+async function fetchNFTs(slug: string, limit: number = 20, apiKey: string, cursor?: string | null): Promise<{ nfts: NFTData[], nextCursor: string | null }> {
   try {
-    const res = await fetch(
-      `${OPENSEA_API_URL}/collection/${slug}/nfts?limit=${limit}`,
-      {
-        headers: API_HEADERS(apiKey),
-        next: { revalidate: 30 }, // Cache 30 seg
-      }
+    let url = `${OPENSEA_API_URL}/collection/${slug}/nfts?limit=${limit}`
+    if (cursor) url += `&next=${cursor}`
+    const res = await fetch(url, {
+      headers: API_HEADERS(apiKey),
+      next: { revalidate: 30 }, // Cache 30 seg
+    }
     )
     if (!res.ok) return []
     const data = await res.json()
 
-    return (data.nfts || []).map((nft: OpenSeaNFT) => ({
+    const mapped = (data.nfts || []).map((nft: OpenSeaNFT) => ({
       identifier: nft.identifier,
       name: nft.name || `NFT #${nft.identifier.slice(0, 8)}`,
       description: nft.description || "",
@@ -96,8 +96,9 @@ async function fetchNFTs(slug: string, limit: number = 20, apiKey: string): Prom
         value: attr.value,
       })),
     }))
+    return { nfts: mapped, nextCursor: data.next || null }
   } catch {
-    return []
+    return { nfts: [], nextCursor: null }
   }
 }
 
@@ -105,6 +106,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const slug = searchParams.get("slug") || "angry-dynomites-lab-fire-dynos"
   const limit = parseInt(searchParams.get("limit") || "20", 10)
+  const cursor = searchParams.get("cursor") || null
 
   // Get API key from env
   const apiKey = process.env.OPENSEA_API_KEY || ""
@@ -142,9 +144,9 @@ export async function GET(request: Request) {
   ) || collections.find((c) => c.enabled) || defaultCollections[0]
 
   // Fetch both stats and NFTs in parallel (pass apiKey)
-  const [stats, nfts, ethPrice] = await Promise.all([
+  const [stats, nftResult, ethPrice] = await Promise.all([
     fetchCollectionStats(targetCollection.slug, apiKey),
-    fetchNFTs(targetCollection.slug, limit, apiKey),
+    fetchNFTs(targetCollection.slug, limit, apiKey, cursor),
     fetchEthPrice(),
   ])
 
@@ -159,7 +161,8 @@ export async function GET(request: Request) {
       volume_all_time: stats?.total?.volume || 0,
       eth_usd_price: ethPrice,
     },
-    nfts,
+    nfts: nftResult.nfts,
+    nextCursor: nftResult.nextCursor,
     timestamp: new Date().toISOString(),
   })
 }
