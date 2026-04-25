@@ -15,6 +15,7 @@ export interface NFTData {
 export interface CollectionStats {
   floor_price: number
   volume_all_time: number
+  eth_usd_price?: number
 }
 
 interface NFTResponse {

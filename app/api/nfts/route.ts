@@ -58,6 +58,19 @@ async function fetchCollectionStats(slug: string, apiKey: string): Promise<OpenS
   }
 }
 
+async function fetchEthPrice(): Promise<number> {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd", {
+      next: { revalidate: 300 }, // Cache 5 min
+    })
+    if (!res.ok) return 0
+    const data = await res.json()
+    return data.ethereum?.usd || 0
+  } catch {
+    return 0
+  }
+}
+
 async function fetchNFTs(slug: string, limit: number = 20, apiKey: string): Promise<NFTData[]> {
   try {
     const res = await fetch(
@@ -129,9 +142,10 @@ export async function GET(request: Request) {
   ) || collections.find((c) => c.enabled) || defaultCollections[0]
 
   // Fetch both stats and NFTs in parallel (pass apiKey)
-  const [stats, nfts] = await Promise.all([
+  const [stats, nfts, ethPrice] = await Promise.all([
     fetchCollectionStats(targetCollection.slug, apiKey),
     fetchNFTs(targetCollection.slug, limit, apiKey),
+    fetchEthPrice(),
   ])
 
   return NextResponse.json({
@@ -143,6 +157,7 @@ export async function GET(request: Request) {
     stats: {
       floor_price: stats?.total?.floor_price || 0,
       volume_all_time: stats?.total?.volume || 0,
+      eth_usd_price: ethPrice,
     },
     nfts,
     timestamp: new Date().toISOString(),
