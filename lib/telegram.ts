@@ -1,4 +1,5 @@
 import { getConfig, getConfigSection, setConfigSection } from "./config-manager"
+import type { AppConfig } from "./config-manager"
 import { RECIPES as DEFAULT_RECIPES } from "./resource-images"
 import type { Recipe } from "./resource-images"
 import { POOLS as DEFAULT_POOLS, NETWORK as DEFAULT_NETWORK } from "./craft-data"
@@ -611,6 +612,14 @@ export async function runMonitorCycle(): Promise<{
     }
   }
 
+  // Check NFT sales
+  let nftSalesSent = 0
+  try {
+    nftSalesSent = await checkNFTSales(config)
+  } catch (e) {
+    console.error("[v0] checkNFTSales error:", e)
+  }
+
   const parts: string[] = []
   parts.push(`${priceCount} prices fetched`)
   if (opportunities.length > 0) {
@@ -625,4 +634,66 @@ export async function runMonitorCycle(): Promise<{
   console.log("[v0] Monitor cycle complete:", parts.join(", "))
 
   return { success: true, message: parts.join(", "), alerts: alertMessages, opportunities, priceAlertSent }
+}
+
+async function checkNFTSales(config: AppConfig): Promise<number> {
+  const collections = config.nftCollections?.filter((c) => c.enabled) || []
+  if (collections.length === 0) return 0
+
+  const apiKey = process.env.OPENSEA_API_KEY || ""
+  if (!apiKey) return 0
+
+  let newLastTimestamp = config.telegram.lastNftTimestamp || Math.floor(Date.now() / 1000) - 3600 // def: last 1 hour
+  let salesSent = 0
+
+  for (const coll of collections) {
+    try {
+      const res = await fetch(`https://api.opensea.io/api/v2/events?collection_slug=${coll.slug}&event_type=sale&limit=10`, {
+        headers: { Accept: "application/json", "X-API-KEY": apiKey },
+        next: { revalidate: 0 } // no cache for cron
+      })
+      if (!res.ok) continue
+      const data = await res.json()
+      const events = data.asset_events || []
+
+      const newEvents = events.filter((ev: any) => ev.event_timestamp > (config.telegram.lastNftTimestamp || 0))
+      
+      for (const ev of newEvents.reverse()) { // oldest to newest among the new ones
+        let priceEth = 0
+        if (ev.payment && ev.payment.quantity && ev.payment.decimals) {
+          priceEth = parseFloat(ev.payment.quantity) / Math.pow(10, ev.payment.decimals)
+        }
+        
+        const priceStr = priceEth > 0 ? `${priceEth.toFixed(4)} ${ev.payment?.symbol || "ETH"}` : "0"
+        let msg = `🔥 <b>Nova Venda de NFT!</b>\n\n`
+        msg += `<b>Coleção:</b> ${coll.name}\n`
+        if (ev.nft) {
+          msg += `<b>NFT:</b> ${ev.nft.name || `NFT #${ev.nft.identifier}`}\n`
+        }
+        msg += `<b>Preço:</b> ${priceStr}\n`
+        msg += `<b>Comprador:</b> <code>${ev.buyer.slice(0,6)}...${ev.buyer.slice(-4)}</code>\n`
+        if (ev.nft?.opensea_url) msg += `\n<a href="${ev.nft.opensea_url}">Ver no OpenSea</a>\n`
+        else if (ev.nft?.contract) msg += `\n<a href="https://opensea.io/item/ethereum/${ev.nft.contract}/${ev.nft.identifier}">Ver no OpenSea</a>\n`
+
+        const result = await sendTelegramMessage(msg, config.telegram.botToken, config.telegram.chatId)
+        if (result.success) salesSent++
+
+        if (ev.event_timestamp > newLastTimestamp) {
+          newLastTimestamp = ev.event_timestamp
+        }
+        // Small delay to prevent hitting telegram limits
+        await new Promise(resolve => setTimeout(resolve, 300))
+      }
+    } catch (e) {
+      console.error(`[v0] Error checking NFT sales for ${coll.name}:`, e)
+    }
+  }
+
+  // Update last seen timestamp
+  if (newLastTimestamp > (config.telegram.lastNftTimestamp || 0)) {
+    const updatedTelegram = { ...config.telegram, lastNftTimestamp: newLastTimestamp }
+    await setConfigSection("telegram", updatedTelegram)
+  }
+
+  return salesSent
 }

@@ -41,6 +41,7 @@ export interface AppConfig {
     priceAlertSymbol?: string
     priceAlertIntervalMinutes?: number
     customAlertMessage?: string
+    lastNftTimestamp?: number
   }
   network: string
   users: UserEntry[]

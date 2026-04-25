@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import { useNFTs } from "@/hooks/use-nfts"
+import { useNFTHistory } from "@/hooks/use-nft-history"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -17,6 +18,9 @@ export default function NFTGallery() {
   const { collection, stats, nfts, isLoading, isLoadingMore, hasMore, loadMore, error, refresh } = useNFTs(activeCollection, 20)
   const [selectedNFT, setSelectedNFT] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+
+  const nftObj = selectedNFT ? nfts.find((n) => n.identifier === selectedNFT) : null
+  const { history: nftHistory, isLoading: isLoadingHistory } = useNFTHistory(nftObj?.collection_slug, nftObj?.identifier)
 
   const filteredNfts = nfts.filter(nft => 
     (nft.name && nft.name.toLowerCase().includes(searchQuery.toLowerCase())) || 
@@ -67,13 +71,6 @@ export default function NFTGallery() {
               <TabsTrigger value="angry-dynomites-lab-water-dynos">💧 Water Dynos</TabsTrigger>
             </TabsList>
           </Tabs>
-          <button
-            onClick={() => refresh()}
-            disabled={isLoading}
-            className="text-sm px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors shrink-0"
-          >
-            {isLoading ? t("nft.loading") : t("dashboard.refresh")}
-          </button>
         </div>
       </div>
 
@@ -227,6 +224,42 @@ export default function NFTGallery() {
                     ))}
                   </div>
                 </div>
+
+                <div className="pt-4 border-t space-y-3">
+                  <h3 className="font-semibold">Histórico de Preços</h3>
+                  {isLoadingHistory ? (
+                    <div className="flex justify-center p-4">
+                      <span className="text-muted-foreground text-sm">Carregando histórico...</span>
+                    </div>
+                  ) : nftHistory.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">Nenhum histórico de compra encontrado.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {nftHistory.map((item, i) => (
+                        <div key={i} className="flex justify-between items-center text-sm bg-secondary/50 p-2 rounded-md">
+                          <div>
+                            <p className="font-medium">{item.priceFormatted}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(item.date).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="text-right text-xs text-muted-foreground">
+                            <p title={item.buyer}>Comprador: {item.buyer.slice(0, 6)}...</p>
+                            <a 
+                              href={`https://etherscan.io/tx/${item.transaction}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              Tx ↗
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="pt-4 border-t">
                   <a
                     href={`https://opensea.io/item/ethereum/${nft.contract}/${nft.identifier}`}
