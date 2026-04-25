@@ -27,7 +27,7 @@ export default function NFTGallery() {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
         <p className="text-destructive">{t("chart.noData")}</p>
-        <button onClick={refresh} className="mt-2 text-sm text-muted-foreground hover:text-foreground">
+        <button onClick={() => refresh()} className="mt-2 text-sm text-muted-foreground hover:text-foreground">
           {t("dashboard.refresh")}
         </button>
       </div>
@@ -68,7 +68,7 @@ export default function NFTGallery() {
             </TabsList>
           </Tabs>
           <button
-            onClick={refresh}
+            onClick={() => refresh()}
             disabled={isLoading}
             className="text-sm px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors shrink-0"
           >
@@ -134,9 +134,21 @@ export default function NFTGallery() {
                 <h3 className="font-semibold text-sm truncate" title={nft.name}>
                   {nft.name}
                 </h3>
-                <div className="flex flex-wrap gap-1">
+                
+                {stats?.floor_price !== undefined && (
+                  <div className="flex items-center gap-1 text-xs">
+                    <span className="font-medium text-foreground">Ξ {stats.floor_price.toFixed(4)}</span>
+                    {stats?.eth_usd_price ? (
+                      <span className="text-muted-foreground">
+                        (${(stats.floor_price * stats.eth_usd_price).toFixed(2)})
+                      </span>
+                    ) : null}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-1 pt-1">
                   {nft.traits.slice(0, 2).map((trait, idx) => (
-                    <Badge key={idx} variant="secondary" className="text-xs px-1.5 py-0.5">
+                    <Badge key={idx} variant="secondary" className="text-[10px] px-1.5 py-0.5">
                       {trait.value}
                     </Badge>
                   ))}
@@ -217,7 +229,7 @@ export default function NFTGallery() {
                 </div>
                 <div className="pt-4 border-t">
                   <a
-                    href={`https://opensea.io/assets/ronin/${nft.collection_slug}/${nft.identifier}`}
+                    href={`https://opensea.io/item/ethereum/${nft.contract}/${nft.identifier}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline text-sm"

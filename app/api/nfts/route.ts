@@ -90,6 +90,7 @@ async function fetchNFTs(slug: string, limit: number = 20, apiKey: string, curso
       image_url: nft.display_image_url || nft.image_url || "",
       collection: nft.collection,
       collection_slug: nft.collection,
+      contract: nft.contract,
       owner: nft.owner || "",
       traits: (nft.traits || []).map((attr) => ({
         trait_type: attr.trait_type,

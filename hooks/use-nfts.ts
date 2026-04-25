@@ -9,6 +9,7 @@ export interface NFTData {
   image_url: string
   collection: string
   collection_slug: string
+  contract: string
   traits: Array<{ trait_type: string; value: string }>
 }
 
