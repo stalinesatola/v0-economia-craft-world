@@ -8,10 +8,12 @@ import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function NFTGallery() {
   const { t } = useI18n()
-  const { collection, stats, nfts, isLoading, error, refresh } = useNFTs("angry-dynomites-lab", 20)
+  const [activeCollection, setActiveCollection] = useState<string>("angry-dynomites-lab-fire-dynos")
+  const { collection, stats, nfts, isLoading, error, refresh } = useNFTs(activeCollection, 20)
   const [selectedNFT, setSelectedNFT] = useState<string | null>(null)
 
   if (error) {
@@ -45,13 +47,21 @@ export default function NFTGallery() {
             </div>
           </div>
         </div>
-        <button
-          onClick={refresh}
-          disabled={isLoading}
-          className="text-sm px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors"
-        >
-          {isLoading ? t("nft.loading") : t("dashboard.refresh")}
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Tabs value={activeCollection} onValueChange={setActiveCollection} className="w-full sm:w-auto">
+            <TabsList>
+              <TabsTrigger value="angry-dynomites-lab-fire-dynos">🔥 Fire Dynos</TabsTrigger>
+              <TabsTrigger value="angry-dynomites-lab-water-dynos">💧 Water Dynos</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <button
+            onClick={refresh}
+            disabled={isLoading}
+            className="text-sm px-3 py-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors shrink-0"
+          >
+            {isLoading ? t("nft.loading") : t("dashboard.refresh")}
+          </button>
+        </div>
       </div>
 
       {/* Grid de NFTs */}

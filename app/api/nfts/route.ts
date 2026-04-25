@@ -25,21 +25,24 @@ interface NFTData {
 }
 
 interface OpenSeaCollectionStats {
-  floor_price: number
-  volume_all_time: number
+  total: {
+    floor_price: number
+    volume: number   
+  }
 }
 
 interface OpenSeaNFT {
   identifier: string
-  name: string
-  description: string
-  image_url: string | null
+  name?: string
+  description?: string
+  image_url?: string | null
+  display_image_url?: string | null
   collection: string
-  collection_slug: string
+  collection_slug?: string
   contract: string
-  token_id: string
-  owner: string
-  attributes: Array<{ trait_type: string; value: string; frequency: string }>
+  token_id?: string
+  owner?: string
+  traits?: Array<{ trait_type: string; value: string }>
 }
 
 async function fetchCollectionStats(slug: string, apiKey: string): Promise<OpenSeaCollectionStats | null> {
@@ -69,13 +72,13 @@ async function fetchNFTs(slug: string, limit: number = 20, apiKey: string): Prom
 
     return (data.nfts || []).map((nft: OpenSeaNFT) => ({
       identifier: nft.identifier,
-      name: nft.name,
-      description: nft.description,
-      image_url: nft.image_url || "",
+      name: nft.name || `NFT #${nft.identifier.slice(0, 8)}`,
+      description: nft.description || "",
+      image_url: nft.display_image_url || nft.image_url || "",
       collection: nft.collection,
-      collection_slug: nft.collection_slug,
-      owner: nft.owner,
-      traits: (nft.attributes || []).map((attr) => ({
+      collection_slug: nft.collection,
+      owner: nft.owner || "",
+      traits: (nft.traits || []).map((attr) => ({
         trait_type: attr.trait_type,
         value: attr.value,
       })),
@@ -87,7 +90,7 @@ async function fetchNFTs(slug: string, limit: number = 20, apiKey: string): Prom
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const slug = searchParams.get("slug") || "angry-dynomites-lab"
+  const slug = searchParams.get("slug") || "angry-dynomites-lab-fire-dynos"
   const limit = parseInt(searchParams.get("limit") || "20", 10)
 
   // Get API key from env
@@ -102,20 +105,28 @@ export async function GET(request: Request) {
     // Use defaults
   }
 
-  // Default Angry Dynomites Lab collection
-  const defaultCollection = {
-    slug: "angry-dynomites-lab",
-    name: "Angry Dynomites Lab",
-    enabled: true,
-    icon: "🔥",
-  }
+  // Default Angry Dynomites Lab collections
+  const defaultCollections = [
+    {
+      slug: "angry-dynomites-lab-fire-dynos",
+      name: "ADL Fire Dynos",
+      enabled: true,
+      icon: "🔥",
+    },
+    {
+      slug: "angry-dynomites-lab-water-dynos",
+      name: "ADL Water Dynos",
+      enabled: true,
+      icon: "💧",
+    }
+  ]
 
-  const collections = customCollections.length > 0 ? customCollections : [defaultCollection]
+  const collections = customCollections.length > 0 ? customCollections : defaultCollections
 
   // Find requested collection or use first enabled
   const targetCollection = collections.find(
     (c) => c.slug.toLowerCase() === slug.toLowerCase()
-  ) || collections.find((c) => c.enabled) || defaultCollection
+  ) || collections.find((c) => c.enabled) || defaultCollections[0]
 
   // Fetch both stats and NFTs in parallel (pass apiKey)
   const [stats, nfts] = await Promise.all([
@@ -130,8 +141,8 @@ export async function GET(request: Request) {
       icon: targetCollection.icon || "🔥",
     },
     stats: {
-      floor_price: stats?.floor_price || 0,
-      volume_all_time: stats?.volume_all_time || 0,
+      floor_price: stats?.total?.floor_price || 0,
+      volume_all_time: stats?.total?.volume || 0,
     },
     nfts,
     timestamp: new Date().toISOString(),
